@@ -175,6 +175,25 @@ systemctl enable "${APP_NAME}.service" >/dev/null
 
 # ── 6. nginx reverse proxy ──────────────────────────────────────────────────
 log "6/7 Cấu hình nginx reverse proxy"
+
+# Buffer đặt ở http level (conf.d được include TRƯỚC sites-enabled) nên áp cho
+# mọi server block, kể cả block HTTPS do setup-ssl.sh sinh ra sau này.
+cat > /etc/nginx/conf.d/${APP_NAME}-proxy-buffers.conf <<'BUFFERS'
+# Response header từ Kestrel phải nằm trọn trong MỘT proxy_buffer_size, không
+# được tràn sang buffer thứ hai. POST /Account/Login trả header 5562 bytes vì
+# auth ticket của Identity mang nhiều permission claim: ASP.NET Core chunk cookie
+# ở ~4090 bytes nên sinh .AspNetCore.Identity.ApplicationC1 (4062 bytes) + C2.
+# Mặc định nginx là 4k -> "upstream sent too big header" -> client thấy 502.
+proxy_buffer_size       32k;
+proxy_buffers        8  32k;
+proxy_busy_buffers_size 64k;
+
+# Chiều ngược lại: sau khi đăng nhập, browser gửi lại ~4,6KB cookie đó trong
+# header Cookie ở MỌI request. Mặc định large_client_header_buffers 4 8k, thêm
+# permission là vượt 8k -> 400 Bad Request. Nới sẵn cho khỏi tái phát.
+large_client_header_buffers 4 32k;
+BUFFERS
+
 cat > "/etc/nginx/sites-available/${APP_NAME}" <<'NGINX'
 server {
     listen 80;
