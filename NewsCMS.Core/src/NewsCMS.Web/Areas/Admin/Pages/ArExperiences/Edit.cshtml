@@ -1,0 +1,98 @@
+@page "{id:guid}"
+@model EditModel
+@using NewsCMS.Web.Areas.Admin.Shared
+@{
+    ViewData["Title"] = $"Sửa: {Model.Current?.Title}";
+}
+
+<div class="mb-6">
+    <p class="text-sm font-semibold text-indigo-600">Trải nghiệm AR</p>
+    <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Sửa trải nghiệm</h2>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="hidden">@ok</div>
+}
+
+<form method="post" class="space-y-6" data-ar-form data-original-target="@Model.Input.TargetImageUrl">
+    @Html.AntiForgeryToken()
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div asp-validation-summary="All" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+    }
+
+    <div class="admin-card grid gap-6 p-6 md:grid-cols-2">
+        <div class="col-span-2">
+            <label class="admin-label">Tiêu đề <span class="text-red-500">*</span></label>
+            <input asp-for="Input.Title" class="admin-input" />
+        </div>
+
+        <input asp-for="Input.Slug" type="hidden" />
+
+        <div class="col-span-2">
+            <label class="admin-label">Mô tả ngắn</label>
+            <textarea asp-for="Input.Description" class="admin-input" rows="2"></textarea>
+        </div>
+
+        <div>
+            <label class="admin-label mb-2 block">Ảnh target</label>
+            <partial name="~/Areas/Admin/Shared/_MediaPicker.cshtml"
+                     model='new MediaPickerOptions { For = "Input.TargetImageUrl", Value = Model.Input.TargetImageUrl, Accept = "image/*", Label = "" }' />
+            <p class="mt-1 text-xs text-slate-500">Để trống = giữ ảnh hiện tại.</p>
+        </div>
+
+        <div>
+            <label class="admin-label mb-2 block">Điểm nhận diện AR</label>
+            <input asp-for="Input.MindFileUrl" type="hidden" />
+            <div class="flex h-16 items-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 text-sm">
+                <span id="ar-compile-status" class="text-slate-500">Đổi ảnh target <span class="text-slate-400">@AdminIcon.Svg("arrow-right")</span> tự tạo lại khi lưu. Giữ nguyên = không đổi.</span>
+            </div>
+            <p class="mt-1 text-xs text-slate-500">Không cần compile thủ công — hệ thống tự sinh file .mind từ ảnh target.</p>
+        </div>
+
+        <div class="col-span-2">
+            <label class="admin-label mb-2 block">Video</label>
+            <partial name="~/Areas/Admin/Shared/_MediaPicker.cshtml"
+                     model='new MediaPickerOptions { For = "Input.VideoUrl", Value = Model.Input.VideoUrl, Accept = "video/mp4,video/*", Label = "" }' />
+            <p class="mt-1 text-xs text-slate-500">Để trống = giữ video hiện tại. MP4 H.264, khuyến nghị 720p.</p>
+        </div>
+
+        <input asp-for="Input.VideoWidth" type="hidden" value="1" />
+
+        <div class="col-span-2">
+            <label class="admin-label">Tỉ lệ khung hình video</label>
+            <select asp-for="Input.VideoHeight" class="admin-select">
+                <option value="0.5625">16:9 — Ngang (phổ biến nhất)</option>
+                <option value="0.75">4:3 — Ngang cổ điển</option>
+                <option value="1">1:1 — Vuông</option>
+                <option value="1.3333">3:4 — Dọc</option>
+                <option value="1.7778">9:16 — Dọc (story / reels)</option>
+            </select>
+            <p class="mt-1 text-xs text-slate-500">Chọn theo tỉ lệ video thật để hình không bị méo khi chiếu lên ảnh target.</p>
+        </div>
+
+        <div>
+            <label class="admin-label">Bài viết fallback</label>
+            <select asp-for="Input.FallbackPostId" asp-items="Model.Posts" class="admin-select">
+                <option value="">-- Không chọn --</option>
+            </select>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <input asp-for="Input.IsPublished" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+            <label asp-for="Input.IsPublished" class="text-sm font-medium text-slate-700">Xuất bản</label>
+        </div>
+    </div>
+
+    <div class="flex gap-3">
+        <button type="submit" class="admin-btn-primary">Lưu thay đổi</button>
+        <a asp-page="/ArExperiences/Details" asp-route-id="@Model.Id" class="admin-btn-secondary">Xem chi tiết</a>
+        <a asp-page="/ArExperiences/Index" class="admin-btn-secondary">Huỷ</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/ar-compile.js?v=20260808-library-selection" defer></script>
+}

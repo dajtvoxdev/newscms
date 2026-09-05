@@ -1,0 +1,61 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.Sites.IndexModel
+@{
+    ViewData["Title"] = "Sites";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Quản lý nền tảng</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Sites</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/Sites/Create" class="admin-btn-primary">Tạo site mới</a>
+</div>
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full min-w-[900px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Site</th>
+                <th class="px-5 py-4">Domain</th>
+                <th class="px-5 py-4">Modules</th>
+                <th class="px-5 py-4">Admins</th>
+                <th class="px-5 py-4">Trạng thái</th>
+                <th class="px-5 py-4"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Sites.Count == 0)
+            {
+                <tr><td colspan="6" class="px-5 py-10 text-center text-slate-500">Chưa có site.</td></tr>
+            }
+            @foreach (var site in Model.Sites)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4">
+                        <div class="font-bold text-slate-950">@site.Name</div>
+                        <div class="text-xs text-slate-500">@site.Slug</div>
+                    </td>
+                    <td class="px-5 py-4 text-slate-600">@(site.PrimaryDomain ?? "-")</td>
+                    <td class="px-5 py-4">
+                        <div class="flex flex-wrap gap-2">
+                            @foreach (var module in site.EnabledModules)
+                            {
+                                <span class="admin-badge bg-indigo-50 text-indigo-700">@module</span>
+                            }
+                        </div>
+                    </td>
+                    <td class="px-5 py-4 text-slate-600">@string.Join(", ", site.Admins)</td>
+                    <td class="px-5 py-4">
+                        <span class="admin-badge @(site.IsActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600")">
+                            @(site.IsActive ? "Đang bật" : "Đã tắt")
+                        </span>
+                    </td>
+                    <td class="px-5 py-4 text-right">
+                        <a asp-area="Admin" asp-page="/Sites/Edit" asp-route-id="@site.Id" class="admin-btn-secondary">Sửa</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

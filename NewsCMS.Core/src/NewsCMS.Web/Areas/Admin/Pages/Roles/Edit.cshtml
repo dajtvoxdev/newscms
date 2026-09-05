@@ -1,0 +1,51 @@
+@page "{id:guid}"
+@model EditModel
+@{ ViewData["Title"] = "Sửa vai trò"; }
+
+<div class="mb-6">
+    <p class="text-sm font-semibold text-indigo-600">Vai trò</p>
+    <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Sửa vai trò — @Model.Name</h2>
+</div>
+
+<form method="post" class="space-y-6">
+    @Html.AntiForgeryToken()
+
+    <div class="admin-card grid gap-5 p-6 md:grid-cols-2">
+        <div>
+            <label class="admin-label">Tên vai trò</label>
+            <input name="Name" value="@Model.Name" class="admin-input" @(Model.IsSystem ? "readonly" : "") />
+        </div>
+        <div>
+            <label class="admin-label">Mô tả</label>
+            <input name="Description" value="@Model.Description" class="admin-input" />
+        </div>
+    </div>
+
+    <div class="admin-card p-6">
+        <h3 class="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">Phân quyền</h3>
+        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            @foreach (var group in Model.PermGroups)
+            {
+                <div>
+                    <p class="mb-2 text-xs font-bold uppercase tracking-wide text-indigo-600">@group.Module</p>
+                    <div class="space-y-1.5">
+                        @foreach (var perm in group.Items)
+                        {
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" name="SelectedPermissions" value="@perm.Id"
+                                       @(Model.AssignedPermIds.Contains(perm.Id) ? "checked" : "")
+                                       class="h-4 w-4 rounded border-slate-300" />
+                                <span class="text-slate-700">@perm.DisplayName</span>
+                            </label>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="flex gap-3">
+        <button type="submit" class="admin-btn-primary">Lưu thay đổi</button>
+        <a asp-page="/Roles/Index" class="admin-btn-secondary">Huỷ</a>
+    </div>
+</form>

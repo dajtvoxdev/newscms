@@ -1,0 +1,50 @@
+@using NewsCMS.Application.Ar.Dtos
+@model ArExperienceDetailDto
+@{
+    Layout = "~/Areas/Theme/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = Model.Title;
+    ViewData["OgImage"] = Model.TargetImageUrl;
+    ViewData["Description"] = Model.Description;
+}
+
+<div class="ar-fallback-page">
+    <div class="ar-fallback-header">
+        <h1>@Model.Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <p>@Model.Description</p>
+        }
+        <a href="/ar/@Model.Slug" class="ar-try-ar-btn">
+            <svg class="ar-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" />
+            </svg>
+            <span>Thử AR thực tế</span>
+        </a>
+    </div>
+
+    <div class="ar-fallback-video-wrap">
+        <video
+            src="@Model.VideoUrl"
+            controls
+            autoplay
+            muted
+            playsinline
+            loop
+            class="ar-fallback-video"
+            crossorigin="anonymous">
+            Trình duyệt không hỗ trợ video.
+        </video>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.FallbackPostContent))
+    {
+        <div class="ar-fallback-content">
+            <h2>@Model.FallbackPostTitle</h2>
+            <div class="ar-post-body">@Html.Raw(Model.FallbackPostContent)</div>
+        </div>
+    }
+</div>
+
+@section Head {
+    <link rel="stylesheet" href="~/_content/NewsCMS.Theme.HaiLuuNguoc/css/ar.css?v=20260618-brand-bg-refresh" />
+}

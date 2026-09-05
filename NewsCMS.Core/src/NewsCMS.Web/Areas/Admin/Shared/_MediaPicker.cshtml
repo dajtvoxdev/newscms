@@ -1,0 +1,169 @@
+@using NewsCMS.Web.Areas.Admin.Shared
+@model MediaPickerOptions
+@{
+    var pickerId = "mp-" + Guid.NewGuid().ToString("N");
+    var fileInputId = pickerId + "-file";
+    var hiddenId = pickerId + "-hidden";
+    var previewId = pickerId + "-preview";
+    var chipId = pickerId + "-chip";
+    var clearId = pickerId + "-clear";
+    var isImage = Model.Accept.StartsWith("image");
+    var hasValue = !string.IsNullOrEmpty(Model.Value);
+    string FileName(string? url) => string.IsNullOrEmpty(url) ? "" : System.IO.Path.GetFileName(url);
+}
+
+<div class="media-picker" data-picker-id="@pickerId">
+    @if (!string.IsNullOrEmpty(Model.Label))
+    {
+        <span class="admin-label block mb-2">@Model.Label</span>
+    }
+
+    @if (isImage)
+    {
+        <div class="mb-3">
+            <img id="@previewId"
+                 src="@(hasValue ? Model.Value : "")"
+                 class="w-full rounded-2xl border border-slate-200 object-cover @(hasValue ? "" : "hidden")"
+                 style="max-height:180px" alt="Preview" />
+            <div id="@previewId-placeholder"
+                 class="flex h-24 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 @(hasValue ? "hidden" : "")">
+                Chưa chọn ảnh
+            </div>
+        </div>
+    }
+    else
+    {
+        <div id="@chipId" class="mb-3 @(hasValue ? "" : "hidden")">
+            <div class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                <span class="text-slate-500">@AdminIcon.Svg("paperclip")</span>
+                <span id="@chipId-name" class="max-w-xs truncate font-medium text-slate-700">@FileName(Model.Value)</span>
+            </div>
+        </div>
+        <div id="@chipId-empty" class="mb-3 flex h-16 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 text-sm text-slate-400 @(hasValue ? "hidden" : "")">
+            Chưa có file
+        </div>
+    }
+
+    <input type="hidden" name="@Model.For" id="@hiddenId" value="@Model.Value" />
+    <input type="file" id="@fileInputId" accept="@Model.Accept" class="hidden" />
+
+    <div class="flex gap-1">
+        <label for="@fileInputId" class="admin-btn-secondary flex-1 cursor-pointer text-center" style="font-size:11px;padding:6px 6px;white-space:nowrap">Tải lên</label>
+        <button type="button" class="admin-btn-secondary flex-1" style="font-size:11px;padding:6px 6px;white-space:nowrap"
+                onclick="window.mediaLibraryModal?.open('@hiddenId', '@(isImage ? previewId : "")', '@(isImage ? previewId + "-placeholder" : "")', '@(isImage ? "" : chipId)')">
+            Thư viện
+        </button>
+        <button type="button" id="@clearId" class="admin-btn-secondary inline-flex items-center justify-center text-red-500" style="font-size:11px;padding:6px 8px;white-space:nowrap" title="Xoá">@AdminIcon.Svg("x")</button>
+    </div>
+</div>
+
+<script>
+(function () {
+    const fileInput = document.getElementById('@fileInputId');
+    const hidden = document.getElementById('@hiddenId');
+    const picker = hidden.closest('.media-picker');
+    const form = hidden.closest('form');
+    let uploadVersion = 0;
+    let uploadPending = false;
+
+    function setFormUploadPending(isPending) {
+        if (!form || uploadPending === isPending) return;
+        uploadPending = isPending;
+        const current = parseInt(form.dataset.mediaUploadsPending || '0', 10) || 0;
+        const next = Math.max(0, current + (isPending ? 1 : -1));
+        form.dataset.mediaUploadsPending = String(next);
+        form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (button) {
+            button.disabled = next > 0;
+            button.setAttribute('aria-busy', next > 0 ? 'true' : 'false');
+        });
+    }
+
+    if (form && !form.dataset.mediaUploadGuardBound) {
+        form.dataset.mediaUploadGuardBound = 'true';
+        form.addEventListener('submit', function (event) {
+            if ((parseInt(form.dataset.mediaUploadsPending || '0', 10) || 0) > 0) {
+                event.preventDefault();
+            }
+        });
+    }
+    @if (isImage)
+    {
+        <text>
+    const preview = document.getElementById('@previewId');
+    const placeholder = document.getElementById('@(previewId + "-placeholder")');
+    function setPreview(url) {
+        if (url) {
+            preview.src = url; preview.classList.remove('hidden');
+            if (placeholder) placeholder.classList.add('hidden');
+        } else {
+            preview.src = ''; preview.classList.add('hidden');
+            if (placeholder) placeholder.classList.remove('hidden');
+        }
+    }
+        </text>
+    }
+    else
+    {
+        <text>
+    const chip = document.getElementById('@chipId');
+    const chipName = document.getElementById('@(chipId + "-name")');
+    const chipEmpty = document.getElementById('@(chipId + "-empty")');
+    function setChip(url, name) {
+        if (url) {
+            chipName.textContent = name || url.split('/').pop();
+            chip.classList.remove('hidden');
+            if (chipEmpty) chipEmpty.classList.add('hidden');
+        } else {
+            chip.classList.add('hidden');
+            if (chipEmpty) chipEmpty.classList.remove('hidden');
+        }
+    }
+        </text>
+    }
+
+    fileInput.addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (!window.uploadManager || typeof window.uploadManager.enqueue !== 'function') {
+            fileInput.value = '';
+            return;
+        }
+        const version = ++uploadVersion;
+        const previousValue = hidden.value;
+        hidden.value = '';
+        if (picker) picker.dataset.uploading = 'true';
+        setFormUploadPending(true);
+        @if (!isImage) { <text>setChip('pending', 'Đang tải ' + file.name + '…');</text> }
+        window.uploadManager.enqueue(file, {
+            folderId: '@Model.FolderId',
+            onDone: function (result) {
+                if (version !== uploadVersion) return;
+                if (result?.location) {
+                    hidden.value = result.location;
+                    @if (isImage) { <text>setPreview(result.location);</text> }
+                    @if (!isImage) { <text>setChip(result.location, result.fileName);</text> }
+                }
+                if (picker) picker.dataset.uploading = 'false';
+                setFormUploadPending(false);
+            },
+            onError: function () {
+                if (version !== uploadVersion) return;
+                hidden.value = previousValue;
+                @if (isImage) { <text>setPreview(previousValue);</text> }
+                @if (!isImage) { <text>setChip(previousValue, previousValue ? previousValue.split('/').pop() : '');</text> }
+                if (picker) picker.dataset.uploading = 'false';
+                setFormUploadPending(false);
+            }
+        });
+    });
+
+    document.getElementById('@clearId').addEventListener('click', function () {
+        uploadVersion++;
+        if (picker) picker.dataset.uploading = 'false';
+        setFormUploadPending(false);
+        hidden.value = ''; fileInput.value = '';
+        @if (isImage) { <text>setPreview('');</text> }
+        @if (!isImage) { <text>setChip('', '');</text> }
+    });
+})();
+</script>

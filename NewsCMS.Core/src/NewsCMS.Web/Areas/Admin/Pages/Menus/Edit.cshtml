@@ -1,0 +1,97 @@
+@page "{id:guid}"
+@model EditModel
+@{ ViewData["Title"] = "Sửa menu"; }
+
+<div class="mb-6">
+    <p class="text-sm font-semibold text-indigo-600">Menu</p>
+    <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">
+        @Model.MenuName <span class="text-slate-400 font-normal text-base">(@Model.MenuLocation)</span>
+    </h2>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="hidden">@ok</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="hidden">@err</div>
+}
+
+<div class="admin-card overflow-hidden mb-6">
+    <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Tiêu đề</th>
+                <th class="px-5 py-4">URL</th>
+                <th class="px-5 py-4">Target</th>
+                <th class="px-5 py-4">Thứ tự</th>
+                <th class="px-5 py-4"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (!Model.Items.Any())
+            {
+                <tr><td colspan="5" class="px-5 py-8 text-center text-slate-500">Chưa có mục nào.</td></tr>
+            }
+            @foreach (var item in Model.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-3">@(item.ParentId.HasValue ? Html.Raw("<span class=\"me-1 inline-block align-middle text-slate-400\">" + AdminIcon.Tag("corner-down-right") + "</span>") : "")@item.Title</td>
+                    <td class="px-5 py-3 font-mono text-xs text-slate-500">@item.Url</td>
+                    <td class="px-5 py-3 text-slate-600">@(item.Target ?? "_self")</td>
+                    <td class="px-5 py-3 text-slate-600">@item.Order</td>
+                    <td class="px-5 py-3 text-right">
+                        <form method="post" asp-page-handler="DeleteItem" asp-route-itemId="@item.Id">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="admin-btn-secondary text-red-600 text-xs">Xoá</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="admin-card p-6">
+    <h3 class="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">Thêm mục mới</h3>
+    <form method="post" asp-page-handler="AddItem" class="grid gap-4 md:grid-cols-3">
+        @Html.AntiForgeryToken()
+        <div>
+            <label class="admin-label">Tiêu đề *</label>
+            <input asp-for="NewItem.Title" class="admin-input" placeholder="Trang chủ" />
+        </div>
+        <div>
+            <label class="admin-label">URL *</label>
+            <input asp-for="NewItem.Url" class="admin-input" placeholder="/" />
+        </div>
+        <div>
+            <label class="admin-label">Target</label>
+            <select asp-for="NewItem.Target" class="admin-select">
+                <option value="_self">_self (cùng tab)</option>
+                <option value="_blank">_blank (tab mới)</option>
+            </select>
+        </div>
+        <div>
+            <label class="admin-label">Icon (tuỳ chọn)</label>
+            <input asp-for="NewItem.Icon" class="admin-input" placeholder="home, mail..." />
+        </div>
+        <div>
+            <label class="admin-label">Thứ tự</label>
+            <input asp-for="NewItem.Order" type="number" class="admin-input" />
+        </div>
+        <div>
+            <label class="admin-label">Mục cha</label>
+            <select asp-for="NewItem.ParentId" asp-items="Model.ParentOptions" class="admin-select">
+                <option value="">-- Mục gốc --</option>
+            </select>
+        </div>
+        <div class="md:col-span-3">
+            <button type="submit" class="admin-btn-primary">Thêm mục</button>
+        </div>
+    </form>
+</div>
+
+<div class="mt-4">
+    <a asp-page="/Menus/Index" class="admin-btn-secondary inline-flex items-center gap-1.5">@AdminIcon.Svg("arrow-left") Quay lại danh sách</a>
+</div>

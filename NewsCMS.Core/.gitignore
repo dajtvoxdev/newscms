@@ -1,0 +1,25 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+appsettings.*.local.json
+*.received.*
+
+## Logs
+logs/
+*.log
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Uploads (production data, not committed)
+src/NewsCMS.Web/wwwroot/uploads/*
+!src/NewsCMS.Web/wwwroot/uploads/.gitkeep
+
+## Node (for theme assets pipeline)
+node_modules/
+dist/

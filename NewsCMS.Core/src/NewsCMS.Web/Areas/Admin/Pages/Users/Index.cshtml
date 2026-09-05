@@ -1,0 +1,64 @@
+@page
+@model IndexModel
+@{ ViewData["Title"] = "Người dùng"; }
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Hệ thống</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Người dùng</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/Users/Create" class="admin-btn-primary">Thêm người dùng</a>
+</div>
+
+<form method="get" class="admin-card mb-6 grid gap-3 p-4 md:grid-cols-[1fr_180px_140px]">
+    <input class="admin-input" name="q" value="@Model.Keyword" placeholder="Tìm email hoặc tên..." />
+    <select class="admin-select" name="Active">
+        <option value="">-- Tất cả --</option>
+        <option value="true" selected="@(Model.Active == true)">Đang hoạt động</option>
+        <option value="false" selected="@(Model.Active == false)">Đã khoá</option>
+    </select>
+    <button class="admin-btn-secondary" type="submit">Lọc</button>
+</form>
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full min-w-[900px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Email</th>
+                <th class="px-5 py-4">Họ tên</th>
+                <th class="px-5 py-4">Vai trò</th>
+                <th class="px-5 py-4">Trạng thái</th>
+                <th class="px-5 py-4">Đăng nhập cuối</th>
+                <th class="px-5 py-4"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (!Model.Items.Any())
+            {
+                <tr><td colspan="6" class="px-5 py-10 text-center text-slate-500">Không có người dùng.</td></tr>
+            }
+            @foreach (var u in Model.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4 font-semibold text-slate-950">@u.Email</td>
+                    <td class="px-5 py-4 text-slate-600">@(u.FullName ?? "—")</td>
+                    <td class="px-5 py-4 text-slate-600">@(string.IsNullOrEmpty(u.Roles) ? "—" : u.Roles)</td>
+                    <td class="px-5 py-4">
+                        <form method="post" asp-page-handler="ToggleActive" asp-route-id="@u.Id">
+                            @Html.AntiForgeryToken()
+                            <button type="submit"
+                                    class="admin-badge @(u.IsActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700")"
+                                    data-confirm-button="@(u.IsActive ? $"Khoá tài khoản {u.Email}?" : $"Mở khoá tài khoản {u.Email}?")">
+                                @(u.IsActive ? "Hoạt động" : "Đã khoá")
+                            </button>
+                        </form>
+                    </td>
+                    <td class="px-5 py-4 text-slate-600">@(u.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa đăng nhập")</td>
+                    <td class="px-5 py-4 text-right">
+                        <a asp-area="Admin" asp-page="/Users/Edit" asp-route-id="@u.Id" class="admin-btn-secondary">Sửa</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

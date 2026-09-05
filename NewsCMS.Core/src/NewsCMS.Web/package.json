@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "css:admin": "tailwindcss -i ./Styles/admin.css -o ./wwwroot/css/admin.css --minify",
+    "css:admin:watch": "tailwindcss -i ./Styles/admin.css -o ./wwwroot/css/admin.css --watch",
+    "css:site": "tailwindcss -i ./Styles/site-utilities.css -o ./wwwroot/css/site-utilities.css --minify",
+    "css:site:watch": "tailwindcss -i ./Styles/site-utilities.css -o ./wwwroot/css/site-utilities.css --watch",
+    "vendor:builder": "node ./scripts/vendor-builder.mjs"
+  },
+  "devDependencies": {
+    "@tailwindcss/browser": "4.3.3",
+    "@tailwindcss/cli": "^4.1.0",
+    "codemirror": "^5.65.18",
+    "grapesjs": "0.23.5",
+    "tailwindcss": "^4.1.0"
+  }
+}

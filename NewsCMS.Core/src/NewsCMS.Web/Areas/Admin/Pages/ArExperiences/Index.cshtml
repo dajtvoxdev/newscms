@@ -1,0 +1,84 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Trải nghiệm AR";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Trải nghiệm</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Trải nghiệm AR</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/ArExperiences/Create" class="admin-btn-primary">Thêm trải nghiệm</a>
+</div>
+
+@if (TempData["Success"] is string msg)
+{
+    <div class="hidden">@msg</div>
+}
+
+<form method="get" class="admin-card mb-6 grid gap-3 p-4 md:grid-cols-[1fr_140px]">
+    <input class="admin-input" name="q" value="@Model.Keyword" placeholder="Tìm theo tiêu đề hoặc slug..." />
+    <button class="admin-btn-secondary" type="submit">Lọc</button>
+</form>
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full min-w-[900px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Tiêu đề</th>
+                <th class="px-5 py-4">Slug</th>
+                <th class="px-5 py-4">Lượt xem</th>
+                <th class="px-5 py-4">Trạng thái</th>
+                <th class="px-5 py-4">Ngày tạo</th>
+                <th class="px-5 py-4"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Items.Items.Count == 0)
+            {
+                <tr><td colspan="6" class="px-5 py-10 text-center text-slate-500">Chưa có trải nghiệm AR nào.</td></tr>
+            }
+            @foreach (var item in Model.Items.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4">
+                        <a asp-area="Admin" asp-page="/ArExperiences/Edit" asp-route-id="@item.Id"
+                           class="font-bold text-slate-950 hover:text-indigo-600">@item.Title</a>
+                    </td>
+                    <td class="px-5 py-4 font-mono text-xs text-slate-500">@item.Slug</td>
+                    <td class="px-5 py-4 text-slate-600">@item.ViewCount</td>
+                    <td class="px-5 py-4">
+                        <form method="post" asp-page-handler="TogglePublish" asp-route-id="@item.Id"
+                              asp-route-q="@Model.Keyword" asp-route-p="@Model.CurrentPage">
+                            @Html.AntiForgeryToken()
+                            <button type="submit"
+                                    class="admin-badge @(item.IsPublished ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")"
+                                    data-confirm-button="@(item.IsPublished ? $"Chuyển \"{item.Title}\" về bản nháp?" : $"Xuất bản trải nghiệm \"{item.Title}\"?")">
+                                @(item.IsPublished ? "Đã xuất bản" : "Bản nháp")
+                            </button>
+                        </form>
+                    </td>
+                    <td class="px-5 py-4 text-slate-600">@item.CreatedAt.ToString("dd/MM/yyyy")</td>
+                    <td class="px-5 py-4 text-right flex gap-2 justify-end">
+                        <a asp-area="Admin" asp-page="/ArExperiences/Details" asp-route-id="@item.Id"
+                           class="admin-btn-secondary">Xem</a>
+                        <a asp-area="Admin" asp-page="/ArExperiences/Edit" asp-route-id="@item.Id"
+                           class="admin-btn-secondary">Sửa</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Items.TotalPages > 1)
+{
+    <div class="mt-4 flex gap-2">
+        @for (int i = 1; i <= Model.Items.TotalPages; i++)
+        {
+            <a asp-page="/ArExperiences/Index" asp-route-q="@Model.Keyword" asp-route-p="@i"
+               class="admin-btn-secondary @(i == Model.CurrentPage ? "font-bold" : "")">@i</a>
+        }
+    </div>
+}

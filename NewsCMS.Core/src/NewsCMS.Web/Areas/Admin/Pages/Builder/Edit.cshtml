@@ -1,0 +1,896 @@
+@page "{id:guid}"
+@model NewsCMS.Web.Areas.Admin.Pages.Builder.EditModel
+@{
+    Layout = null; // Full-screen builder — không dùng _AdminLayout
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Builder · @Model.PageTitle</title>
+
+    <link rel="stylesheet" href="~/lib/grapesjs/grapes.min.css" asp-append-version="true" />
+    <!-- Code editor cho custom CSS/JS của trang -->
+    <link rel="stylesheet" href="~/lib/codemirror/codemirror.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/codemirror/theme/material-darker.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nc-builder.css" asp-append-version="true" />
+    <style>
+        html, body { margin: 0; height: 100%; overflow: hidden; }
+
+        /* ── Topbar ─────────────────────────────────────────────────────── */
+        .nc-topbar {
+            height: 48px; display: flex; align-items: center; gap: 12px;
+            padding: 0 16px; background: #0f172a; color: #e2e8f0;
+            font-family: system-ui, sans-serif; font-size: 13px;
+            border-bottom: 1px solid #1e293b; z-index: 10;
+        }
+        .nc-topbar a { color: #93c5fd; text-decoration: none; font-weight: 600; }
+        .nc-topbar a:hover { text-decoration: underline; }
+        .nc-topbar .nc-title { font-weight: 700; color: #fff; max-width: 280px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .nc-topbar .nc-badge { background: #1e293b; color: #cbd5e1; padding: 2px 10px;
+            border-radius: 999px; font-size: 11px; }
+        .nc-topbar .nc-spacer { flex: 1; }
+        .nc-topbar .nc-actions { display: flex; gap: 8px; align-items: center; }
+        .nc-btn {
+            padding: 6px 14px; border-radius: 8px; border: 1px solid #334155;
+            background: #1e293b; color: #e2e8f0; cursor: pointer; font-size: 12px;
+            font-weight: 600; transition: all .15s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .nc-btn:hover { background: #334155; }
+        .nc-btn-primary { background: #0d7c66; border-color: #0d7c66; color: #fff; }
+        .nc-btn-primary:hover { background: #0a6352; }
+        .nc-status { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+        .nc-status .dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; }
+        .nc-status.saving .dot { background: #fbbf24; }
+        .nc-status.saved .dot { background: #34d399; }
+        .nc-status.error .dot { background: #f87171; }
+
+        /* ── Device switcher ────────────────────────────────────────────── */
+        .nc-devices { display: flex; gap: 4px; }
+        .nc-device {
+            padding: 4px 10px; border-radius: 6px; border: 1px solid #334155;
+            background: transparent; color: #94a3b8; cursor: pointer; font-size: 11px;
+        }
+        .nc-device.active { background: #334155; color: #fff; }
+
+        /* ── GrapesJS canvas ────────────────────────────────────────────── */
+        #gjs { height: calc(100vh - 48px); }
+
+        /* Tinh chỉnh panel GrapesJS cho gọn hơn */
+        .gjs-pn-panels { font-size: 12px; }
+        .gjs-block { font-size: 11px !important; padding: 8px !important; }
+
+        /* Icon trong nút topbar */
+        .nc-btn .nc-icon { width: 15px; height: 15px; }
+
+        /* ── Thanh công cụ thư viện ảnh (Asset Manager) ──────────────────── */
+        .nc-am-bar { display: flex; gap: 8px; align-items: center; padding: 0 0 10px; }
+        .nc-am-bar input {
+            flex: 1; min-width: 0; padding: 6px 10px; border-radius: 6px; font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, .15); background: rgba(0, 0, 0, .2); color: #ddd;
+        }
+        .nc-am-bar input::placeholder { color: #8c8c8c; }
+        .nc-am-bar button {
+            padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, .15); background: rgba(255, 255, 255, .08); color: #ddd;
+        }
+        .nc-am-bar button:disabled { opacity: .45; cursor: default; }
+        .nc-am-bar .nc-am-info { font-size: 11px; color: #9a9a9a; white-space: nowrap; }
+    </style>
+</head>
+<body>
+    @Html.AntiForgeryToken()
+
+    <div class="nc-topbar">
+        <a href="/Admin/Builder">&larr; Trang</a>
+        <span class="nc-title">@Model.PageTitle</span>
+        <span class="nc-badge">v@(Model.Version)</span>
+        <span class="nc-badge">@Model.StatusLabel</span>
+
+        <div class="nc-devices">
+            <button class="nc-device active" data-device="Desktop" title="1440px">@AdminIcon.Svg("monitor")</button>
+            <button class="nc-device" data-device="Tablet" title="768px">@AdminIcon.Svg("tablet")</button>
+            <button class="nc-device" data-device="Mobile" title="375px">@AdminIcon.Svg("smartphone")</button>
+        </div>
+
+        @if (Model.IsTemplate)
+        {
+            <div style="display:inline-flex;align-items:center;gap:6px;margin-left:12px;padding:4px 8px;border-radius:8px;background:#1e293b;border:1px solid #334155" title="Chọn dữ liệu mẫu để xem trước các khối động trên canvas">
+                <span style="font-size:11px;color:#94a3b8;white-space:nowrap">Xem trước:</span>
+                <select class="nc-shell-select" id="nc-sample-picker" style="max-width:200px;font-size:11px;padding:2px 6px">
+                    <option value="">— Placeholder mẫu —</option>
+                </select>
+            </div>
+        }
+
+        <div class="nc-spacer"></div>
+
+        <div class="nc-status" id="nc-status">
+            <span class="dot"></span><span id="nc-status-text">Sẵn sàng</span>
+        </div>
+
+        <div class="nc-actions">
+            <select class="nc-shell-select" id="nc-shell-select" title="Shell (header/footer) bọc quanh trang">
+                <option value="">— Shell mặc định của site —</option>
+            </select>
+            <button class="nc-btn" id="btn-shell-preview" title="Xem trang trong shell (chỉ xem, không sửa)">@AdminIcon.Svg("layout-template") Xem shell</button>
+            @if (Model.HasLayoutScope)
+            {
+                <a class="nc-btn" id="btn-shell-edit" href="/admin/Builder/Layouts" target="_blank" rel="noopener"
+                   title="Mở trình thiết kế shell — sửa header/footer cho MỌI trang dùng shell này">@AdminIcon.Svg("pencil") Sửa shell</a>
+            }
+            @if (Model.HasSeoScope)
+            {
+                <button class="nc-btn" id="btn-seo" title="SEO: tiêu đề, mô tả, ảnh chia sẻ">@AdminIcon.Svg("file-text") SEO</button>
+            }
+            @if (Model.HasRestoreScope)
+            {
+                <button class="nc-btn" id="btn-history" title="Lịch sử phiên bản + khôi phục">@AdminIcon.Svg("rotate-cw") Lịch sử</button>
+            }
+            <button class="nc-btn" id="btn-code" title="CSS/JS riêng của trang + thư viện snippet">@AdminIcon.Svg("code") Code</button>
+            <button class="nc-btn" id="btn-save">@AdminIcon.Svg("save") Lưu nháp</button>
+            <button class="nc-btn nc-btn-primary" id="btn-publish">@AdminIcon.Svg("rocket") Xuất bản</button>
+        </div>
+    </div>
+
+    <div id="gjs"></div>
+
+    <script src="~/lib/grapesjs/grapes.min.js" asp-append-version="true"></script>
+    <!-- Cầu nối Tailwind: bơm runtime vào iframe canvas + trả CSS đã build để lưu server. -->
+    <script src="~/lib/grapesjs/nc-tailwind.js" asp-append-version="true"></script>
+    <!-- CodeMirror cho modal custom code -->
+    <script src="~/lib/codemirror/codemirror.min.js" asp-append-version="true"></script>
+    <script src="~/lib/codemirror/mode/css/css.min.js" asp-append-version="true"></script>
+    <script src="~/lib/codemirror/mode/xml/xml.min.js" asp-append-version="true"></script>
+    <script src="~/lib/codemirror/mode/javascript/javascript.min.js" asp-append-version="true"></script>
+    <script src="~/lib/codemirror/mode/htmlmixed/htmlmixed.min.js" asp-append-version="true"></script>
+    <script src="~/lib/codemirror/addon/edit/matchbrackets.min.js" asp-append-version="true"></script>
+    <script src="~/lib/codemirror/addon/edit/closebrackets.min.js" asp-append-version="true"></script>
+    <script src="~/lib/codemirror/addon/display/autorefresh.min.js" asp-append-version="true"></script>
+    <!-- Phần mở rộng builder: block dữ liệu động + style variant + custom code + library -->
+    <script src="~/js/admin/nc-realm-bridge.js" asp-append-version="true"></script>
+    <!-- Truy vết rule CSS nào đang áp lên phần tử đang chọn. Phải nạp TRƯỚC extensions. -->
+    <script src="~/js/admin/nc-css-inspector.js" asp-append-version="true"></script>
+    <script src="~/js/admin/nc-builder-extensions.js" asp-append-version="true"></script>
+    <!-- Hạ tầng canvas dùng chung với màn sửa shell: hydrate preview, font Google, Asset Manager. -->
+    <script src="~/js/admin/nc-builder-canvas.js" asp-append-version="true"></script>
+    <!-- Upload manager dùng chung với admin: file nhỏ đi XHR /Admin/Media/Upload, file lớn đi tus.
+         Asset Manager của builder gọi lại nó để mọi ảnh tải lên đều thành Media row. -->
+    <div id="upload-tracker"></div>
+    <script src="~/lib/tus/tus.min.js"></script>
+    <script src="~/js/admin/upload-manager.js" asp-append-version="true"></script>
+    <script>
+    (function () {
+        var PAGE_ID = '@Model.PageId';
+        var TOKEN_CSS_URL = '@Model.TokenCssUrl';
+        // CSS component tầng site (PageRenderer nhồi vào <head> trang public). Nạp vào canvas để
+        // preview khối động hiển thị đúng (icon .chu-cup 17px thay vì SVG phình 345px, swiper banner).
+        // JSON-encode để an toàn với dấu nháy/xuống dòng trong CSS.
+        var SITE_CUSTOM_CSS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SiteCustomCss));
+        // JS tầng site (init swiper/masonry/nav) + HeadHtml (vendor <script src>, <link> CSS, font) —
+        // PageRenderer đưa vào trang public. Chạy trong canvas để khối động dùng mẫu "ẩn tới khi JS bật"
+        // (masonry .chu-pin-grid, flipbook) hiển thị đúng, tổng quát cho mọi theme, không hardcode class.
+        var SITE_CUSTOM_JS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SiteCustomJs));
+        var SITE_HEAD_HTML = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SiteHeadHtml));
+        var HAS_CODE_SCOPE = @((Model.HasCodeScope).ToString().ToLowerInvariant());
+        // Font Google (đã lọc: chỉ font CÓ bộ ký tự tiếng Việt). Cùng nguồn với PageRenderer nên
+        // font chọn được ở đây chắc chắn được trang public nạp.
+        var GOOGLE_FONTS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.GoogleFonts.Select(f => new { name = f.Name, category = f.Category, weights = f.Weights })));
+
+        var HAS_SEO_SCOPE = @((Model.HasSeoScope).ToString().ToLowerInvariant());
+        var HAS_RESTORE_SCOPE = @((Model.HasRestoreScope).ToString().ToLowerInvariant());
+        /** Shell bọc trang khi render; Guid rỗng = shell mặc định của site. Dropdown topbar đổi giá trị này. */
+        var LAYOUT_ID = '@Model.LayoutId';
+        var TOKEN = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        var API_BASE = '/admin/api/builder/pages/' + PAGE_ID;
+
+        var statusEl = document.getElementById('nc-status');
+        var statusText = document.getElementById('nc-status-text');
+
+        function setStatus(state, text) {
+            statusEl.className = 'nc-status ' + state;
+            statusText.textContent = text;
+        }
+
+        function apiHeaders(json) {
+            var h = { 'RequestVerificationToken': TOKEN };
+            if (json) h['Content-Type'] = 'application/json';
+            return h;
+        }
+
+        // ── Load project từ server ────────────────────────────────────────
+        /**
+         * true nếu trang đã có nội dung lúc mở. Dùng làm lưới an toàn: nếu canvas rỗng mà
+         * cờ này bật thì việc lưu bị chặn — trước đây một lần load lỗi + bấm Lưu là mất trang.
+         */
+        var hadContentOnLoad = false;
+
+        /** Mốc ncTailwind chèn giữa utility đã build và CSS của Style Manager. */
+        var SM_MARKER = '/* Style Manager */';
+
+        /**
+         * Bóc riêng phần CSS do Style Manager sinh ra khỏi compiledCss.
+         * Nạp lại toàn bộ compiledCss sẽ đổ hàng nghìn rule utility Tailwind vào CssComposer,
+         * rồi lần lưu sau ghi tất cả trở lại — CSS phình lên mỗi lần mở trang.
+         */
+        function manualCssPart(css) {
+            if (!css) return '';
+            var i = css.indexOf(SM_MARKER);
+            if (i >= 0) return css.slice(i + SM_MARKER.length).trim();
+            // Không có mốc: hoặc là bundle utility thuần (trang tạo qua MCP), hoặc là CSS thủ công
+            // lưu lúc Tailwind runtime lỗi. Nhận diện bằng dấu vết preflight của Tailwind.
+            if (/tailwindcss|@@layer\s+(properties|theme|base)|\*,\s*::?before/i.test(css)) return '';
+            return css.trim();
+        }
+
+        /** HTML coi như rỗng: không chữ, không media, không block động. */
+        function isEmptyHtml(html) {
+            if (!html || !html.trim()) return true;
+            if (/data-nc-block/i.test(html)) return false;
+            if (/<(img|svg|iframe|video|audio|canvas|input|hr|picture|source)\b/i.test(html)) return false;
+            var tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            return !(tmp.textContent || '').trim();
+        }
+
+        async function loadProject() {
+            try {
+                var res = await fetch(API_BASE, { headers: apiHeaders(false), credentials: 'include' });
+                if (!res.ok) return null;
+                var data = await res.json();
+                if (window.ncBuilder) ncBuilder.setCode(data.customCss || '', data.customJs || '');
+                hadContentOnLoad = !isEmptyHtml(data.compiledHtml);
+                return data;
+            } catch(e) {
+                console.error('Load failed:', e);
+                return null;
+            }
+        }
+
+        /**
+         * Nạp canvas. Ưu tiên BuilderJson (giữ nguyên cây component GrapesJS); nếu thiếu —
+         * trang tạo qua MCP/API không hề có project data — parse từ CompiledHtml, vốn là
+         * NGUỒN SỰ THẬT của trang. Trả về true nếu canvas có nội dung.
+         */
+        function loadCanvas(data) {
+            if (!data) return false;
+
+            var project = null;
+            if (data.builderJson) {
+                try { project = JSON.parse(data.builderJson); } catch(e) { project = null; }
+            }
+            if (project && project.pages && project.pages.length > 0) {
+                editor.loadProjectData(project);
+                return true;
+            }
+
+            if (isEmptyHtml(data.compiledHtml)) return false;
+
+            editor.setComponents(data.compiledHtml);
+            var manual = manualCssPart(data.compiledCss);
+            if (manual) editor.setStyle(manual);
+            return true;
+        }
+
+        // ── Save project xuống server (draft) ─────────────────────────────
+        var dirty = false;
+        function markDirty() {
+            dirty = true;
+            setStatus('saving', 'Có thay đổi chưa lưu');
+        }
+
+        async function saveProject(projectData) {
+            var html = editor.getHtml();
+
+            // Lưới an toàn: canvas rỗng nhưng trang vốn có nội dung → gần như chắc chắn là load
+            // lỗi, không phải người dùng muốn xoá trắng. Server cũng chặn, đây là chặn sớm để
+            // báo rõ nguyên nhân.
+            if (hadContentOnLoad && isEmptyHtml(html)) {
+                setStatus('error', 'Canvas đang rỗng — không lưu để tránh xoá trắng trang. Hãy tải lại builder.');
+                return false;
+            }
+
+            setStatus('saving', 'Đang lưu…');
+            try {
+                // CSS gửi lên gồm utility Tailwind đã build + CSS của Style Manager. Nhờ vậy
+                // trang phục vụ khách không phải compile ở runtime, và CssDirty được gỡ.
+                var css = window.ncTailwind
+                    ? await window.ncTailwind.getCompiledCss(editor)
+                    : editor.getCss();
+
+                // CSS định nghĩa variant ncv-* KHÔNG gửi kèm nữa: PageRenderer tự nạp
+                // /css/nc-builder.css bằng link tĩnh khi HTML trang có class ncv-*.
+                var code = window.ncBuilder ? ncBuilder.getCode() : { customCss: '', customJs: '' };
+                var customCss = (code.customCss && code.customCss.trim()) ? code.customCss : null;
+
+                var payload = {
+                    // Title/slug/kind nhúng qua JSON an toàn (Json.Serialize) — nếu nội suy trực tiếp
+                    // bằng @Model.PageTitle, Razor encode dấu tiếng Việt thành &#x1EE7; rồi chuỗi
+                    // bị escape đó được LƯU XUỐNG DB, mỗi lần save lại cộng thêm một lớp &amp;amp;.
+                    title: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PageTitle)),
+                    slug: '@Model.Slug',
+                    builderJson: JSON.stringify(projectData),
+                    compiledHtml: html,
+                    compiledCss: css,
+                    customCss: customCss,
+                    customJs: code.customJs || null,
+                    kind: '@Model.Kind',
+                    layoutId: LAYOUT_ID
+                };
+                var res = await fetch(API_BASE, {
+                    method: 'PUT',
+                    headers: apiHeaders(true),
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    var err = await res.json().catch(function(){return {error:'Lỗi không xác định'}});
+                    setStatus('error', err.error || 'Lưu thất bại');
+                    return false;
+                }
+                dirty = false;
+                setStatus('saved', 'Đã lưu ' + new Date().toLocaleTimeString());
+                return true;
+            } catch(e) {
+                setStatus('error', 'Lỗi mạng');
+                return false;
+            }
+        }
+
+        // ── Publish ───────────────────────────────────────────────────────
+        async function publishPage() {
+            setStatus('saving', 'Đang xuất bản…');
+            try {
+                // Save first, then publish
+                var projectData = editor.getProjectData();
+                var saved = await saveProject(projectData);
+                if (!saved) return;
+
+                var res = await fetch(API_BASE + '/publish', {
+                    method: 'POST',
+                    headers: apiHeaders(true),
+                    credentials: 'include',
+                    body: JSON.stringify({ note: '' })
+                });
+                if (!res.ok) {
+                    var err = await res.json().catch(function(){return {error:'Lỗi xuất bản'}});
+                    setStatus('error', err.error || 'Xuất bản thất bại');
+                    return;
+                }
+                setStatus('saved', 'Đã xuất bản!');
+            } catch(e) {
+                setStatus('error', 'Lỗi mạng');
+            }
+        }
+
+        // ── Init GrapesJS ─────────────────────────────────────────────────
+        var editor = grapesjs.init({
+            container: '#gjs',
+            height: 'calc(100vh - 48px)',
+            width: 'auto',
+            fromElement: false,
+            showOffsets: true,
+            noticeOnUnload: true,
+
+            // Storage: custom async load/store thay vì remote storage mặc định
+            storageManager: { type: 'local', autosave: false, autoload: false },
+
+            // Thư viện ảnh nối thẳng vào Media của NewsCMS: danh sách do ncCanvas.assets nạp
+            // từ /Admin/Media?handler=List, upload đi qua ncCanvas.uploadFile (nc-builder-canvas.js)
+            // nên file luôn được ghi thành Media row thay vì nhúng base64 vào trang.
+            assetManager: {
+                upload: '/admin/Media/Upload',
+                uploadName: 'file',
+                headers: { 'RequestVerificationToken': TOKEN },
+                multiUpload: true,
+                autoAdd: false,
+                embedAsBase64: false,
+                assets: [],
+                uploadFile: function (e, clb) { ncCanvas.uploadFile(e, clb, this); },
+                handleAdd: function (url) { ncCanvas.assets.prepend([ncCanvas.assets.fromUrl(url)]); }
+            },
+
+            deviceManager: {
+                devices: [
+                    { name: 'Desktop', width: '' },
+                    { name: 'Tablet', width: '768px', widthMedia: '768px' },
+                    { name: 'Mobile', width: '375px', widthMedia: '375px' }
+                ]
+            },
+
+            styleManager: {
+                sectors: [
+                    { name: 'Bố cục', open: true, properties: [
+                        'display', 'position',
+                        { property: 'top' }, { property: 'right' }, { property: 'bottom' }, { property: 'left' },
+                        'flex-direction', 'flex-wrap', 'justify-content', 'align-items', 'align-content', 'gap',
+                        'flex-grow', 'flex-shrink', 'flex-basis', 'order',
+                        'grid-template-columns', 'grid-template-rows', 'grid-gap',
+                        'overflow', 'z-index'
+                    ] },
+                    { name: 'Kích thước', properties: ['width','height','max-width','min-width','max-height','min-height'] },
+                    { name: 'Khoảng cách', properties: ['margin','padding'] },
+                    { name: 'Chữ', properties: [
+                        // font-family khai đầy đủ (không để mặc định của GrapesJS) để nhét thêm
+                        // font Google vào dropdown. Danh sách dựng ở ncCanvas.fontFamilyOptions().
+                        { property: 'font-family', name: 'Font family', type: 'select', default: '',
+                          options: ncCanvas.fontFamilyOptions(GOOGLE_FONTS) },
+                        'font-size','font-weight','color','text-align','text-transform','line-height','letter-spacing','text-decoration'] },
+                    { name: 'Trang trí', properties: ['background-color','background-image','background-size','background-position','background-repeat','border','border-width','border-radius','box-shadow','opacity'] },
+                    { name: 'Hiệu ứng', properties: ['transition','transform','cursor'] }
+                ]
+            },
+
+            // Cùng bộ CSS và cùng THỨ TỰ như PageRenderer.BuildHtml, nên canvas hiển thị giống
+            // trang public: utility precompile → token của site → định nghĩa variant ncv-*.
+            // Tailwind runtime trong iframe vẫn chạy song song để compile class vừa gõ.
+            canvas: { styles: ['/css/site-utilities.css', TOKEN_CSS_URL, '/css/nc-builder.css'] },
+
+            // componentFirst: style áp lên chính component đang chọn khi nó chưa có class —
+            // không tự sinh class rác, và không vô tình sửa mọi phần tử cùng class.
+            selectorManager: { componentFirst: true }
+        });
+
+        // ── Tailwind trong canvas ─────────────────────────────────────────
+        // Phải attach trước khi editor bắn 'load' để runtime kịp bơm vào iframe.
+        if (window.ncTailwind) {
+            window.ncTailwind.attach(editor, { tokenCssUrl: TOKEN_CSS_URL });
+        }
+
+        // ── Panel builder đầy đủ (Phase 2.5) ──────────────────────────────
+        // GrapesJS core đã dựng sẵn Layer Manager, Selector Manager và các nút chuyển view
+        // (blocks/layers/styles) ở panel phải. Ở đây bổ sung nhóm nút thao tác còn thiếu vào
+        // panel 'options' phía trên phải: undo / redo / xem code / khung viền / toàn màn hình.
+        // Dùng lệnh có sẵn của GrapesJS (core-undo, core-redo, export-template, sw-visibility,
+        // fullscreen) nên không cần tự viết logic.
+        (function addToolbarButtons() {
+            var opts = editor.Panels.getPanel('options');
+            if (!opts) return;
+            var btns = opts.get('buttons');
+            var have = {};
+            btns.forEach(function (b) { have[b.id] = true; });
+            // Dùng className FontAwesome giống hệt nút gốc GrapesJS (fa fa-*) để icon canh đúng
+            // cỡ và căn giữa như sw-visibility/export-template/fullscreen; tránh <span> ký tự Unicode
+            // to lệch. Các nút gốc đã có sẵn nên chỉ thực sự thêm undo/redo.
+            [
+                { id: 'sw-visibility', command: 'sw-visibility', className: 'fa fa-square-o', attributes: { title: 'Bật/tắt khung viền' }, context: 'sw-visibility' },
+                { id: 'core-undo', command: 'core:undo', className: 'fa fa-undo', attributes: { title: 'Hoàn tác (Ctrl+Z)' } },
+                { id: 'core-redo', command: 'core:redo', className: 'fa fa-repeat', attributes: { title: 'Làm lại (Ctrl+Shift+Z)' } },
+                { id: 'export-template', command: 'export-template', className: 'fa fa-code', attributes: { title: 'Xem mã HTML/CSS' }, context: 'export-template' },
+                { id: 'fullscreen', command: 'fullscreen', className: 'fa fa-arrows-alt', attributes: { title: 'Toàn màn hình' }, context: 'fullscreen' }
+            ].forEach(function (b) { if (!have[b.id]) btns.add(b); });
+        })();
+
+        // ── Catalog khối động ─────────────────────────────────────────────
+        // Một lượt gọi duy nhất: mỗi khối C# tự mô tả mình (label/icon/preset/props kèm options đã
+        // giải quyết sẵn). Trước đây phải gọi 3 endpoint pickers rồi khai báo lại toàn bộ palette
+        // trong nc-builder-extensions.js — thêm khối mà quên sửa file JS là khối biến mất khỏi
+        // builder mà không có lỗi nào báo.
+        async function loadBlockCatalog() {
+            try {
+                var res = await fetch('/admin/api/builder/blocks', { headers: apiHeaders(false), credentials: 'include' });
+                if (!res.ok) return null;
+                var data = await res.json();
+                return { blocks: data.blocks || [], sitePresets: data.sitePresets || [] };
+            } catch (e) {
+                return null; // null = gọi lỗi; [] = site thật sự không có khối động nào.
+            }
+        }
+
+        // ─️ Đăng ký extension TRƯỚC load project để type nhận diện data-nc-block
+        //    được áp dụng ngay lúc parse BuilderJson.
+        loadProject().then(function(data) {
+            return loadBlockCatalog().then(function(catalog) {
+                if (window.ncBuilder) {
+                    ncBuilder.register(editor, {
+                        token: TOKEN,
+                        blocks: catalog ? catalog.blocks : [],
+                        sitePresets: catalog ? catalog.sitePresets : [],
+                        siteCss: SITE_CUSTOM_CSS,
+                        hasCodeScope: HAS_CODE_SCOPE,
+                        // Kind quyết định palette lọc khối theo loại nội dung: template bài viết
+                        // không nên hiện "Giá sản phẩm" (khối sai loại chỉ im lặng trả rỗng).
+                        pageKind: '@Model.Kind',
+                        onChange: markDirty
+                    });
+                }
+
+                var loaded = loadCanvas(data);
+                // Catalog lỗi báo to hơn "đã nạp": palette khối dữ liệu trống mà không nói gì thì
+                // người dùng tưởng builder mất khối.
+                if (catalog === null) setStatus('error', 'Không tải được danh mục khối dữ liệu — hãy tải lại trang.');
+                else if (loaded) setStatus('saved', 'Đã nạp');
+                else if (hadContentOnLoad) setStatus('error', 'Không nạp được nội dung trang — đừng lưu, hãy tải lại.');
+                else setStatus('saved', 'Trang trống — kéo khối từ panel bên phải để bắt đầu');
+
+                // Ctrl+S → save draft
+                editor.Commands.add('nc-save', { run: function(ed) { saveProject(ed.getProjectData()); } });
+                editor.Keymaps.add('nc-save', 'ctrl+s', 'nc-save');
+
+                // Gắn SAU khi nạp để lần nạp đầu không bị đánh dấu "chưa lưu". GrapesJS còn phát
+                // change:changesCount trong vài tick sau load (parse xong component, gán type…),
+                // nên chờ hết microtask hiện tại rồi mới lắng nghe — không có bước này là trang
+                // vừa mở đã hiện "chưa lưu" dù người dùng chưa chạm gì.
+                setTimeout(function () {
+                    editor.on('change:changesCount', markDirty);
+                }, 0);
+            });
+        });
+
+        // ── Event handlers ────────────────────────────────────────────────
+        editor.on('storage:start:store', function() { setStatus('saving', 'Đang lưu…'); });
+        editor.on('storage:end:store', function(res) {
+            if (res && res.success !== false) setStatus('saved', 'Đã lưu ' + new Date().toLocaleTimeString());
+            else setStatus('error', 'Lưu thất bại');
+        });
+
+        // Buttons
+        document.getElementById('btn-save').addEventListener('click', function() {
+            saveProject(editor.getProjectData());
+        });
+        document.getElementById('btn-publish').addEventListener('click', publishPage);
+
+        // Nút "Code" do nc-builder-extensions.js tự gắn listener sau register().
+
+        // Device switcher
+        document.querySelectorAll('.nc-device').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.nc-device').forEach(function(b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                editor.setDevice(btn.getAttribute('data-device'));
+            });
+        });
+
+        window.ncEditor = editor;
+
+        // Hạ tầng canvas (hydrate preview + font Google + Asset Manager) nằm ở
+        // wwwroot/js/admin/nc-builder-canvas.js vì màn sửa shell cũng cần y hệt.
+        ncCanvas.attach(editor, {
+            token: TOKEN,
+            siteCss: SITE_CUSTOM_CSS,
+            siteHeadHtml: SITE_HEAD_HTML,
+            siteJs: SITE_CUSTOM_JS,
+            googleFonts: GOOGLE_FONTS
+        });
+
+        // ── Phase 3: Chọn thực thể mẫu xem trước cho template trang chi tiết ────
+        var samplePicker = document.getElementById('nc-sample-picker');
+        if (samplePicker) {
+            var sampleEndpoint = '@Model.SampleType' === 'product'
+                ? '/admin/api/builder/pickers/products'
+                : '/admin/api/builder/pickers/posts';
+
+            fetch(sampleEndpoint, { headers: apiHeaders(false), credentials: 'include' })
+                .then(function(res) { return res.ok ? res.json() : []; })
+                .then(function(items) {
+                    items.forEach(function(item) {
+                        var opt = document.createElement('option');
+                        opt.value = item.id;
+                        opt.textContent = item.name || item.title || item.slug;
+                        samplePicker.appendChild(opt);
+                    });
+                })
+                .catch(function() {});
+
+            samplePicker.addEventListener('change', function() {
+                var val = this.value;
+                if (window.ncBuilder && window.ncBuilder.setSampleEntity) {
+                    window.ncBuilder.setSampleEntity(editor, val, '@Model.SampleType');
+                }
+            });
+        }
+
+        // ══ Phase 4: Shell layout, SEO, Lịch sử phiên bản ═════════════════════════
+
+        // ── Dropdown chọn shell (header/footer) bọc trang ────────────────────────
+        var shellSelect = document.getElementById('nc-shell-select');
+        // Nút "Sửa shell" chỉ có với quyền Builder.Layout.Manage → null khi thiếu quyền.
+        var shellEditLink = document.getElementById('btn-shell-edit');
+        var defaultShellId = '';
+
+        /**
+         * Trỏ "Sửa shell" vào ĐÚNG shell đang bọc trang này. Chọn "shell mặc định của site" thì
+         * dùng id của shell isDefault; không có shell nào thì để link ở danh sách layout để người
+         * dùng tạo mới, chứ không đưa tới /EditShell/ với id rỗng (404).
+         */
+        function syncShellEditLink() {
+            if (!shellEditLink) return;
+            var id = shellSelect.value || defaultShellId;
+            shellEditLink.href = id ? '/admin/Builder/EditShell/' + id : '/admin/Builder/Layouts';
+        }
+
+        (async function initShellDropdown() {
+            try {
+                var res = await fetch('/admin/api/builder/pickers/layouts', { headers: apiHeaders(false), credentials: 'include' });
+                if (!res.ok) return;
+                var layouts = await res.json();
+                layouts.forEach(function (l) {
+                    var opt = document.createElement('option');
+                    opt.value = l.id;
+                    opt.textContent = l.name + (l.isDefault ? ' (mặc định)' : '');
+                    shellSelect.appendChild(opt);
+                    if (l.isDefault) defaultShellId = l.id;
+                });
+                // LAYOUT_ID rỗng/Guid.Empty = shell mặc định → giữ option đầu.
+                if (LAYOUT_ID && LAYOUT_ID !== '00000000-0000-0000-0000-000000000000') {
+                    shellSelect.value = LAYOUT_ID;
+                }
+                syncShellEditLink();
+            } catch (e) { /* dropdown chỉ còn shell mặc định — không chặn builder */ }
+        })();
+        shellSelect.addEventListener('change', function () {
+            LAYOUT_ID = shellSelect.value; // saveProject() đọc biến này khi PUT
+            syncShellEditLink();
+            markDirty();
+        });
+
+        // ── Xem trang trong shell (CHỈ XEM) ──────────────────────────────────────
+        // Quan trọng: KHÔNG nhồi HTML shell vào canvas GrapesJS. editor.getHtml() phải luôn
+        // chỉ trả nội dung trang, nếu không một cú Lưu sẽ ghi cả header/footer vào CompiledHtml
+        // của trang — đúng loại lỗi mất/lẫn dữ liệu mà Phase 0-1 vừa chặn. Nên dựng iframe
+        // overlay riêng, ghép shell + nội dung y như PageRenderer, chỉ để mắt nhìn.
+        var BODY_MARKER = 'data-nc-body';
+        document.getElementById('btn-shell-preview').addEventListener('click', openShellPreview);
+
+        async function openShellPreview() {
+            setStatus('saving', 'Đang dựng bản xem shell…');
+            var layoutId = shellSelect.value || '';
+            var shell = { compiledHtml: null, compiledCss: null };
+            try {
+                var res = await fetch('/admin/api/builder/pickers/layouts/' + (layoutId || 'default') + '/html',
+                    { headers: apiHeaders(false), credentials: 'include' });
+                if (res.ok) shell = await res.json();
+            } catch (e) { /* không có shell → xem trần nội dung trang */ }
+
+            var pageHtml = editor.getHtml();
+            var pageCss = window.ncTailwind ? await window.ncTailwind.getCompiledCss(editor) : editor.getCss();
+            var code = window.ncBuilder ? ncBuilder.getCode() : { customCss: '' };
+
+            var bodyInner;
+            if (shell.compiledHtml && shell.compiledHtml.indexOf(BODY_MARKER) >= 0) {
+                // Thay nội dung vào phần tử đánh dấu data-nc-body của shell, khớp PageRenderer.
+                var host = document.createElement('div');
+                host.innerHTML = shell.compiledHtml;
+                var slot = host.querySelector('[' + BODY_MARKER + ']');
+                if (slot) { slot.innerHTML = pageHtml; bodyInner = host.innerHTML; }
+                else bodyInner = shell.compiledHtml + pageHtml;
+            } else {
+                bodyInner = pageHtml; // shell không có marker → chỉ xem nội dung trang
+            }
+
+            var doc =
+                '<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8">' +
+                '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+                '<link rel="stylesheet" href="/css/site-utilities.css">' +
+                '<link rel="stylesheet" href="' + TOKEN_CSS_URL + '">' +
+                '<link rel="stylesheet" href="/css/nc-builder.css">' +
+                '<style>' + (shell.compiledCss || '') + '\n' + (pageCss || '') + '\n' + (code.customCss || '') + '</style>' +
+                '</head><body>' + bodyInner + '</body></html>';
+
+            showPreviewOverlay(doc);
+            setStatus('saved', 'Bản xem shell (chỉ xem)');
+        }
+
+        function showPreviewOverlay(srcdoc) {
+            var existing = document.getElementById('nc-shell-preview-overlay');
+            if (existing) existing.remove();
+            var ov = document.createElement('div');
+            ov.id = 'nc-shell-preview-overlay';
+            ov.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.6);display:flex;flex-direction:column';
+            var bar = document.createElement('div');
+            bar.style.cssText = 'height:44px;display:flex;align-items:center;gap:12px;padding:0 16px;background:#0f172a;color:#e2e8f0;font:600 13px system-ui';
+            bar.innerHTML = '<span>Xem trang trong shell — chỉ để xem, mọi thay đổi vẫn làm ở canvas.</span>';
+            var close = document.createElement('button');
+            close.className = 'nc-btn';
+            close.textContent = '✕ Đóng';
+            close.style.marginLeft = 'auto';
+            close.addEventListener('click', function () { ov.remove(); });
+            bar.appendChild(close);
+            var frame = document.createElement('iframe');
+            frame.style.cssText = 'flex:1;border:0;background:#fff;width:100%';
+            frame.setAttribute('sandbox', 'allow-same-origin'); // không allow-scripts: JS trang không chạy trong bản xem
+            frame.srcdoc = srcdoc;
+            ov.appendChild(bar);
+            ov.appendChild(frame);
+            document.body.appendChild(ov);
+        }
+
+        // ── Modal SEO ────────────────────────────────────────────────────────────
+        var SEO_API = '/admin/api/builder/seo';
+        var btnSeo = document.getElementById('btn-seo');
+        if (btnSeo) btnSeo.addEventListener('click', openSeoModal);
+
+        function ensureSeoModal() {
+            if (document.getElementById('nc-seo-modal')) return;
+            var modal = document.createElement('div');
+            modal.id = 'nc-seo-modal';
+            modal.innerHTML =
+                '<div class="nc-modal-backdrop"></div>' +
+                '<div class="nc-modal">' +
+                '  <div class="nc-modal-head"><span>SEO của trang</span><button type="button" class="nc-modal-close" title="Đóng">×</button></div>' +
+                '  <div class="nc-form">' +
+                '    <div class="nc-field"><label>Tiêu đề SEO <span class="nc-charcount" data-for="seo-title">0</span></label>' +
+                '      <input type="text" id="seo-title" maxlength="200" placeholder="Để trống = dùng tiêu đề trang"></div>' +
+                '    <div class="nc-field"><label>Mô tả SEO <span class="nc-charcount" data-for="seo-desc">0</span></label>' +
+                '      <textarea id="seo-desc" rows="3" placeholder="Tối ưu 150–160 ký tự"></textarea></div>' +
+                '    <div class="nc-field"><label>Ảnh chia sẻ (og:image URL)</label>' +
+                '      <input type="text" id="seo-ogimage" placeholder="/uploads/… hoặc URL đầy đủ"></div>' +
+                '    <div class="nc-field"><label>Canonical URL</label>' +
+                '      <input type="text" id="seo-canonical" placeholder="Để trống = URL của trang"></div>' +
+                '    <div class="nc-field"><label>Robots</label>' +
+                '      <select id="seo-robots">' +
+                '        <option value="">Mặc định (index, follow)</option>' +
+                '        <option value="noindex, follow">noindex, follow</option>' +
+                '        <option value="index, nofollow">index, nofollow</option>' +
+                '        <option value="noindex, nofollow">noindex, nofollow</option>' +
+                '      </select></div>' +
+                '  </div>' +
+                '  <div class="nc-modal-foot">' +
+                '    <span class="nc-lib-check" id="seo-status"></span>' +
+                '    <div class="nc-spacer"></div>' +
+                '    <button type="button" class="nc-btn" id="seo-cancel">Đóng</button>' +
+                '    <button type="button" class="nc-btn-primary" id="seo-save">Lưu SEO</button>' +
+                '  </div>' +
+                '</div>';
+            document.body.appendChild(modal);
+            modal.querySelector('.nc-modal-close').addEventListener('click', closeSeoModal);
+            modal.querySelector('.nc-modal-backdrop').addEventListener('click', closeSeoModal);
+            modal.querySelector('#seo-cancel').addEventListener('click', closeSeoModal);
+            modal.querySelector('#seo-save').addEventListener('click', saveSeo);
+            [['seo-title', 200], ['seo-desc', 160]].forEach(function (pair) {
+                var el = modal.querySelector('#' + pair[0]);
+                var cc = modal.querySelector('.nc-charcount[data-for="' + pair[0] + '"]');
+                el.addEventListener('input', function () {
+                    cc.textContent = el.value.length;
+                    cc.classList.toggle('over', el.value.length > pair[1]);
+                });
+            });
+        }
+
+        async function openSeoModal() {
+            ensureSeoModal();
+            var modal = document.getElementById('nc-seo-modal');
+            modal.classList.add('open');
+            document.getElementById('seo-status').textContent = 'Đang tải…';
+            try {
+                var res = await fetch(SEO_API + '?entityType=Page&entityId=' + PAGE_ID + '&culture=vi',
+                    { headers: apiHeaders(false), credentials: 'include' });
+                var m = res.ok ? await res.json() : {};
+                document.getElementById('seo-title').value = m.metaTitle || '';
+                document.getElementById('seo-desc').value = m.metaDescription || '';
+                document.getElementById('seo-ogimage').value = m.ogImage || '';
+                document.getElementById('seo-canonical').value = m.canonical || '';
+                document.getElementById('seo-robots').value = m.robots || '';
+                document.getElementById('seo-status').textContent = '';
+                ['seo-title', 'seo-desc'].forEach(function (id) {
+                    document.getElementById(id).dispatchEvent(new Event('input'));
+                });
+            } catch (e) { document.getElementById('seo-status').textContent = 'Không tải được SEO.'; }
+        }
+
+        function closeSeoModal() {
+            var modal = document.getElementById('nc-seo-modal');
+            if (modal) modal.classList.remove('open');
+        }
+
+        async function saveSeo() {
+            var s = document.getElementById('seo-status');
+            s.textContent = 'Đang lưu…';
+            var val = function (id) { var v = document.getElementById(id).value.trim(); return v || null; };
+            var payload = {
+                entityType: 'Page', entityId: PAGE_ID, culture: 'vi',
+                metaTitle: val('seo-title'), metaDescription: val('seo-desc'),
+                ogImage: val('seo-ogimage'), canonical: val('seo-canonical'), robots: val('seo-robots'),
+                schemaJsonLd: null, ogType: null, twitterCard: null, priority: null, changeFreq: null
+            };
+            try {
+                var res = await fetch(SEO_API, {
+                    method: 'PUT', headers: apiHeaders(true), credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    var err = await res.json().catch(function () { return {}; });
+                    s.textContent = err.error || 'Lưu SEO thất bại.';
+                    return;
+                }
+                s.textContent = 'Đã lưu SEO.';
+            } catch (e) { s.textContent = 'Lỗi mạng.'; }
+        }
+
+        // ── Modal Lịch sử phiên bản ──────────────────────────────────────────────
+        var btnHistory = document.getElementById('btn-history');
+        if (btnHistory) btnHistory.addEventListener('click', openHistoryModal);
+
+        function ensureHistoryModal() {
+            if (document.getElementById('nc-history-modal')) return;
+            var modal = document.createElement('div');
+            modal.id = 'nc-history-modal';
+            modal.innerHTML =
+                '<div class="nc-modal-backdrop"></div>' +
+                '<div class="nc-modal">' +
+                '  <div class="nc-modal-head"><span>Lịch sử phiên bản</span><button type="button" class="nc-modal-close" title="Đóng">×</button></div>' +
+                '  <div class="nc-hint">Khôi phục sẽ ghi đè nội dung/CSS/JS hiện tại bằng bản đã chọn. Bản hiện tại đã được lưu tự động thành một revision trước đó, nên vẫn quay lại được.</div>' +
+                '  <div id="nc-history-list"></div>' +
+                '  <div class="nc-modal-foot"><span class="nc-lib-check" id="history-status"></span>' +
+                '    <div class="nc-spacer"></div>' +
+                '    <button type="button" class="nc-btn" id="history-close">Đóng</button></div>' +
+                '</div>';
+            document.body.appendChild(modal);
+            modal.querySelector('.nc-modal-close').addEventListener('click', closeHistoryModal);
+            modal.querySelector('.nc-modal-backdrop').addEventListener('click', closeHistoryModal);
+            modal.querySelector('#history-close').addEventListener('click', closeHistoryModal);
+        }
+
+        async function openHistoryModal() {
+            ensureHistoryModal();
+            var modal = document.getElementById('nc-history-modal');
+            modal.classList.add('open');
+            var list = document.getElementById('nc-history-list');
+            list.innerHTML = '<div class="nc-empty">Đang tải…</div>';
+            try {
+                var res = await fetch(API_BASE + '/revisions', { headers: apiHeaders(false), credentials: 'include' });
+                var revs = res.ok ? await res.json() : [];
+                if (!revs.length) { list.innerHTML = '<div class="nc-empty">Chưa có phiên bản nào được lưu.</div>'; return; }
+                list.innerHTML = '';
+                revs.forEach(function (r) {
+                    var row = document.createElement('div');
+                    row.className = 'nc-rev';
+                    var when = r.createdAt ? new Date(r.createdAt).toLocaleString('vi-VN') : '';
+                    row.innerHTML =
+                        '<div class="nc-rev-info"><div class="nc-rev-ver">v' + r.version + '</div>' +
+                        '<div class="nc-rev-meta">' + when + '</div>' +
+                        (r.note ? '<div class="nc-rev-note">' + escapeHtml(r.note) + '</div>' : '') + '</div>';
+                    var btn = document.createElement('button');
+                    btn.className = 'nc-btn';
+                    btn.textContent = 'Khôi phục';
+                    btn.addEventListener('click', function () { restoreRevision(r.version, btn); });
+                    row.appendChild(btn);
+                    list.appendChild(row);
+                });
+            } catch (e) { list.innerHTML = '<div class="nc-empty">Không tải được lịch sử.</div>'; }
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        async function restoreRevision(version, btn) {
+            if (!confirm('Khôi phục về phiên bản v' + version + '? Nội dung hiện tại sẽ bị thay thế.')) return;
+            var s = document.getElementById('history-status');
+            s.textContent = 'Đang khôi phục v' + version + '…';
+            btn.disabled = true;
+            try {
+                var res = await fetch(API_BASE + '/revisions/' + version + '/restore', {
+                    method: 'POST', headers: apiHeaders(true), credentials: 'include'
+                });
+                if (!res.ok) {
+                    var err = await res.json().catch(function () { return {}; });
+                    s.textContent = err.error || 'Khôi phục thất bại.';
+                    btn.disabled = false;
+                    return;
+                }
+                // Nạp lại canvas từ dữ liệu vừa khôi phục để người dùng thấy ngay.
+                var data = await res.json();
+                editor.DomComponents.clear();
+                loadCanvas(data);
+                hadContentOnLoad = !isEmptyHtml(data.compiledHtml);
+                if (window.ncBuilder) ncBuilder.setCode(data.customCss || '', data.customJs || '');
+                s.textContent = 'Đã khôi phục v' + version + '.';
+                setStatus('saved', 'Đã khôi phục v' + version + ' — hãy kiểm tra rồi Lưu/Xuất bản.');
+            } catch (e) { s.textContent = 'Lỗi mạng.'; btn.disabled = false; }
+        }
+
+        function closeHistoryModal() {
+            var modal = document.getElementById('nc-history-modal');
+            if (modal) modal.classList.remove('open');
+        }
+    })();
+    </script>
+</body>
+</html>

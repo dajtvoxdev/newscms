@@ -1,0 +1,64 @@
+@page "{id:guid}"
+@model EditModel
+@{
+    ViewData["Title"] = "Sửa chuyên mục";
+}
+
+<div class="mb-6">
+    <p class="text-sm font-semibold text-indigo-600">Chuyên mục</p>
+    <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Sửa chuyên mục</h2>
+</div>
+
+<form method="post" class="space-y-6">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+    <div class="admin-card grid gap-5 p-6 md:grid-cols-2">
+        <div>
+            <label class="admin-label">Tên chuyên mục <span class="text-red-500">*</span></label>
+            <input asp-for="Input.Name" class="admin-input" />
+            <span asp-validation-for="Input.Name" class="text-xs text-red-500"></span>
+        </div>
+        <div>
+            <label class="admin-label">Slug (URL)</label>
+            <input asp-for="Input.Slug" class="admin-input font-mono" />
+        </div>
+        <div class="col-span-2">
+            <label class="admin-label">Mô tả</label>
+            <textarea asp-for="Input.Description" class="admin-input" rows="2"></textarea>
+        </div>
+        <div>
+            <label class="admin-label">Chuyên mục cha</label>
+            <select asp-for="Input.ParentId" asp-items="Model.ParentOptions" class="admin-select">
+                <option value="">-- Không có --</option>
+            </select>
+        </div>
+        <div>
+            <label class="admin-label">Thứ tự hiển thị</label>
+            <input asp-for="Input.Order" type="number" class="admin-input" />
+        </div>
+        <div>
+            <label class="admin-label">Template danh mục (Site Builder)</label>
+            <select asp-for="Input.TemplatePageId" asp-items="Model.TemplateOptions" class="admin-select">
+                <option value="">-- Mặc định của site --</option>
+            </select>
+            <p class="mt-1 text-xs text-slate-400">Trang builder làm template listing cho chuyên mục này.</p>
+        </div>
+        <div>
+            <label class="admin-label">Layout Shell</label>
+            <select asp-for="Input.LayoutId" asp-items="Model.LayoutOptions" class="admin-select">
+                <option value="">-- Mặc định của site --</option>
+            </select>
+            <p class="mt-1 text-xs text-slate-400">Header/Footer riêng cho chuyên mục (để trống = dùng layout mặc định).</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <input asp-for="Input.IsActive" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+            <label asp-for="Input.IsActive" class="text-sm font-medium text-slate-700">Hiển thị</label>
+        </div>
+    </div>
+
+    <div class="flex gap-3">
+        <button type="submit" class="admin-btn-primary">Lưu thay đổi</button>
+        <a asp-page="/Categories/Index" class="admin-btn-secondary">Huỷ</a>
+    </div>
+</form>

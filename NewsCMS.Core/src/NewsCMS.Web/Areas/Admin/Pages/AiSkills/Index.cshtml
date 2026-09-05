@@ -1,0 +1,84 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.AiSkills.IndexModel
+@{
+    ViewData["Title"] = "Kỹ năng AI";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">AI</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Kỹ năng AI</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/AiSkills/Create" class="admin-btn-primary">Thêm kỹ năng</a>
+</div>
+
+@if (TempData["Success"] is string msg)
+{
+    <div class="hidden">@msg</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="hidden">@err</div>
+}
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full min-w-[700px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Key</th>
+                <th class="px-5 py-4">Tên</th>
+                <th class="px-5 py-4">Loại</th>
+                <th class="px-5 py-4">Trạng thái</th>
+                <th class="px-5 py-4">Targets</th>
+                <th class="px-5 py-4"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (!Model.Items.Any())
+            {
+                <tr>
+                    <td colspan="6" class="px-5 py-10 text-center text-slate-500">
+                        <p class="font-semibold">Chưa có kỹ năng AI nào</p>
+                        <p class="mt-1 text-xs">Tạo prompt skill đầu tiên để thêm nút AI vào trình soạn nội dung.</p>
+                    </td>
+                </tr>
+            }
+            @foreach (var item in Model.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4 font-mono text-xs text-slate-500">@item.Key</td>
+                    <td class="px-5 py-4">
+                        <a asp-area="Admin" asp-page="/AiSkills/Edit" asp-route-id="@item.Id"
+                           class="font-bold text-slate-950 hover:text-indigo-600">@item.Name</a>
+                    </td>
+                    <td class="px-5 py-4">
+                        @if (item.Kind == NewsCMS.Domain.Entities.Ai.AiSkillKind.Prompt)
+                        {
+                            <span class="admin-badge bg-purple-100 text-purple-700">Prompt</span>
+                        }
+                        else
+                        {
+                            <span class="admin-badge bg-amber-100 text-amber-700">Tool</span>
+                        }
+                    </td>
+                    <td class="px-5 py-4">
+                        <span class="admin-badge @(item.IsActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")">
+                            @(item.IsActive ? "Hoạt động" : "Ẩn")
+                        </span>
+                    </td>
+                    <td class="px-5 py-4 text-xs text-slate-500">@(string.IsNullOrEmpty(item.Targets) ? "—" : item.Targets)</td>
+                    <td class="px-5 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a asp-area="Admin" asp-page="/AiSkills/Edit" asp-route-id="@item.Id"
+                               class="admin-btn-secondary">Sửa</a>
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" class="inline"
+                                  data-confirm="Xoá skill này?" data-confirm-danger="true">
+                                <button type="submit" class="admin-btn-secondary !border-red-200 !text-red-700">Xoá</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

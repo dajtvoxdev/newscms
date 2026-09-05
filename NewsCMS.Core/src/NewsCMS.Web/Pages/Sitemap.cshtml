@@ -1,0 +1,18 @@
+@page "/sitemap.xml"
+@model SitemapModel
+@{
+    Layout = null;
+    Response.ContentType = "application/xml; charset=utf-8";
+}
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+@foreach (var u in Model.Urls)
+{
+    <url>
+        <loc>@u.Loc</loc>
+        <lastmod>@u.LastMod.ToString("yyyy-MM-dd")</lastmod>
+        <changefreq>@u.ChangeFreq</changefreq>
+        <priority>@u.Priority.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)</priority>
+    </url>
+}
+</urlset>

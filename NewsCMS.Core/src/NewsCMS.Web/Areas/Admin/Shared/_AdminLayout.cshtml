@@ -1,0 +1,72 @@
+@{
+    var title = ViewData["Title"] ?? "Quản trị";
+    var userName = User.Identity?.Name ?? "Admin";
+    Context.Response.Headers.CacheControl = "no-store";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@title · NewsCMS Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body>
+    <div class="min-h-screen bg-slate-100 lg:flex">
+        <aside class="border-r border-slate-800 bg-slate-950 text-slate-100 lg:fixed lg:inset-y-0 lg:left-0 lg:w-72 lg:overflow-y-auto">
+            <div class="flex h-20 items-center gap-3 border-b border-white/10 px-6">
+                <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-500 text-lg font-black text-white">N</div>
+                <div>
+                    <div class="text-base font-extrabold tracking-tight text-white">NewsCMS</div>
+                    <div class="text-xs font-medium text-slate-400">Admin Console</div>
+                </div>
+            </div>
+            <div class="px-4 py-5">
+                @await Html.PartialAsync("~/Areas/Admin/Shared/_Sidebar.cshtml")
+            </div>
+        </aside>
+
+        <main class="min-h-screen flex-1 lg:pl-72">
+            <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
+                <div class="flex min-h-20 items-center justify-between gap-4 px-5 py-4 lg:px-8">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-indigo-600">Quản trị</p>
+                        <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">@title</h1>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        @await Component.InvokeAsync("SiteSwitcher")
+                        <div class="hidden rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-right sm:block">
+                            <div class="text-sm font-semibold text-slate-900">@userName</div>
+                            <div class="text-xs text-slate-500">Đang đăng nhập</div>
+                        </div>
+                        <a class="admin-btn-secondary" href="/Account/Logout">Đăng xuất</a>
+                    </div>
+                </div>
+            </header>
+
+            <section class="px-5 py-6 lg:px-8 lg:py-8">
+                @RenderBody()
+            </section>
+        </main>
+    </div>
+    @* Toast + confirm dialog dùng chung — nạp trước section Scripts để script của trang gọi được window.toast *@
+    <script src="~/js/admin/toast.js" asp-append-version="true"></script>
+    <script src="~/js/admin/confirm-dialog.js" asp-append-version="true"></script>
+    <script src="~/js/admin/validation-toast.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+    <partial name="~/Areas/Admin/Shared/_Toasts.cshtml" />
+    <script>
+        // Trang có dữ liệu one-time (vd. key API chỉ hiện 1 lần) đặt window.__keepBfcacheState
+        // để không bị reload xoá mất nội dung khi quay lại qua bfcache.
+        window.addEventListener('pageshow', function (e) {
+            if (e.persisted && !window.__keepBfcacheState) window.location.reload();
+        });
+    </script>
+    @await Html.PartialAsync("~/Areas/Admin/Shared/_UploadTracker.cshtml")
+    @await Html.PartialAsync("~/Areas/Admin/Shared/_MediaLibraryModal.cshtml")
+</body>
+</html>

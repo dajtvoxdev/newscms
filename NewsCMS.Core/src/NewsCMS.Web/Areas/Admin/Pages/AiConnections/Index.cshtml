@@ -1,0 +1,106 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.AiConnections.IndexModel
+@{
+    ViewData["Title"] = "Kết nối AI";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">AI</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Kết nối AI</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/AiConnections/Create" class="admin-btn-primary">Thêm kết nối</a>
+</div>
+
+@if (TempData["Success"] is string msg)
+{
+    <div class="hidden">@msg</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="hidden">@err</div>
+}
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full min-w-[700px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Tên</th>
+                <th class="px-5 py-4">Provider</th>
+                <th class="px-5 py-4">Model</th>
+                <th class="px-5 py-4">Trạng thái</th>
+                <th class="px-5 py-4">Mặc định</th>
+                <th class="px-5 py-4"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (!Model.Items.Any())
+            {
+                <tr>
+                    <td colspan="6" class="px-5 py-10 text-center text-slate-500">
+                        <p class="font-semibold">Chưa có kết nối AI nào</p>
+                        <p class="mt-1 text-xs">Tạo kết nối đầu tiên để bắt đầu sử dụng AI trong trình soạn nội dung.</p>
+                    </td>
+                </tr>
+            }
+            @foreach (var item in Model.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4">
+                        <a asp-area="Admin" asp-page="/AiConnections/Edit" asp-route-id="@item.Id"
+                           class="font-bold text-slate-950 hover:text-indigo-600">@item.Name</a>
+                    </td>
+                    <td class="px-5 py-4 text-slate-600">@item.Provider</td>
+                    <td class="px-5 py-4 font-mono text-xs text-slate-500">@item.DefaultModel</td>
+                    <td class="px-5 py-4">
+                        <span class="admin-badge @(item.IsActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")">
+                            @(item.IsActive ? "Hoạt động" : "Ẩn")
+                        </span>
+                    </td>
+                    <td class="px-5 py-4">
+                        @if (item.IsDefault)
+                        {
+                            <span class="admin-badge bg-indigo-100 text-indigo-700">Mặc định</span>
+                        }
+                        else
+                        {
+                            <span class="text-slate-400">—</span>
+                        }
+                    </td>
+                    <td class="px-5 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <button onclick="testConnection('@item.Id')" class="admin-btn-secondary !text-indigo-600">Test</button>
+                            <a asp-area="Admin" asp-page="/AiConnections/Edit" asp-route-id="@item.Id"
+                               class="admin-btn-secondary">Sửa</a>
+                            <form method="post" asp-page-handler="SetDefault" asp-route-id="@item.Id" class="inline">
+                                @if (!item.IsDefault)
+                                {
+                                    <button type="submit" class="admin-btn-secondary !text-emerald-600">Đặt mặc định</button>
+                                }
+                            </form>
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" class="inline"
+                                  data-confirm="Xoá kết nối này?" data-confirm-danger="true">
+                                <button type="submit" class="admin-btn-secondary !border-red-200 !text-red-700">Xoá</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+<script>
+function testConnection(id) {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    fetch('?handler=Test&id=' + id, {
+        method: 'POST',
+        headers: { 'RequestVerificationToken': token, 'X-CSRF-TOKEN': token }
+    }).then(r => r.json()).then(data => {
+        if (data.success) window.toast?.success(data.message);
+        else window.toast?.error(data.message || 'Kiểm tra kết nối thất bại.');
+    }).catch(() => window.toast?.error('Lỗi kết nối'));
+}
+</script>
+}

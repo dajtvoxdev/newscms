@@ -1,0 +1,48 @@
+# Chuẩn hoá line-ending: repo phát triển trên Windows nhưng CI (ubuntu-latest)
+# checkout trên Linux. Không có file này thì CRLF bị commit nguyên văn và
+# tooling trên Linux dễ báo diff ảo / script .sh không chạy được.
+* text=auto eol=lf
+
+# Windows-only: phải giữ CRLF mới chạy đúng khi double-click.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Nguồn C# / web / config: chuẩn LF trong repo, checkout theo native.
+*.cs      text diff=csharp
+*.csproj  text
+*.sln     text eol=crlf
+*.props   text
+*.targets text
+*.cshtml  text
+*.razor   text
+*.json    text
+*.yml     text
+*.yaml    text
+*.md      text
+*.css     text
+*.js      text
+*.mjs     text
+*.cjs     text
+*.sql     text
+*.html    text
+
+# Binary: không bao giờ chuyển đổi eol, không diff.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.pdf  binary
+*.mp3  binary
+*.mp4  binary
+*.woff  binary
+*.woff2 binary
+*.ttf  binary
+*.eot  binary
+*.otf  binary
+*.docx binary
+*.xlsx binary
+*.zip  binary
+*.dll  binary

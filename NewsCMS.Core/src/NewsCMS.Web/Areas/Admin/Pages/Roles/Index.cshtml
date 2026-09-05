@@ -1,0 +1,60 @@
+@page
+@model IndexModel
+@{ ViewData["Title"] = "Vai trò"; }
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Hệ thống</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Vai trò</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/Roles/Create" class="admin-btn-primary">Thêm vai trò</a>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="hidden">@ok</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="hidden">@err</div>
+}
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Vai trò</th>
+                <th class="px-5 py-4">Mô tả</th>
+                <th class="px-5 py-4">Quyền</th>
+                <th class="px-5 py-4"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @foreach (var r in Model.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4">
+                        <span class="font-semibold text-slate-950">@r.Name</span>
+                        @if (r.IsSystem)
+                        {
+                            <span class="ml-2 admin-badge bg-violet-100 text-violet-700">Hệ thống</span>
+                        }
+                    </td>
+                    <td class="px-5 py-4 text-slate-600">@(r.Description ?? "—")</td>
+                    <td class="px-5 py-4 text-slate-600">@r.PermCount quyền</td>
+                    <td class="px-5 py-4 text-right flex gap-2 justify-end">
+                        <a asp-area="Admin" asp-page="/Roles/Edit" asp-route-id="@r.Id" class="admin-btn-secondary">Sửa quyền</a>
+                        @if (!r.IsSystem)
+                        {
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@r.Id"
+                                  data-confirm="Xoá vai trò này?" data-confirm-danger="true">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="admin-btn-secondary text-red-600">Xoá</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

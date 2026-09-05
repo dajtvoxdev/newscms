@@ -1,0 +1,59 @@
+@page "{id:guid}"
+@model EditModel
+@{
+    ViewData["Title"] = "Sửa chuyên mục sản phẩm";
+}
+
+<div class="mb-6 flex items-center justify-between">
+    <h2 class="text-2xl font-extrabold tracking-tight text-slate-950">Sửa chuyên mục sản phẩm</h2>
+    <a asp-area="Admin" asp-page="/ProductCategories/Index" class="admin-btn-secondary">Quay lại</a>
+</div>
+
+<form method="post" class="admin-card max-w-2xl space-y-5 p-6">
+    <div asp-validation-summary="ModelOnly" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+    <div>
+        <label class="admin-label">Tên chuyên mục *</label>
+        <input asp-for="Input.Name" class="admin-input mt-1" required />
+    </div>
+    <div>
+        <label class="admin-label">Slug</label>
+        <input asp-for="Input.Slug" class="admin-input mt-1" />
+    </div>
+    <div>
+        <label class="admin-label">Mô tả</label>
+        <textarea asp-for="Input.Description" rows="3" class="admin-input mt-1"></textarea>
+    </div>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div>
+            <label class="admin-label">Chuyên mục cha</label>
+            <select asp-for="Input.ParentId" asp-items="Model.Parents" class="admin-select mt-1">
+                <option value="">— Không có —</option>
+            </select>
+        </div>
+        <div>
+            <label class="admin-label">Thứ tự</label>
+            <input asp-for="Input.Order" type="number" class="admin-input mt-1" />
+        </div>
+    <div>
+        <label class="admin-label">Template danh mục sản phẩm (Site Builder)</label>
+        <select asp-for="Input.TemplatePageId" asp-items="Model.TemplateOptions" class="admin-select mt-1">
+            <option value="">— Mặc định của site —</option>
+        </select>
+        <p class="mt-1 text-xs text-slate-400">Trang builder làm template listing cho chuyên mục sản phẩm này.</p>
+    </div>
+    <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+        <input asp-for="Input.IsActive" type="checkbox" class="h-4 w-4" />
+        Hoạt động
+    </label>
+
+    <div class="flex gap-2">
+        <button type="submit" class="admin-btn-primary">Lưu thay đổi</button>
+        <a asp-area="Admin" asp-page="/ProductCategories/Index" class="admin-btn-secondary">Huỷ</a>
+    </div>
+</form>
+
+<form method="post" asp-page-handler="Delete" class="mt-6 max-w-2xl"
+      data-confirm="Xoá chuyên mục này?" data-confirm-danger="true">
+    <button type="submit" class="admin-btn-secondary !border-red-200 !text-red-700">Xoá chuyên mục</button>
+</form>

@@ -1,0 +1,22 @@
+@page "{id:guid}"
+@model NewsCMS.Web.Areas.Admin.Pages.Banners.EditModel
+@{
+    ViewData["Title"] = "Sửa banner";
+}
+
+<div class="mb-6">
+    <p class="text-sm font-semibold text-indigo-600">Giao diện</p>
+    <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Sửa banner</h2>
+</div>
+
+<form method="post" class="admin-card grid gap-4 p-5 max-w-3xl">
+    <div asp-validation-summary="ModelOnly" class="text-sm text-red-600"></div>
+    <div><label class="admin-label" asp-for="Input.Title">Tiêu đề</label><input class="admin-input" asp-for="Input.Title" /><span asp-validation-for="Input.Title" class="text-sm text-red-600"></span></div>
+    <div><label class="admin-label" asp-for="Input.ImageId">Ảnh</label><select class="admin-select" asp-for="Input.ImageId"><option value="">-- Chọn ảnh --</option>@foreach (var i in Model.Images) { <option value="@i.Id">@i.FileName</option> }</select><span asp-validation-for="Input.ImageId" class="text-sm text-red-600"></span></div>
+    <div><label class="admin-label" asp-for="Input.Url">URL</label><input class="admin-input" asp-for="Input.Url" /></div>
+    <div><label class="admin-label" asp-for="Input.Position">Vị trí</label><input class="admin-input" asp-for="Input.Position" /></div>
+    <div class="grid gap-4 md:grid-cols-3"><div><label class="admin-label" asp-for="Input.Order">Thứ tự</label><input class="admin-input" asp-for="Input.Order" /></div><div><label class="admin-label" asp-for="Input.StartAt">Bắt đầu</label><input class="admin-input" asp-for="Input.StartAt" type="datetime-local" /></div><div><label class="admin-label" asp-for="Input.EndAt">Kết thúc</label><input class="admin-input" asp-for="Input.EndAt" type="datetime-local" /></div></div>
+    <label class="flex items-center gap-2 text-sm font-semibold text-slate-700"><input asp-for="Input.IsActive" /> Hiển thị</label>
+    <div class="flex gap-3"><button type="submit" class="admin-btn-primary">Lưu</button><a asp-area="Admin" asp-page="/Banners/Index" class="admin-btn-secondary">Huỷ</a></div>
+</form>
+

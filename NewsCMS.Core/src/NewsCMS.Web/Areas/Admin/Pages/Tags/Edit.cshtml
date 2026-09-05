@@ -1,0 +1,30 @@
+@page "{id:guid}"
+@model EditModel
+@{ ViewData["Title"] = "Sửa tag"; }
+
+<div class="mb-6">
+    <p class="text-sm font-semibold text-indigo-600">Tags</p>
+    <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Sửa tag</h2>
+</div>
+
+<form method="post" class="space-y-6">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+    <div class="admin-card grid gap-5 p-6 md:grid-cols-2">
+        <div>
+            <label class="admin-label">Tên tag <span class="text-red-500">*</span></label>
+            <input asp-for="Input.Name" class="admin-input" />
+            <span asp-validation-for="Input.Name" class="text-xs text-red-500"></span>
+        </div>
+        <div>
+            <label class="admin-label">Slug</label>
+            <input asp-for="Input.Slug" class="admin-input font-mono" />
+        </div>
+    </div>
+
+    <div class="flex gap-3">
+        <button type="submit" class="admin-btn-primary">Lưu thay đổi</button>
+        <a asp-page="/Tags/Index" class="admin-btn-secondary">Huỷ</a>
+    </div>
+</form>

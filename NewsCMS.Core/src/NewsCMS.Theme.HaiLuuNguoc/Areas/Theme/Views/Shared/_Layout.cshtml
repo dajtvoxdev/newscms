@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="@(ViewData["Description"] ?? "Hải lưu ngược")" />
+    <title>@(ViewData["Title"] ?? "Hải lưu ngược")</title>
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;600;700;800&display=swap&subset=vietnamese" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css" />
+    <link rel="stylesheet" href="~/_content/NewsCMS.Theme.HaiLuuNguoc/css/site.css?v=20260711-contest-mobile-time-3" />
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body class="@(ViewData["BodyClass"] as string)">
+<div class="ocean-ambience" aria-hidden="true">
+    <i class="oa-b"></i><i class="oa-b"></i><i class="oa-b"></i><i class="oa-b"></i><i class="oa-b"></i>
+    <i class="oa-b"></i><i class="oa-b"></i><i class="oa-b"></i><i class="oa-b"></i><i class="oa-b"></i>
+    <i class="oa-b"></i><i class="oa-b"></i><i class="oa-b"></i><i class="oa-b"></i><i class="oa-b"></i>
+    <i class="oa-b"></i><i class="oa-b"></i><i class="oa-b"></i><i class="oa-b"></i><i class="oa-b"></i>
+</div>
+
+    <header class="site-nav" aria-label="Điều hướng chính">
+        <a class="brand" asp-area="Theme" asp-controller="Home" asp-action="Index">
+            <picture>
+                <source srcset="~/_content/NewsCMS.Theme.HaiLuuNguoc/transparentlogo-whitetext.webp" type="image/webp" />
+                <img src="~/_content/NewsCMS.Theme.HaiLuuNguoc/transparentlogo-whitetext.png" alt="Hải lưu ngược" />
+            </picture>
+        </a>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Mở menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <nav class="nav-links" id="main-nav" aria-label="Menu chính">
+            <a href="/#van-de">Về dự án</a>
+            <button class="nav-comic" type="button" data-comic-open>Comic</button>
+            <a class="nav-contest" href="/cuoc-thi">Cuộc thi</a>
+            <a href="/#ban-tin">Bản tin</a>
+            <a href="/ar">Chạm vào đại dương</a>
+            <a class="nav-pledge" href="/cam-ket">Cam kết</a>
+        </nav>
+    </header>
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <footer class="site-footer" id="tham-gia">
+        <section class="sponsor-strip" aria-labelledby="sponsor-title">
+            <p id="sponsor-title" class="footer-label">ĐỐI TÁC &amp; ĐỒNG HÀNH</p>
+            <div class="sponsor-marquee" aria-label="Danh sách đối tác">
+                <div class="sponsor-marquee-track">
+                    <img src="~/_content/NewsCMS.Theme.HaiLuuNguoc/nhataitrogoc-500.jpg?v=20260711-sponsors-1" alt="Đối tác và đồng hành" decoding="async" fetchpriority="low" />
+                    <img src="~/_content/NewsCMS.Theme.HaiLuuNguoc/nhataitrogoc-500.jpg?v=20260711-sponsors-1" alt="" decoding="async" fetchpriority="low" aria-hidden="true" />
+                </div>
+            </div>
+        </section>
+
+        <section class="footer-main" aria-label="Thông tin cuối trang">
+            <nav class="footer-nav" aria-label="Điều hướng cuối trang">
+                <p class="footer-label">ĐIỀU HƯỚNG</p>
+                <a href="/#van-de">Về dự án</a>
+                <button type="button" data-comic-open>Comic</button>
+                <a href="/cuoc-thi">Cuộc thi</a>
+                <a href="/#ban-tin">Sự kiện</a>
+                <a href="/cam-ket">Cam kết</a>
+            </nav>
+
+            <div class="footer-brand-block">
+                <a class="footer-brand" asp-area="Theme" asp-controller="Home" asp-action="Index" aria-label="Hải Lưu Ngược">
+                    <picture>
+                        <source srcset="~/_content/NewsCMS.Theme.HaiLuuNguoc/transparentlogo-whitetext.webp" type="image/webp" />
+                        <img src="~/_content/NewsCMS.Theme.HaiLuuNguoc/transparentlogo-whitetext.png" alt="Hải Lưu Ngược" loading="lazy" />
+                    </picture>
+                </a>
+            </div>
+
+            <p class="footer-label footer-socials-label">THEO DÕI TẠI</p>
+
+            <div class="footer-socials" aria-label="Kênh liên hệ">
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+                </a>
+                <a href="mailto:hello@hailuunguoc.vn" aria-label="Email">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"></path><path d="m22 6-10 7L2 6"></path></svg>
+                </a>
+                <a href="tel:+84000000000" aria-label="Điện thoại">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.11 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.32 1.77.6 2.61a2 2 0 0 1-.45 2.11L8 9.7a16 16 0 0 0 6.3 6.3l1.26-1.26a2 2 0 0 1 2.11-.45c.84.28 1.71.48 2.61.6A2 2 0 0 1 22 16.92z"></path></svg>
+                </a>
+            </div>
+        </section>
+
+        <section class="footer-bottom" aria-label="Bản quyền">
+            <p>Hành trình đưa người trẻ trở về với biển.</p>
+            <p>© @DateTime.Now.Year Hải Lưu Ngược. All rights reserved.</p>
+        </section>
+    </footer>
+
+    <aside class="floating-tools" aria-label="Công cụ nhanh">
+        <a class="floating-tool ar-tool" href="/ar" aria-label="Mở trải nghiệm AR — Chạm vào đại dương">
+            <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                <circle cx="12" cy="13" r="3"/>
+            </svg>
+        </a>
+        <button class="floating-tool scroll-top-btn" type="button" aria-label="Lên đầu trang" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>
+            </svg>
+        </button>
+        <button class="floating-tool ambient-toggle" type="button" aria-pressed="false" aria-label="Tắt nhạc nền">
+            <svg class="tool-icon tool-icon-on" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
+                <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+                <path d="M18.5 5.5a9 9 0 0 1 0 13"></path>
+            </svg>
+            <svg class="tool-icon tool-icon-off" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
+                <path d="m16 9 5 5"></path>
+                <path d="m21 9-5 5"></path>
+            </svg>
+        </button>
+    </aside>
+
+    <dialog class="comic-dialog" data-comic-dialog aria-labelledby="comic-dialog-title">
+        <div class="comic-shell">
+            <div class="comic-header">
+                <div>
+                    <p class="comic-kicker">Hải Lưu Ngược</p>
+                    <h2 id="comic-dialog-title">Comic</h2>
+                </div>
+                <div class="comic-actions">
+                    <button class="comic-mode-toggle" type="button" data-comic-mode-toggle aria-pressed="false">Đọc dọc</button>
+                    <button class="comic-close" type="button" data-comic-close aria-label="Đóng comic">×</button>
+                </div>
+            </div>
+            <div class="comic-reader-wrap">
+                <button class="comic-nav comic-prev" type="button" data-comic-prev aria-label="Trang trước">‹</button>
+                <div class="comic-track" data-comic-track tabindex="0" aria-label="Các trang comic">
+                    @for (var i = 1; i <= 10; i++)
+                    {
+                        <figure class="comic-page">
+                            <img src="~/_content/NewsCMS.Theme.HaiLuuNguoc/images/comic/tranh @(i).jpg" alt="Comic Hải Lưu Ngược - trang @i" loading="lazy" />
+                        </figure>
+                    }
+                </div>
+                <button class="comic-nav comic-next" type="button" data-comic-next aria-label="Trang sau">›</button>
+            </div>
+            <p class="comic-counter" aria-live="polite"><span data-comic-current>1</span> / <span data-comic-total>10</span></p>
+        </div>
+    </dialog>
+
+    <audio class="ambient-audio" src="~/_content/NewsCMS.Theme.HaiLuuNguoc/audio/Beneath_The_Bronze_Drum.mp3" preload="none" loop></audio>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script src="~/_content/NewsCMS.Theme.HaiLuuNguoc/js/site.js?v=20260802-audio-button-only-1"></script>    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

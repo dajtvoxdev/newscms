@@ -1,0 +1,67 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.AiConnections.EditModel
+@{
+    ViewData["Title"] = "Sửa kết nối AI";
+}
+
+<div class="mb-6 flex items-center justify-between">
+    <h2 class="text-2xl font-extrabold tracking-tight text-slate-950">Sửa kết nối AI</h2>
+    <a asp-area="Admin" asp-page="/AiConnections/Index" class="admin-btn-secondary">Quay lại</a>
+</div>
+
+<form method="post" class="admin-card max-w-2xl space-y-5 p-6">
+    <div asp-validation-summary="ModelOnly" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+    <input asp-for="Input.Id" type="hidden" />
+
+    <div>
+        <label class="admin-label">Tên kết nối *</label>
+        <input asp-for="Input.Name" class="admin-input mt-1" required />
+    </div>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div>
+            <label class="admin-label">Provider *</label>
+            <input asp-for="Input.Provider" class="admin-input mt-1" required />
+        </div>
+        <div>
+            <label class="admin-label">Model mặc định *</label>
+            <input asp-for="Input.DefaultModel" class="admin-input mt-1" required />
+        </div>
+    </div>
+    <div>
+        <label class="admin-label">Base URL *</label>
+        <input asp-for="Input.BaseUrl" class="admin-input mt-1" required />
+    </div>
+    <div>
+        <label class="admin-label">API Key</label>
+        <input asp-for="Input.ApiKey" type="password" class="admin-input mt-1" placeholder="Để trống nếu giữ key cũ" />
+        <p class="mt-1 text-xs text-slate-400">Để trống nếu không muốn thay đổi key.</p>
+    </div>
+    <div>
+        <label class="admin-label">Timeout (giây)</label>
+        <input asp-for="Input.TimeoutSeconds" type="number" class="admin-input mt-1" />
+    </div>
+    <div>
+        <label class="admin-label">Mô tả</label>
+        <textarea asp-for="Input.Description" rows="2" class="admin-input mt-1"></textarea>
+    </div>
+    <div class="flex items-center gap-6">
+        <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input asp-for="Input.IsActive" type="checkbox" class="h-4 w-4" />
+            Kích hoạt
+        </label>
+        <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input asp-for="Input.IsDefault" type="checkbox" class="h-4 w-4" />
+            Đặt mặc định
+        </label>
+    </div>
+
+    <div class="flex gap-2">
+        <button type="submit" class="admin-btn-primary">Lưu thay đổi</button>
+        <a asp-area="Admin" asp-page="/AiConnections/Index" class="admin-btn-secondary">Huỷ</a>
+    </div>
+</form>
+
+<form method="post" asp-page-handler="Delete" asp-route-id="@Model.Input.Id" class="mt-6 max-w-2xl"
+      data-confirm="Xoá kết nối này?" data-confirm-danger="true">
+    <button type="submit" class="admin-btn-secondary !border-red-200 !text-red-700">Xoá kết nối</button>
+</form>

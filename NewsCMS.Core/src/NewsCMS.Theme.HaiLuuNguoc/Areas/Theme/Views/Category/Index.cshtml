@@ -1,0 +1,39 @@
+@model IReadOnlyList<NewsCMS.Application.Content.Dtos.PostListItemDto>
+@{
+    ViewData["Title"] = (string)ViewBag.CategoryName + " — Hải lưu ngược";
+}
+
+<section class="category-hero" aria-labelledby="cat-title">
+    <div class="category-hero-copy">
+        <p class="eyebrow">Chủ đề</p>
+        <h1 id="cat-title">@ViewBag.CategoryName</h1>
+    </div>
+</section>
+
+<section class="category-list" aria-label="Danh sách bài viết">
+    <div class="story-grid">
+        @foreach (var post in Model)
+        {
+            <article class="story-card" data-reveal data-aos="fade-up" data-aos-anchor-placement="top-bottom">
+                <a href="/@post.CategorySlug/@post.Slug" aria-label="Đọc @post.Title">
+                    <div class="story-image">
+                        @if (!string.IsNullOrWhiteSpace(post.FeaturedImageUrl))
+                        {
+                            <img src="@post.FeaturedImageUrl" alt="" loading="lazy" />
+                        }
+                    </div>
+                    <div class="story-body">
+                        <p>@post.CategoryName · @(post.PublishedAt?.ToString("dd.MM.yyyy") ?? "Mới")</p>
+                        <h3>@post.Title</h3>
+                        <span>@(post.Excerpt ?? "")</span>
+                        <strong class="read-more">Đọc thêm <span aria-hidden="true">→</span></strong>
+                    </div>
+                </a>
+            </article>
+        }
+        @if (!Model.Any())
+        {
+            <p class="empty-state">Chưa có bài viết nào trong chủ đề này.</p>
+        }
+    </div>
+</section>

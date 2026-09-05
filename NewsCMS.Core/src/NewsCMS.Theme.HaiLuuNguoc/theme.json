@@ -1,0 +1,9 @@
+{
+  "name": "HaiLuuNguoc",
+  "displayName": "Hải lưu ngược",
+  "version": "1.0.0",
+  "author": "NewsCMS.Core",
+  "description": "Campaign magazine theme for ocean protection, reverse-current action, stories, and community impact.",
+  "screenshot": "/_content/NewsCMS.Theme.HaiLuuNguoc/design-preview.png",
+  "supports": ["home", "category", "post", "page", "search"]
+}

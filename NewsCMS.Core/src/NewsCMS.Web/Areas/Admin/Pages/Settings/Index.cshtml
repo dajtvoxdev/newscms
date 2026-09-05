@@ -1,0 +1,30 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.Settings.IndexModel
+@{
+    ViewData["Title"] = "Cấu hình";
+    var groups = Model.Items.GroupBy(x => x.Group);
+}
+
+<div class="mb-6">
+    <p class="text-sm font-semibold text-indigo-600">Hệ thống</p>
+    <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Cấu hình</h2>
+</div>
+
+<form method="post" class="space-y-6">
+    @foreach (var group in groups)
+    {
+        <div class="admin-card overflow-hidden">
+            <div class="border-b border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold uppercase tracking-wide text-slate-600">@group.Key</div>
+            <div class="divide-y divide-slate-100">
+                @foreach (var s in group)
+                {
+                    <div class="grid gap-3 p-5 md:grid-cols-[260px_1fr] md:items-center">
+                        <div><div class="font-semibold text-slate-900">@s.Key</div><div class="text-xs text-slate-500">@s.Description</div></div>
+                        <input class="admin-input" name="Values[@s.Key]" value="@s.Value" />
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    <button type="submit" class="admin-btn-primary">Lưu cấu hình</button>
+</form>

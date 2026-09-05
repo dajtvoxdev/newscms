@@ -1,0 +1,71 @@
+@page "/admin/Seo/Health"
+@model NewsCMS.Web.Areas.Admin.Pages.Builder.SeoHealthModel
+@{
+    ViewData["Title"] = "SEO Health Check";
+}
+
+<div class="mb-6">
+    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-indigo-600">SEO</p>
+    <h2 class="text-xl font-bold text-slate-900 mt-1">Kiểm tra sức khỏe SEO</h2>
+</div>
+
+<!-- Summary cards -->
+<div class="grid grid-cols-2 gap-4 mb-6 sm:grid-cols-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="text-2xl font-bold text-slate-900">@Model.Report.TotalPages</div>
+        <div class="text-xs text-slate-500">Tổng trang</div>
+    </div>
+    <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+        <div class="text-2xl font-bold text-amber-700">@Model.Report.PagesMissingMeta</div>
+        <div class="text-xs text-amber-600">Thiếu meta title</div>
+    </div>
+    <div class="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm">
+        <div class="text-2xl font-bold text-red-700">@Model.Report.DuplicateSlugs</div>
+        <div class="text-xs text-red-600">Slug trùng</div>
+    </div>
+    <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
+        <div class="text-2xl font-bold text-orange-700">@Model.Report.OrphanPages</div>
+        <div class="text-xs text-orange-600">Trang mồ côi</div>
+    </div>
+</div>
+
+<!-- Issues table -->
+@if (Model.Report.Issues.Any())
+{
+    <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                <tr>
+                    <th class="px-4 py-3 font-semibold">Mức</th>
+                    <th class="px-4 py-3 font-semibold">Loại</th>
+                    <th class="px-4 py-3 font-semibold">Mô tả</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @foreach (var issue in Model.Report.Issues)
+                {
+                    var severityClass = issue.Severity == "error"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-amber-100 text-amber-700";
+                    <tr class="hover:bg-slate-50/80">
+                        <td class="px-4 py-3">
+                            <span class="rounded-full px-2 py-0.5 text-xs font-bold @severityClass">
+                                @(issue.Severity == "error" ? "LỖI" : "CẢNH BÁO")
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 font-mono text-xs text-slate-500">@issue.Type</td>
+                        <td class="px-4 py-3 text-slate-700">@issue.Message</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-8 text-center">
+        <div class="mb-2 text-emerald-600">@AdminIcon.Svg("circle-check", "h-9 w-9")</div>
+        <div class="text-lg font-bold text-emerald-800">Không phát hiện vấn đề SEO nào!</div>
+        <div class="text-sm text-emerald-600 mt-1">Tất cả trang đều có meta, không trùng slug, không trang mồ côi.</div>
+    </div>
+}

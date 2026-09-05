@@ -1,0 +1,19 @@
+@model NewsCMS.Application.Content.Dtos.PostDto
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<article class="post-detail post-detail-editorial">
+    <a class="back-link" asp-area="Theme" asp-controller="Home" asp-action="Index">← Về Hải lưu ngược</a>
+    <header>
+        <p class="eyebrow">@Model.CategoryName · @(Model.PublishedAt?.ToString("dd.MM.yyyy") ?? "Bản tin")</p>
+        <h1>@Model.Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Excerpt))
+        {
+            <p class="post-excerpt">@Model.Excerpt</p>
+        }
+    </header>
+    <div class="post-content">
+        @Html.Raw(Model.Content)
+    </div>
+</article>

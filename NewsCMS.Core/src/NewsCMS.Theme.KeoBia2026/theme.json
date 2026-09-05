@@ -1,0 +1,9 @@
+{
+  "name": "KeoBia2026",
+  "displayName": "Kèo Bia 2026",
+  "version": "1.0.0",
+  "author": "NewsCMS.Core",
+  "description": "Mini-game đặt kèo World Cup 2026 bằng cốc bia với giao diện vui, đậm chất cổ động và tối ưu cho desktop/mobile fixed viewport.",
+  "screenshot": "/_content/NewsCMS.Theme.KeoBia2026/images/design-preview.svg",
+  "supports": [ "landing", "sports", "campaign" ]
+}

@@ -1,0 +1,88 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Đồng bộ lịch Bia Vui";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Bia Vui 2026</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Đồng bộ lịch thi đấu</h2>
+    </div>
+    <a href="/Admin/KeoBia/Matches" class="admin-btn-secondary">Xem lịch & kết quả</a>
+</div>
+
+@if (TempData["Success"] is string msg)
+{
+    <div class="hidden">@msg</div>
+}
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div asp-validation-summary="All" class="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
+}
+
+<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
+    <section class="admin-card p-5 space-y-4">
+        <div class="rounded-xl border border-indigo-100 bg-indigo-50 p-5">
+            <div class="text-sm font-extrabold text-indigo-950">Football-Data.org (nguồn chính)</div>
+            <p class="mt-2 max-w-3xl text-sm leading-6 text-indigo-800">
+                Đồng bộ lịch thi đấu (gồm đội vòng loại trực tiếp được chốt sau vòng bảng), kết quả thắng/thua
+                và tự cập nhật số cốc bia hoặc gói lạc theo từng trận. Job nền tự chạy mỗi 30 phút; nút này dùng khi cần cập nhật ngay.
+            </p>
+            <form method="post" asp-page-handler="FootballData" class="mt-4">
+                @Html.AntiForgeryToken()
+                <button class="admin-btn-primary" type="submit">Đồng bộ Football-Data ngay</button>
+            </form>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div class="text-sm font-extrabold text-slate-800">OpenFootball (dự phòng lịch)</div>
+            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                Chỉ nhập lịch từ openfootball/worldcup.json, không cập nhật kết quả hoặc số cốc bia hay gói lạc. Job nền đã tắt — dùng nút
+                này khi muốn nhập tay từ nguồn cũ.
+            </p>
+            <form method="post" asp-page-handler="OpenFootball" class="mt-4">
+                @Html.AntiForgeryToken()
+                <button class="admin-btn-secondary" type="submit">Đồng bộ lịch OpenFootball</button>
+            </form>
+        </div>
+
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-5">
+            <div class="text-sm font-extrabold text-amber-900">Dọn dẹp trận placeholder</div>
+            <p class="mt-2 max-w-3xl text-sm leading-6 text-amber-700">
+                Xóa tất cả trận có tên đội placeholder (2A, 2B, 1C, 2F, W74, TBD...) kể cả có bet.
+                Dự đoán bị xóa sẽ được hoàn cốc bia hoặc gói lạc theo loại của trận. Sau đó đồng bộ Football-Data lại.
+            </p>
+            <form method="post" asp-page-handler="Cleanup" class="mt-4"
+                  data-confirm="Xóa tất cả trận placeholder? Dự đoán trên các trận này sẽ bị xóa và hoàn cốc bia hoặc gói lạc theo loại của trận." data-confirm-danger="true">
+                @Html.AntiForgeryToken()
+                <button class="admin-btn-secondary border-amber-300 text-amber-800 hover:bg-amber-100" type="submit">Dọn dẹp placeholder</button>
+            </form>
+        </div>
+    </section>
+
+    <aside class="admin-card p-5">
+        <h3 class="text-base font-extrabold text-slate-950">Lịch sử đồng bộ</h3>
+        <div class="mt-4 space-y-3">
+            @if (Model.RecentJobs.Count == 0)
+            {
+                <div class="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Chưa có job đồng bộ.</div>
+            }
+            @foreach (var job in Model.RecentJobs)
+            {
+                var isLegacyManualJob = job.Source.Contains("CSV", StringComparison.OrdinalIgnoreCase);
+                var sourceName = isLegacyManualJob ? "Nguồn cũ" : job.Source;
+                <div class="rounded-xl border border-slate-100 p-3">
+                    <div class="font-bold text-slate-900">@sourceName</div>
+                    <div class="mt-1 text-sm text-slate-600">Đồng bộ @job.ImportedRows/@job.TotalRows, lỗi @job.ErrorRows</div>
+                    <div class="mt-1 text-xs text-slate-400">@job.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                    @if (!isLegacyManualJob && !string.IsNullOrWhiteSpace(job.ErrorLog))
+                    {
+                        <pre class="mt-2 max-h-32 overflow-auto rounded-lg bg-slate-50 p-2 text-xs text-rose-700">@job.ErrorLog</pre>
+                    }
+                </div>
+            }
+        </div>
+    </aside>
+</div>

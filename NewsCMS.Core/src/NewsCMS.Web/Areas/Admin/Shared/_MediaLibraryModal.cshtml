@@ -1,0 +1,169 @@
+<dialog id="media-library-modal"
+        class="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-black/50">
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <h2 class="text-lg font-bold text-slate-950">Chọn từ thư viện</h2>
+        <button type="button" id="mlm-close" class="inline-flex rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">@AdminIcon.Svg("x")</button>
+    </div>
+
+    <div class="flex gap-3 border-b border-slate-200 px-6 py-3">
+        <input type="text" id="mlm-search" placeholder="Tìm theo tên…" class="admin-input flex-1" />
+        <select id="mlm-kind" class="admin-select w-36">
+            <option value="">Tất cả loại</option>
+            <option value="image">Ảnh</option>
+            <option value="video">Video</option>
+            <option value="audio">Âm thanh</option>
+            <option value="document">Tài liệu</option>
+        </select>
+    </div>
+
+    <div id="mlm-grid" class="grid grid-cols-4 gap-3 overflow-y-auto p-6 sm:grid-cols-5 lg:grid-cols-6" style="max-height:420px">
+        <div class="col-span-full py-10 text-center text-slate-400" id="mlm-loading">Đang tải…</div>
+    </div>
+
+    <div class="flex items-center justify-between border-t border-slate-200 px-6 py-3">
+        <div class="flex gap-1" id="mlm-pager"></div>
+        <span id="mlm-count" class="text-sm text-slate-400"></span>
+    </div>
+</dialog>
+
+<script>
+(function () {
+    const modal = document.getElementById('media-library-modal');
+    const grid = document.getElementById('mlm-grid');
+    const search = document.getElementById('mlm-search');
+    const kindSel = document.getElementById('mlm-kind');
+    const pager = document.getElementById('mlm-pager');
+    const countEl = document.getElementById('mlm-count');
+
+    let targetHiddenId = null;
+    let targetPreviewId = null;
+    let targetPlaceholderId = null;
+    let targetChipId = null;
+    let currentPage = 1;
+    let searchTimer = null;
+
+    // Icon SVG render từ server (AdminIcon) — dùng cho HTML do JS sinh ra.
+    const ICONS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(AdminIcon.All()));
+
+    document.getElementById('mlm-close').addEventListener('click', () => modal.close());
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.close(); });
+
+    search.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => { currentPage = 1; loadPage(); }, 350);
+    });
+    kindSel.addEventListener('change', () => { currentPage = 1; loadPage(); });
+
+    async function loadPage() {
+        grid.innerHTML = '<div class="col-span-full py-10 text-center text-slate-400">Đang tải…</div>';
+        pager.innerHTML = '';
+        countEl.textContent = '';
+
+        const params = new URLSearchParams({
+            handler: 'List',
+            q: search.value,
+            kind: kindSel.value,
+            p: currentPage
+        });
+
+        const resp = await fetch('/Admin/Media?' + params.toString());
+        if (!resp.ok) { grid.innerHTML = '<div class="col-span-full text-red-500 py-10 text-center">Lỗi tải danh sách.</div>'; return; }
+        const data = await resp.json();
+
+        countEl.textContent = data.totalItems + ' file';
+
+        if (!data.items || data.items.length === 0) {
+            grid.innerHTML = '<div class="col-span-full py-10 text-center text-slate-400">Không có media nào.</div>';
+            return;
+        }
+
+        grid.innerHTML = '';
+        data.items.forEach(item => {
+            const cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'group relative overflow-hidden rounded-xl border border-slate-200 bg-white hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500';
+            cell.setAttribute('data-url', item.filePath);
+            cell.title = item.fileName;
+
+            if (item.kind === 'image') {
+                cell.innerHTML = `<img src="${item.filePath}" class="aspect-square w-full object-cover" loading="lazy" />`;
+            } else {
+                const icon = item.kind === 'video' ? ICONS['film'] : item.kind === 'audio' ? ICONS['music'] : ICONS['file-text'];
+                cell.innerHTML = `<div class="flex aspect-square items-center justify-center bg-slate-50 text-3xl">${icon}</div>`;
+            }
+
+            const label = document.createElement('div');
+            label.className = 'truncate px-1.5 py-1 text-center text-xs text-slate-600';
+            label.textContent = item.title || item.fileName;
+            cell.appendChild(label);
+
+            cell.addEventListener('click', () => selectItem(item.filePath, item.fileName));
+            grid.appendChild(cell);
+        });
+
+        // Pagination buttons.
+        if (data.totalPages > 1) {
+            if (data.hasPrev) {
+                const prev = document.createElement('button');
+                prev.type = 'button'; prev.innerHTML = ICONS['arrow-left'] || '←'; prev.className = 'admin-btn-secondary text-sm';
+                prev.addEventListener('click', () => { currentPage--; loadPage(); });
+                pager.appendChild(prev);
+            }
+            const info = document.createElement('span');
+            info.className = 'px-3 text-sm text-slate-500 self-center';
+            info.textContent = `${data.page} / ${data.totalPages}`;
+            pager.appendChild(info);
+            if (data.hasNext) {
+                const next = document.createElement('button');
+                next.type = 'button'; next.innerHTML = ICONS['arrow-right'] || '→'; next.className = 'admin-btn-secondary text-sm';
+                next.addEventListener('click', () => { currentPage++; loadPage(); });
+                pager.appendChild(next);
+            }
+        }
+    }
+
+    function selectItem(url, fileName) {
+        if (targetHiddenId) {
+            const hidden = document.getElementById(targetHiddenId);
+            if (hidden) {
+                hidden.value = url;
+                hidden.dispatchEvent(new CustomEvent('media-library:selected', {
+                    bubbles: true,
+                    detail: { url: url, fileName: fileName }
+                }));
+            }
+        }
+        if (targetPreviewId) {
+            const preview = document.getElementById(targetPreviewId);
+            if (preview) { preview.src = url; preview.classList.remove('hidden'); }
+        }
+        if (targetPlaceholderId) {
+            const ph = document.getElementById(targetPlaceholderId);
+            if (ph) ph.classList.add('hidden');
+        }
+        if (targetChipId) {
+            const chip = document.getElementById(targetChipId);
+            const chipName = document.getElementById(targetChipId + '-name');
+            const chipEmpty = document.getElementById(targetChipId + '-empty');
+            if (chip) chip.classList.remove('hidden');
+            if (chipName) chipName.textContent = fileName || url.split('/').pop();
+            if (chipEmpty) chipEmpty.classList.add('hidden');
+        }
+        modal.close();
+    }
+
+    window.mediaLibraryModal = {
+        open(hiddenId, previewId, placeholderId, chipId) {
+            targetHiddenId = hiddenId;
+            targetPreviewId = previewId || null;
+            targetPlaceholderId = placeholderId || null;
+            targetChipId = chipId || null;
+            currentPage = 1;
+            search.value = '';
+            kindSel.value = '';
+            modal.showModal();
+            loadPage();
+        }
+    };
+})();
+</script>

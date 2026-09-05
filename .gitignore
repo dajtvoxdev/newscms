@@ -1,0 +1,115 @@
+# ─────────────────────────────────────────────────────────────
+# .NET build output
+# ─────────────────────────────────────────────────────────────
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+.vs/
+*.received.*
+
+# Local build/publish scratch dirs
+.artifacts/
+.tmp-build/
+.tmpbuild/
+.tmpout/
+.tmp-publish/
+
+# ─────────────────────────────────────────────────────────────
+# Secrets & local config
+#   appsettings.json IS committed (placeholders only).
+#   Real values live in appsettings.Production.json / env vars
+#   on the server, and are never committed.
+# ─────────────────────────────────────────────────────────────
+appsettings.Production.json
+appsettings.*.local.json
+appsettings.Local.json
+*.pfx
+*.p12
+*.pem
+*.key
+secrets.json
+
+# ─────────────────────────────────────────────────────────────
+# Node / theme asset pipeline
+# ─────────────────────────────────────────────────────────────
+node_modules/
+dist/
+.playwright-cli/
+test-results/
+playwright-report/
+
+# ─────────────────────────────────────────────────────────────
+# Logs
+# ─────────────────────────────────────────────────────────────
+logs/
+*.log
+*.log.err
+app.log*
+
+# ─────────────────────────────────────────────────────────────
+# Production data (lives on the server, not in git)
+# ─────────────────────────────────────────────────────────────
+**/wwwroot/uploads/*
+!**/wwwroot/uploads/.gitkeep
+**/App_Data/media-trash/
+**/App_Data/*.db
+**/App_Data/*.sqlite
+
+# ─────────────────────────────────────────────────────────────
+# Throwaway browser profiles from headless-debug sessions
+# (Edge/Chrome user-data dirs — thousands of binary files)
+# ─────────────────────────────────────────────────────────────
+.browser-test/
+.tmp-edge-*/
+.playwright-mcp/
+.chukafe-work/
+
+# ─────────────────────────────────────────────────────────────
+# Agent / editor tooling scratch (machine-local, not shared)
+# ─────────────────────────────────────────────────────────────
+.claude/
+.codex/
+.codegraph/
+.kilo/
+.serena/
+.plans/
+.ai-devkit.json
+.vscode/
+.idea/
+
+# ─────────────────────────────────────────────────────────────
+# Ad-hoc scratch files at repo root
+# ─────────────────────────────────────────────────────────────
+.tmp-*
+tmp-*
+*.tmp
+
+# Debug screenshots / recordings
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.bin
+!**/wwwroot/**/*.png
+!**/wwwroot/**/*.jpg
+!**/wwwroot/**/*.jpeg
+
+# ─────────────────────────────────────────────────────────────
+# Tài liệu / asset tham khảo thiết kế — không phải source, không
+# cần cho CI/CD. Giữ trên máy, không commit (Profile CHU.pdf ~38MB).
+# ─────────────────────────────────────────────────────────────
+stitch_chu_kafe_landing_page/
+stitch_xe_i_n_yaka_ph_ph_c/
+hailuunguoc-assets/
+*.docx
+*.skill
+
+# ─────────────────────────────────────────────────────────────
+# OS cruft
+# ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

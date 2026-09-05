@@ -1,0 +1,20 @@
+@model NewsCMS.Web.Components.SiteSwitcherViewComponent.SiteSwitcherModel
+
+<form method="post" action="/Admin/SwitchSite" class="hidden items-center gap-2 md:flex">
+    @Html.AntiForgeryToken()
+    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Site</span>
+    <select name="siteId" onchange="this.form.submit()"
+            class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+        @foreach (var site in Model.Sites)
+        {
+            if (site.Id == Model.CurrentSiteId)
+            {
+                <option value="@site.Id" selected>@site.Name</option>
+            }
+            else
+            {
+                <option value="@site.Id">@site.Name</option>
+            }
+        }
+    </select>
+</form>

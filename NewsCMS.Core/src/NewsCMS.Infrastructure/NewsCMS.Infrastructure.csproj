@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NewsCMS.Domain\NewsCMS.Domain.csproj" />
+    <ProjectReference Include="..\NewsCMS.Shared\NewsCMS.Shared.csproj" />
+    <ProjectReference Include="..\NewsCMS.Application\NewsCMS.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
+    <PackageReference Include="HtmlSanitizer" Version="8.0.843" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.65" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
+    <PackageReference Include="Slugify.Core" Version="4.0.1" />
+    <PackageReference Include="tusdotnet" Version="2.11.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="DependencyInjection.cs" />
+    <Compile Include="Persistence\*.cs" />
+    <Compile Include="Persistence\Migrations\*.cs" />
+    <Compile Include="Persistence\Configurations\*.cs" />
+    <Compile Include="Persistence\Seed\*.cs" />
+    <Compile Include="Storage\*.cs" />
+    <Compile Include="Site\*.cs" />
+    <Compile Include="Settings\*.cs" />
+    <Compile Include="Builder\*.cs" />
+    <Compile Include="Builder\Blocks\*.cs" />
+    <Compile Include="Builder\ContentTypes\*.cs" />
+    <Compile Include="Content\*.cs" />
+    <Compile Include="Analytics\*.cs" />
+    <Compile Include="Ar\*.cs" />
+    <Compile Include="Catalog\*.cs" />
+    <Compile Include="Engagement\*.cs" />
+    <Compile Include="Jobs\*.cs" />
+    <Compile Include="KeoBia\*.cs" />
+    <Compile Include="Ai\*.cs" />
+    <Compile Include="Ai\Tools\*.cs" />
+  </ItemGroup>
+
+</Project>

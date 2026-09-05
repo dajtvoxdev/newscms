@@ -1,0 +1,158 @@
+@model NewsCMS.Theme.HaiLuuNguoc.Areas.Theme.Controllers.HomeViewModel
+@using NewsCMS.Application.Content.Dtos
+@{
+    const string assetVersion = "20260630-comic-reader";
+    ViewData["Title"] = "Hải lưu ngược";
+
+    var featured = Model.Featured.Count > 0
+        ? Model.Featured
+        : new[]
+        {
+            new PostListItemDto(Guid.Empty, "Khi rác trôi ngược về bàn ăn", "rac-troi-nguoc-ve-ban-an", "Mỗi chai nhựa rời tay hôm nay có thể quay lại trong muối, cá, và nước uống ngày mai.", DateTime.Today.AddDays(-8), "Phóng sự", "phong-su", null),
+            new PostListItemDto(Guid.Empty, "Bản đồ lưới ma ven bờ Việt Nam", "ban-do-luoi-ma", "Những điểm nóng cần cộng đồng, ngư dân và đội cứu hộ cùng kéo dòng chảy về phía an toàn.", DateTime.Today.AddDays(-15), "Dữ liệu", "du-lieu", null),
+            new PostListItemDto(Guid.Empty, "Một ngày cứu rùa mắc lưới", "mot-ngay-cuu-rua", "Từ tín hiệu đầu tiên trên bãi đến ca thả về biển lúc bình minh.", DateTime.Today.AddDays(-21), "Nhật ký", "nhat-ky", null)
+        };
+
+    var latest = Model.Latest.Count > 0 ? Model.Latest : featured;
+}
+
+<section class="hero-shell hero-cinematic" aria-labelledby="hero-title">
+    <picture class="hero-cinema-media" aria-hidden="true">
+        <source srcset="~/_content/NewsCMS.Theme.HaiLuuNguoc/hero-cinematic-ocean.webp?v=@assetVersion" type="image/webp" />
+        <img src="~/_content/NewsCMS.Theme.HaiLuuNguoc/hero-cinematic-ocean.png?v=@assetVersion" alt="" fetchpriority="high" />
+    </picture>
+    <div class="hero-overlay" aria-hidden="true"></div>
+    <div class="hero-current-map" aria-hidden="true">
+        <span class="current-line current-line-one"></span>
+        <span class="current-line current-line-two"></span>
+        <span class="current-line current-line-three"></span>
+    </div>
+    <div class="divers-container" aria-hidden="true">
+    </div>
+
+    <div class="hero-copy hero-cinema-copy">
+        <!-- <p class="hero-kicker">Chiến dịch cộng đồng của người trẻ hướng về đại dương</p> -->
+        <h1 id="hero-title">Hải lưu ngược</h1>
+        <p class="hero-lede">Chiến dịch truyền thông nhằm nâng cao nhận thức và khơi dậy sự quan tâm của người trẻ về vấn đề ô nhiễm nhựa biển tại khu vực miền Bắc.</p>
+        <div class="hero-actions">
+            <a class="button button-primary" href="#van-de">
+                BẮT ĐẦU HÀNH TRÌNH
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                </svg>
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="origin-section" id="van-de" aria-labelledby="origin-title">
+    <picture class="origin-backdrop" aria-hidden="true">
+        <source srcset="~/_content/NewsCMS.Theme.HaiLuuNguoc/origin-story-bg.webp?v=@assetVersion" type="image/webp" />
+        <img src="~/_content/NewsCMS.Theme.HaiLuuNguoc/origin-story-bg.png?v=@assetVersion" alt="" loading="lazy" />
+    </picture>
+    <div class="origin-overlay" aria-hidden="true"></div>
+    <div class="origin-content" data-reveal data-aos="fade-up" data-aos-anchor-placement="top-bottom">
+        <p class="eyebrow">Câu chuyện nguồn cội</p>
+        <h2 id="origin-title">CÂU CHUYỆN NGUỒN CỘI</h2>
+        <span class="origin-divider" aria-hidden="true"></span>
+        <div class="origin-poem">
+            <p>Chúng ta lớn lên cùng những câu chuyện về nguồn cội.</p>
+            <p>Nhưng đôi khi, có một điều rất dễ bị lãng quên:</p>
+            <p>Biển cũng là một phần trong ký ức của người Việt.</p>
+            <p>Từ truyền thuyết, văn hóa sông nước đến đời sống ven bờ,</p>
+            <p>biển chưa từng là một nơi xa lạ.</p>
+            <p>Biển là nơi những dòng chảy tìm về,</p>
+            <p>là không gian nuôi dưỡng sinh kế, ký ức và bản sắc.</p>
+            <p>Vì vậy, khi biển hôm nay bị tổn thương bởi rác nhựa,</p>
+            <p>điều mất đi không chỉ là màu xanh của đại dương.</p>
+            <p>Đó còn là một phần nguồn cội mà chúng ta cần gìn giữ.</p>
+        </div>
+        <button class="button origin-cta" type="button" data-comic-open>
+            ĐỌC COMIC HẢI LƯU NGƯỢC
+            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14"></path>
+                <path d="m13 6 6 6-6 6"></path>
+            </svg>
+        </button>
+    </div>
+</section>
+
+<section class="action-section vision-section" id="hanh-dong" aria-labelledby="vision-title">
+    <picture class="vision-bg" aria-hidden="true">
+        <source srcset="~/_content/NewsCMS.Theme.HaiLuuNguoc/vision-bg.webp?v=@assetVersion" type="image/webp" />
+        <img src="~/_content/NewsCMS.Theme.HaiLuuNguoc/vision-bg.png?v=@assetVersion" alt="" loading="lazy" />
+    </picture>
+    <div class="vision-light" aria-hidden="true"></div>
+    <div class="vision-reef" aria-hidden="true"></div>
+    <div class="vision-copy" data-reveal data-aos="fade-up" data-aos-anchor-placement="top-bottom">
+        <p class="eyebrow">02 / Mục tiêu chiến dịch</p>
+        <h2 id="vision-title">TẦM NHÌN</h2>
+        <span class="vision-divider" aria-hidden="true"></span>
+        <p>Trở thành chiến dịch truyền thông cộng đồng góp phần kết nối người trẻ Việt với biển như một phần nguồn cội, từ đó khơi gợi nhận thức và trách nhiệm với vấn đề ô nhiễm nhựa biển.</p>
+    </div>
+    <picture class="vision-turtle" aria-hidden="true">
+        <source srcset="~/_content/NewsCMS.Theme.HaiLuuNguoc/vision-turtle.webp?v=@assetVersion" type="image/webp" />
+        <img src="~/_content/NewsCMS.Theme.HaiLuuNguoc/vision-turtle.png?v=@assetVersion" alt="" loading="lazy" />
+    </picture>
+</section>
+
+<section class="mission-section" aria-labelledby="mission-title">
+    <picture class="mission-bg" aria-hidden="true">
+        <source srcset="~/_content/NewsCMS.Theme.HaiLuuNguoc/mission-bg.webp?v=@assetVersion" type="image/webp" />
+        <img src="~/_content/NewsCMS.Theme.HaiLuuNguoc/mission-bg.png?v=@assetVersion" alt="" loading="lazy" />
+    </picture>
+    <div class="mission-copy" data-reveal data-aos="fade-up" data-aos-anchor-placement="top-bottom">
+        <p class="eyebrow">03 / Hành động</p>
+        <h2 id="mission-title">SỨ MỆNH</h2>
+        <span class="mission-divider" aria-hidden="true"></span>
+        <p>Khơi dậy lòng <strong>tự hào nguồn cội</strong> văn hóa để giúp <strong>Gen Z</strong> nhìn nhận ô nhiễm nhựa biển như một vấn đề gần gũi với đời sống hằng ngày, từ đó lan tỏa sự quan tâm và những lựa chọn sống có trách nhiệm hơn với biển.</p>
+        <a class="mission-link" href="#ban-tin">
+            Cùng hành động
+            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14"></path>
+                <path d="m13 6 6 6-6 6"></path>
+            </svg>
+        </a>
+    </div>
+    <div class="mission-visual" aria-hidden="true">
+        <picture>
+            <source srcset="~/_content/NewsCMS.Theme.HaiLuuNguoc/mission-plastic.webp?v=@assetVersion" type="image/webp" />
+            <img src="~/_content/NewsCMS.Theme.HaiLuuNguoc/mission-plastic.png?v=@assetVersion" class="mission-plastic mission-plastic-one" alt="" loading="lazy" />
+        </picture>
+        <picture>
+            <source srcset="~/_content/NewsCMS.Theme.HaiLuuNguoc/mission-plastic.webp?v=@assetVersion" type="image/webp" />
+            <img src="~/_content/NewsCMS.Theme.HaiLuuNguoc/mission-plastic.png?v=@assetVersion" class="mission-plastic mission-plastic-two" alt="" loading="lazy" />
+        </picture>
+    </div>
+</section>
+
+<section class="magazine-section" id="ban-tin" aria-labelledby="magazine-title">
+    <div class="seafoam-transition" aria-hidden="true"></div>
+    <div class="magazine-head" data-reveal data-aos="fade-up" data-aos-anchor-placement="top-bottom">
+        <p class="eyebrow">Bản tin · Vấn đề từ đất liền</p>
+        <h2 id="magazine-title">VẤN ĐỀ KHÔNG Ở NGOÀI KHƠI</h2>
+        <p class="magazine-lede">Sau giấc mơ nguồn cội dưới đáy biển, ta trồi lên mặt nước để nhìn thẳng vào thực tại: rác nhựa bắt đầu từ chính bờ, phố, thói quen hằng ngày.</p>
+    </div>
+    <div class="story-grid">
+        @foreach (var post in latest.Take(3))
+        {
+            <article class="story-card" data-reveal data-aos="fade-up" data-aos-anchor-placement="top-bottom">
+                <a href="/@post.CategorySlug/@post.Slug" aria-label="Đọc @post.Title">
+                    <div class="story-image">
+                        @if (!string.IsNullOrWhiteSpace(post.FeaturedImageUrl))
+                        {
+                            <img src="@post.FeaturedImageUrl" alt="" loading="lazy" />
+                        }
+                    </div>
+                    <div class="story-body">
+                        <p>@post.CategoryName · @(post.PublishedAt?.ToString("dd.MM.yyyy") ?? "Mới")</p>
+                        <h3>@post.Title</h3>
+                        <span>@(post.Excerpt ?? "Câu chuyện đang được cập nhật từ hệ thống NewsCMS.")</span>
+                        <strong class="read-more">Đọc thêm <span aria-hidden="true">→</span></strong>
+                    </div>
+                </a>
+            </article>
+        }
+    </div>
+</section>

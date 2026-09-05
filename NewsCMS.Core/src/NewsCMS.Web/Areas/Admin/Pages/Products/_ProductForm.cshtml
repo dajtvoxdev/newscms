@@ -1,0 +1,188 @@
+@using NewsCMS.Domain.Enums
+@using NewsCMS.Web.Areas.Admin.Shared
+@model NewsCMS.Web.Areas.Admin.Pages.Products.ProductFormViewModel
+@{
+    var statusLabels = new Dictionary<ProductStatus, string>
+    {
+        [ProductStatus.Draft] = "Bản nháp",
+        [ProductStatus.Published] = "Đang bán",
+        [ProductStatus.Archived] = "Lưu trữ"
+    };
+}
+
+<form method="post" id="product-form" class="space-y-6">
+    @if (ViewData.ModelState[string.Empty]?.Errors.Count > 0)
+    {
+        <div asp-validation-summary="ModelOnly" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"></div>
+    }
+
+    <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div class="min-w-0 space-y-6">
+            <section class="admin-card p-6">
+                <h3 class="text-base font-bold text-slate-950">Thông tin cơ bản</h3>
+                <div class="mt-5 space-y-5">
+                    <label class="block space-y-2">
+                        <span class="admin-label">Tên sản phẩm <span class="text-red-500">*</span></span>
+                        <input asp-for="Input.Name" id="product-name" class="admin-input text-base font-semibold"
+                               autocomplete="off" required placeholder="Ví dụ: CHU Specialty Beans" data-ai-field="product.name" />
+                        <span asp-validation-for="Input.Name" class="text-sm text-red-600"></span>
+                    </label>
+
+                    <div class="grid gap-5 md:grid-cols-2">
+                        <label class="block space-y-2">
+                            <span class="admin-label">Đường dẫn (slug)</span>
+                            <span class="flex gap-2">
+                                <span class="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500">/</span>
+                                <input asp-for="Input.Slug" id="product-slug" class="admin-input" placeholder="tu-dong-sinh-tu-ten" />
+                                <button type="button" id="product-slug-regen" class="admin-btn-secondary shrink-0" title="Sinh lại slug từ tên">&#8635;</button>
+                            </span>
+                            <span class="block text-xs text-slate-500">Bỏ trống để hệ thống tự sinh từ tên sản phẩm.</span>
+                        </label>
+
+                        <label class="block space-y-2">
+                            <span class="admin-label">SKU <span class="text-red-500">*</span></span>
+                            <input asp-for="Input.Sku" class="admin-input font-mono" required placeholder="BEAN-01" />
+                            <span asp-validation-for="Input.Sku" class="text-sm text-red-600"></span>
+                            <span class="block text-xs text-slate-500">Mã quản lý nội bộ, không hiển thị ra trang khách.</span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <section class="admin-card p-6">
+                <h3 class="text-base font-bold text-slate-950">Nội dung hiển thị</h3>
+                <div class="mt-5 space-y-5">
+                    <label class="block space-y-2">
+                        <span class="admin-label">Mô tả ngắn</span>
+                        <textarea asp-for="Input.ShortDescription" rows="2" maxlength="500" class="admin-input"
+                                  placeholder="Một dòng tóm tắt — ví dụ nguồn gốc hạt: Ethiopia Blend Liberica" data-ai-field="product.short"></textarea>
+                        <span class="block text-xs text-slate-500">Dùng làm dòng phụ dưới tên sản phẩm trên trang khách.</span>
+                    </label>
+
+                    <label class="block space-y-2">
+                        <span class="admin-label">Mô tả chi tiết</span>
+                        <textarea asp-for="Input.Description" id="product-description" class="admin-input" data-ai-target="product.description"></textarea>
+                    </label>
+                </div>
+            </section>
+
+            <section class="admin-card p-6">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-950">Thư viện ảnh</h3>
+                        <p class="mt-1 text-xs text-slate-500">Ảnh đầu tiên được dùng khi sản phẩm chưa đặt ảnh đại diện.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" id="product-images-library" class="admin-btn-secondary">Chọn từ thư viện</button>
+                        <button type="button" id="product-images-upload" class="admin-btn-secondary">Tải ảnh lên</button>
+                    </div>
+                </div>
+
+                <div id="product-images-list" class="mt-5 space-y-3" data-initial="@Model.ImagesJson"></div>
+                <div id="product-images-empty" class="mt-5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">
+                    Chưa có ảnh nào. Bấm <strong>Chọn từ thư viện</strong> hoặc <strong>Tải ảnh lên</strong>.
+                </div>
+
+                <input asp-for="Input.ImagesJson" id="product-images-json" type="hidden" />
+                <input type="hidden" id="product-image-stage" />
+                <input type="file" id="product-image-file" accept="image/*" multiple class="hidden" />
+            </section>
+
+            <section class="admin-card p-6">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-950">Biến thể</h3>
+                        <p class="mt-1 text-xs text-slate-500">Ví dụ gói 250gr / 500gr. Để trống nếu sản phẩm chỉ có một loại.</p>
+                    </div>
+                    <button type="button" id="product-variants-add" class="admin-btn-secondary">Thêm biến thể</button>
+                </div>
+
+                <div id="product-variants-list" class="mt-5 space-y-3" data-initial="@Model.VariantsJson"></div>
+                <div id="product-variants-empty" class="mt-5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">
+                    Chưa có biến thể nào.
+                </div>
+
+                <input asp-for="Input.VariantsJson" id="product-variants-json" type="hidden" />
+            </section>
+        </div>
+
+        <aside class="space-y-4">
+            <section class="admin-card p-5 lg:sticky lg:top-6 lg:z-10">
+                <h3 class="font-bold text-slate-950">Xuất bản</h3>
+                <div class="mt-4 space-y-4">
+                    <label class="block space-y-2">
+                        <span class="admin-label">Trạng thái</span>
+                        <select asp-for="Input.Status" class="admin-select">
+                            @foreach (var status in statusLabels)
+                            {
+                                <option value="@((int)status.Key)">@status.Value</option>
+                            }
+                        </select>
+                        <span class="block text-xs text-slate-500">Chỉ trạng thái <strong>Đang bán</strong> mới hiển thị ra trang khách.</span>
+                    </label>
+
+                    <label class="flex items-center gap-3">
+                        <input asp-for="Input.IsFeatured" class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                        <span class="admin-label">Sản phẩm nổi bật</span>
+                    </label>
+
+                    <label class="block space-y-2">
+                        <span class="admin-label">Thứ tự hiển thị</span>
+                        <input asp-for="Input.SortOrder" type="number" step="1" class="admin-input" />
+                        <span class="block text-xs text-slate-500">Số nhỏ đứng trước. Cùng số thì sản phẩm đăng sau đứng trước.</span>
+                    </label>
+
+                    <div class="space-y-2 pt-1">
+                        <button type="submit" class="admin-btn-primary w-full">@Model.SubmitLabel</button>
+                        <a asp-area="Admin" asp-page="/Products/Index" class="admin-btn-secondary w-full">Huỷ</a>
+                    </div>
+                </div>
+            </section>
+
+            <section class="admin-card p-5">
+                <h3 class="mb-4 font-bold text-slate-950">Ảnh đại diện</h3>
+                <partial name="~/Areas/Admin/Shared/_MediaPicker.cshtml"
+                         model='new MediaPickerOptions { For = "Input.ThumbnailUrl", Value = Model.Input.ThumbnailUrl }' />
+                <input asp-for="Input.ThumbnailMediaId" type="hidden" />
+                <p class="mt-3 text-xs text-slate-500">Ảnh này dùng cho card sản phẩm trên trang chủ và danh sách.</p>
+            </section>
+
+            <section class="admin-card p-5">
+                <h3 class="font-bold text-slate-950">Phân loại</h3>
+                <label class="mt-4 block space-y-2">
+                    <span class="admin-label">Chuyên mục <span class="text-red-500">*</span></span>
+                    <select asp-for="Input.ProductCategoryId" asp-items="Model.Categories" class="admin-select" required>
+                        <option value="">— Chọn chuyên mục —</option>
+                    </select>
+                    <span asp-validation-for="Input.ProductCategoryId" class="text-sm text-red-600"></span>
+                </label>
+            </section>
+
+            <section class="admin-card p-5">
+                <h3 class="font-bold text-slate-950">Giá &amp; Tồn kho</h3>
+                <div class="mt-4 space-y-4">
+                    <label class="block space-y-2">
+                        <span class="admin-label">Giá bán (VND) <span class="text-red-500">*</span></span>
+                        <input asp-for="Input.Price" asp-format="{0:0}" type="number" step="1000" min="0" class="admin-input" required />
+                        <span asp-validation-for="Input.Price" class="text-sm text-red-600"></span>
+                    </label>
+
+                    <label class="block space-y-2">
+                        <span class="admin-label">Giá khuyến mãi</span>
+                        <input asp-for="Input.SalePrice" asp-format="{0:0}" type="number" step="1000" min="0" class="admin-input" placeholder="Để trống nếu không giảm giá" />
+                    </label>
+
+                    <label class="flex items-center gap-3">
+                        <input asp-for="Input.IsTrackingStock" id="product-track-stock" class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                        <span class="admin-label">Theo dõi tồn kho</span>
+                    </label>
+
+                    <label class="block space-y-2">
+                        <span class="admin-label">Số lượng tồn</span>
+                        <input asp-for="Input.StockQuantity" id="product-stock-qty" type="number" min="0" class="admin-input" />
+                    </label>
+                </div>
+            </section>
+        </aside>
+    </div>
+</form>

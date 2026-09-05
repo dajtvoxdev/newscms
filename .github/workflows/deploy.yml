@@ -1,0 +1,191 @@
+name: Deploy
+
+# Triển khai lên server Windows self-hosted (cùng máy đang chạy scheduled task
+# "NewsCMS Restart App", app listen port 5000 — xem restart-app.bat).
+#
+# YÊU CẦU TRƯỚC KHI DÙNG:
+#   1. Cài GitHub Actions self-hosted runner trên server đó, label: self-hosted, windows, newscms
+#   2. Tạo Environment "production" trong Settings → Environments, bật Required reviewers
+#      để mỗi lần deploy phải có người bấm approve.
+#   3. Thêm secret CONNECTION_STRING (production) + variable DEPLOY_PATH.
+#
+# Nếu deploy lên Azure App Service / Linux qua SSH / Docker thì file này cần viết lại:
+# xem ghi chú ở cuối file.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_migrations:
+        description: 'Chạy dotnet ef database update trước khi swap'
+        type: boolean
+        default: true
+  push:
+    tags: ['v*']
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  WEB_PROJECT: NewsCMS.Core/src/NewsCMS.Web/NewsCMS.Web.csproj
+  INFRA_PROJECT: NewsCMS.Core/src/NewsCMS.Infrastructure/NewsCMS.Infrastructure.csproj
+  SOLUTION: NewsCMS.Core/NewsCMS.Core.sln
+  APP_PORT: '5000'
+  TASK_NAME: NewsCMS Restart App
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+# Không bao giờ deploy 2 run cùng lúc lên một server.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: [self-hosted, windows, newscms]
+    environment: production
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Resolve deploy path
+        run: |
+          $target = "${{ vars.DEPLOY_PATH }}"
+          if ([string]::IsNullOrWhiteSpace($target)) {
+            throw "Chua set variable DEPLOY_PATH (vi du: D:\apps\newscms). Settings -> Environments -> production -> Variables."
+          }
+          "DEPLOY_PATH=$target"  | Out-File $env:GITHUB_ENV -Append
+          "STAGE_PATH=$env:RUNNER_TEMP\newscms-stage" | Out-File $env:GITHUB_ENV -Append
+
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION }}
+
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION }} --configuration Release --no-restore
+
+      # Publish ra thư mục staging trước, chưa chạm vào app đang chạy.
+      - name: Publish to staging
+        run: |
+          if (Test-Path "$env:STAGE_PATH") { Remove-Item "$env:STAGE_PATH" -Recurse -Force }
+          dotnet publish ${{ env.WEB_PROJECT }} `
+            --configuration Release `
+            --no-build `
+            -o "$env:STAGE_PATH"
+
+      # dotnet-ef là local tool (.config/dotnet-tools.json) nên phải restore mới gọi được.
+      # Tag push: luôn migrate (inputs rỗng). Dispatch: theo checkbox.
+      # Không dùng `inputs.run_migrations != false` — GitHub coerce null và false
+      # về cùng 0 nên tag push sẽ bị skip migration.
+      - name: Restore local tools
+        if: github.event_name != 'workflow_dispatch' || inputs.run_migrations
+        working-directory: NewsCMS.Core
+        run: dotnet tool restore
+
+      # Chạy migration TRƯỚC khi swap: nếu schema fail thì app cũ vẫn đang chạy nguyên vẹn.
+      - name: Apply EF migrations
+        if: github.event_name != 'workflow_dispatch' || inputs.run_migrations
+        working-directory: NewsCMS.Core
+        env:
+          ConnectionStrings__DefaultConnection: ${{ secrets.CONNECTION_STRING }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:ConnectionStrings__DefaultConnection)) {
+            throw "Chua set secret CONNECTION_STRING cho environment production."
+          }
+          dotnet ef database update `
+            --project src/NewsCMS.Infrastructure `
+            --startup-project src/NewsCMS.Web `
+            --configuration Release `
+            --no-build
+
+      - name: Backup current release
+        run: |
+          if (Test-Path "$env:DEPLOY_PATH") {
+            $stamp  = Get-Date -Format 'yyyyMMdd-HHmmss'
+            $backup = "$env:DEPLOY_PATH-backup-$stamp"
+            Copy-Item "$env:DEPLOY_PATH" $backup -Recurse -Force
+            "ROLLBACK_PATH=$backup" | Out-File $env:GITHUB_ENV -Append
+            Write-Host "Backup: $backup"
+            # Giữ lại 5 bản backup gần nhất, xoá bản cũ hơn.
+            Get-ChildItem (Split-Path $env:DEPLOY_PATH -Parent) -Directory `
+              -Filter "$(Split-Path $env:DEPLOY_PATH -Leaf)-backup-*" |
+              Sort-Object CreationTime -Descending | Select-Object -Skip 5 |
+              Remove-Item -Recurse -Force
+          } else {
+            New-Item "$env:DEPLOY_PATH" -ItemType Directory -Force | Out-Null
+          }
+
+      - name: Stop app
+        run: |
+          schtasks /end /tn "${{ env.TASK_NAME }}" 2>$null
+          # Scheduled task chỉ spawn dotnet rồi thoát, nên phải kill theo port như restart-app.bat.
+          Get-NetTCPConnection -LocalPort ${{ env.APP_PORT }} -State Listen -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty OwningProcess -Unique |
+            ForEach-Object { Write-Host "Kill PID $_"; Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
+          Start-Sleep -Seconds 3
+
+      # /XD uploads + logs: đây là dữ liệu production, KHÔNG được xoá theo build
+      # (.gitignore đã loại wwwroot/uploads khỏi repo nên staging không có nó).
+      # appsettings.Production.json giữ nguyên trên server, không commit vào repo.
+      - name: Swap files
+        run: |
+          robocopy "$env:STAGE_PATH" "$env:DEPLOY_PATH" /MIR /NFL /NDL /NJH /NP /R:3 /W:5 `
+            /XD "$env:DEPLOY_PATH\wwwroot\uploads" "$env:DEPLOY_PATH\logs" `
+            /XF appsettings.Production.json
+          # Robocopy: exit code < 8 là thành công (0-7 = copy/skip bình thường).
+          if ($LASTEXITCODE -ge 8) { throw "Robocopy that bai, exit code $LASTEXITCODE" }
+          $global:LASTEXITCODE = 0
+
+      - name: Start app
+        run: |
+          schtasks /run /tn "${{ env.TASK_NAME }}"
+          Start-Sleep -Seconds 10
+
+      - name: Health check
+        id: health
+        run: |
+          $url = "http://localhost:${{ env.APP_PORT }}/"
+          $ok = $false
+          foreach ($i in 1..12) {
+            try {
+              $r = Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 10
+              if ($r.StatusCode -lt 500) { $ok = $true; Write-Host "OK ($($r.StatusCode)) sau $i lan thu"; break }
+            } catch {
+              Write-Host "Lan $i chua len: $($_.Exception.Message)"
+            }
+            Start-Sleep -Seconds 5
+          }
+          if (-not $ok) { throw "App khong phan hoi tren $url sau 60s" }
+
+      # Chỉ rollback file. Migration đã apply thì KHÔNG tự revert:
+      # EF down-migration có thể mất dữ liệu nên phải xử lý tay.
+      - name: Rollback on failure
+        if: failure() && env.ROLLBACK_PATH != ''
+        run: |
+          Write-Warning "Deploy that bai — dang rollback ve $env:ROLLBACK_PATH"
+          Get-NetTCPConnection -LocalPort ${{ env.APP_PORT }} -State Listen -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty OwningProcess -Unique |
+            ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
+          Start-Sleep -Seconds 3
+          robocopy "$env:ROLLBACK_PATH" "$env:DEPLOY_PATH" /MIR /NFL /NDL /NJH /NP /R:3 /W:5
+          if ($LASTEXITCODE -ge 8) { throw "Rollback that bai, exit code $LASTEXITCODE" }
+          $global:LASTEXITCODE = 0
+          schtasks /run /tn "${{ env.TASK_NAME }}"
+          Write-Warning "Da rollback file. Neu buoc migration da chay thi phai kiem tra schema bang tay."
+
+      - name: Cleanup staging
+        if: always()
+        run: Remove-Item "$env:STAGE_PATH" -Recurse -Force -ErrorAction SilentlyContinue
+
+# ---------------------------------------------------------------------------
+# Deploy nơi khác thì thay job trên:
+#   - Azure App Service : azure/webapps-deploy@v3 + secret AZURE_WEBAPP_PUBLISH_PROFILE,
+#                         runs-on: ubuntu-latest, publish không cần -r win-x64.
+#   - Linux qua SSH     : appleboy/scp-action rồi systemctl restart newscms.service.
+#   - Docker            : docker/build-push-action đẩy image lên ghcr.io.
+# ---------------------------------------------------------------------------

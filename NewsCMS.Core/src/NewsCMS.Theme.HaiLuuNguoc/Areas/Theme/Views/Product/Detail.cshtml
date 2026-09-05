@@ -1,0 +1,135 @@
+@using NewsCMS.Application.Catalog.Dtos
+@model ProductDetailDto
+@{
+    ViewData["Title"] = $"{Model.Name} — Hải lưu ngược";
+}
+
+<section class="product-detail">
+    <div class="product-detail-grid">
+        <div class="product-gallery">
+            @if (!string.IsNullOrEmpty(Model.ThumbnailUrl))
+            {
+                <img class="main" src="@Model.ThumbnailUrl" alt="@Model.Name" id="main-image" />
+            }
+            else if (Model.Images.Count > 0)
+            {
+                <img class="main" src="@Model.Images[0].Url" alt="@Model.Name" id="main-image" />
+            }
+            else
+            {
+                <div class="main main-placeholder"></div>
+            }
+
+            @if (Model.Images.Count > 0)
+            {
+                <div class="thumbs">
+                    @foreach (var img in Model.Images)
+                    {
+                        <img src="@img.Url" alt="@(img.AltText ?? Model.Name)" onclick="document.getElementById('main-image').src=this.src" />
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="product-info">
+            <p class="category"><a href="/san-pham?cat=@Model.CategorySlug">@Model.CategoryName</a></p>
+            <h1>@Model.Name</h1>
+            <p class="sku">SKU: <code>@Model.Sku</code></p>
+
+            <div class="pricing">
+                @if (Model.SalePrice.HasValue)
+                {
+                    <span class="sale">@Model.SalePrice.Value.ToString("N0") đ</span>
+                    <span class="original">@Model.Price.ToString("N0") đ</span>
+                }
+                else
+                {
+                    <span class="price">@Model.Price.ToString("N0") đ</span>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.ShortDescription))
+            {
+                <p class="short">@Model.ShortDescription</p>
+            }
+
+            @if (Model.Variants.Count > 0)
+            {
+                <div class="variants">
+                    <h3>Chọn biến thể</h3>
+                    <div class="variant-grid">
+                        @foreach (var v in Model.Variants.Where(x => x.IsActive))
+                        {
+                            <label class="variant">
+                                <input type="radio" name="variant" value="@v.Id" />
+                                <span>@v.Name</span>
+                                @if (v.Price.HasValue)
+                                {
+                                    <span class="vprice">@v.Price.Value.ToString("N0") đ</span>
+                                }
+                                @if (v.StockQuantity == 0)
+                                {
+                                    <span class="oos">Hết hàng</span>
+                                }
+                            </label>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="stock">
+                @if (Model.IsTrackingStock)
+                {
+                    if (Model.StockQuantity > 0)
+                    {
+                        <span class="in-stock">Còn @Model.StockQuantity sản phẩm</span>
+                    }
+                    else
+                    {
+                        <span class="out-stock">Hết hàng</span>
+                    }
+                }
+            </div>
+
+            <button class="cta" type="button" disabled>Thêm vào giỏ (chưa hỗ trợ)</button>
+        </div>
+    </div>
+
+    <article class="product-description">
+        <h2>Mô tả</h2>
+        @Html.Raw(Model.Description)
+    </article>
+</section>
+
+<style>
+    .product-detail { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
+    .product-detail-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+    @@media (min-width: 768px) { .product-detail-grid { grid-template-columns: 1fr 1fr; } }
+    .product-gallery .main, .main-placeholder { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 1rem; background: #f1f5f9; }
+    .product-gallery .thumbs { display: flex; gap: .5rem; margin-top: 1rem; overflow-x: auto; }
+    .product-gallery .thumbs img { width: 80px; height: 80px; object-fit: cover; border-radius: .5rem; cursor: pointer; border: 2px solid transparent; }
+    .product-gallery .thumbs img:hover { border-color: #0f172a; }
+    .product-info .category a { color: #6366f1; text-decoration: none; font-weight: 600; }
+    .product-info h1 { font-size: 2rem; font-weight: 800; margin: .5rem 0; }
+    .product-info .sku { color: #64748b; font-size: .9rem; }
+    .pricing { margin: 1rem 0; }
+    .pricing .sale, .pricing .price { font-size: 2rem; font-weight: 800; color: #e11d48; }
+    .pricing .price { color: #0f172a; }
+    .pricing .original { color: #94a3b8; text-decoration: line-through; margin-left: 1rem; }
+    .short { color: #475569; line-height: 1.6; }
+    .variants { margin: 1.5rem 0; }
+    .variants h3 { font-size: 1rem; font-weight: 700; margin-bottom: .5rem; }
+    .variant-grid { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .variant { display: inline-flex; align-items: center; gap: .5rem; padding: .5rem 1rem; border: 1px solid #cbd5e1; border-radius: .5rem; cursor: pointer; font-size: .9rem; }
+    .variant:has(input:checked) { border-color: #0f172a; background: #0f172a; color: #fff; }
+    .variant .vprice { font-weight: 600; }
+    .variant .oos { color: #e11d48; font-size: .8rem; }
+    .variant input { display: none; }
+    .stock { margin: 1rem 0; }
+    .in-stock { color: #16a34a; font-weight: 600; }
+    .out-stock { color: #e11d48; font-weight: 600; }
+    .cta { width: 100%; padding: 1rem; background: #0f172a; color: #fff; border: none; border-radius: .75rem; font-weight: 700; font-size: 1rem; cursor: pointer; }
+    .cta:disabled { background: #94a3b8; cursor: not-allowed; }
+    .product-description { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .product-description h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 1rem; }
+</style>

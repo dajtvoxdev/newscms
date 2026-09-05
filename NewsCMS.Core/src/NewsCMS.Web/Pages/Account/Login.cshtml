@@ -1,0 +1,56 @@
+@page
+@model LoginModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Đăng nhập";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+</head>
+<body class="min-h-screen overflow-hidden bg-slate-950 text-slate-900">
+    <main class="relative flex min-h-screen items-center justify-center px-6 py-12">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(79,70,229,0.35),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.24),_transparent_38%)]"></div>
+        <div class="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/10 to-transparent"></div>
+
+        <section class="admin-card relative w-full max-w-md overflow-hidden border-white/10 bg-white/95 p-8 shadow-2xl shadow-indigo-950/40 backdrop-blur">
+            <div class="mb-8 text-center">
+                <p class="text-sm font-bold uppercase tracking-[0.3em] text-indigo-600">Admin</p>
+                <h1 class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">Đăng nhập</h1>
+                <p class="mt-2 text-sm text-slate-500">Truy cập khu vực quản trị nội dung.</p>
+            </div>
+
+            <form method="post" class="space-y-5">
+                <label class="block space-y-2">
+                    <span class="admin-label">Tài khoản</span>
+                    <input asp-for="Input.UserName" class="admin-input" autocomplete="username" required autofocus />
+                </label>
+
+                <label class="block space-y-2">
+                    <span class="admin-label">Mật khẩu</span>
+                    <input asp-for="Input.Password" type="password" class="admin-input" autocomplete="current-password" required />
+                </label>
+
+                <label class="flex items-center gap-3 text-sm font-semibold text-slate-600">
+                    <input asp-for="Input.RememberMe" class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                    <span>Ghi nhớ đăng nhập</span>
+                </label>
+
+                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                {
+                    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">@Model.ErrorMessage</div>
+                }
+
+                <button class="admin-btn-primary w-full" type="submit">Đăng nhập</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,30 @@
+@page
+@using NewsCMS.Web.Areas.Admin.Shared
+@model CreateModel
+@{
+    ViewData["Title"] = "Tạo sản phẩm";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Catalog</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Tạo sản phẩm</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/Products/Index" class="admin-btn-secondary">Quay lại</a>
+</div>
+
+<partial name="_ProductForm"
+         model='new NewsCMS.Web.Areas.Admin.Pages.Products.ProductFormViewModel
+         {
+             Input = Model.Input,
+             Categories = Model.Categories,
+             SubmitLabel = "Tạo sản phẩm",
+             ImagesJson = Model.ImagesJson,
+             VariantsJson = Model.VariantsJson
+         }' />
+
+@section Scripts {
+    <partial name="~/Areas/Admin/Shared/_TinyMce.cshtml" model='new TinyMceOptions { Selector = "#product-description", Height = 420 }' />
+    <script src="~/js/admin/product-form.js" asp-append-version="true"></script>
+    <script src="~/js/admin/ai-assist.js" asp-append-version="true"></script>
+}

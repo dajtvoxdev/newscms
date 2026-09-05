@@ -1,0 +1,91 @@
+@page "{id:guid}"
+@model EditModel
+@{
+    ViewData["Title"] = "Sửa Media";
+    var d = Model.Detail;
+}
+
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Media</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Sửa thông tin</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/Media/Index" class="admin-btn-secondary">Quay lại</a>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="hidden">@ok</div>
+}
+
+<div class="grid gap-6 lg:grid-cols-[1fr_340px]">
+    <form method="post">
+        @Html.AntiForgeryToken()
+        <input asp-for="Input.Id" type="hidden" />
+        <section class="admin-card p-6 space-y-5">
+            <label class="block space-y-2">
+                <span class="admin-label">Tiêu đề (Title)</span>
+                <input asp-for="Input.Title" class="admin-input" placeholder="Tên thân thiện, dùng để tìm kiếm" />
+            </label>
+            <label class="block space-y-2">
+                <span class="admin-label">Alt text (cho ảnh)</span>
+                <input asp-for="Input.AltText" class="admin-input" placeholder="Mô tả ngắn nội dung ảnh" />
+            </label>
+            <label class="block space-y-2">
+                <span class="admin-label">Thư mục</span>
+                <select asp-for="Input.FolderId" class="admin-select">
+                    <option value="">-- Không có thư mục --</option>
+                    @foreach (var f in Model.Folders)
+                    {
+                        <option value="@f.Value" selected="@(f.Value == Model.Input.FolderId?.ToString())">@f.Text</option>
+                    }
+                </select>
+            </label>
+            <button type="submit" class="admin-btn-primary">Lưu thay đổi</button>
+        </section>
+    </form>
+
+    @if (d is not null)
+    {
+        <aside class="space-y-4">
+            <section class="admin-card p-5">
+                @if (d.Kind == "image")
+                {
+                    <img src="@d.FilePath" alt="@d.AltText" class="mb-4 w-full rounded-xl border border-slate-200 object-contain max-h-64" />
+                }
+                else
+                {
+                    <div class="mb-4 flex aspect-video items-center justify-center rounded-xl bg-slate-50 text-slate-300">
+                        @(Html.Raw(d.Kind == "video" ? AdminIcon.Tag("film", "h-16 w-16") : d.Kind == "audio" ? AdminIcon.Tag("music", "h-16 w-16") : AdminIcon.Tag("file-text", "h-16 w-16")))
+                    </div>
+                }
+                <dl class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <dt class="text-slate-500">Tên file</dt>
+                        <dd class="font-medium text-slate-900 truncate max-w-[180px]" title="@d.FileName">@d.FileName</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-slate-500">Loại</dt>
+                        <dd class="font-medium text-slate-900">@d.Kind</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-slate-500">Kích thước</dt>
+                        <dd class="font-medium text-slate-900">@(d.Size >= 1048576 ? $"{d.Size/1048576.0:0.#} MB" : $"{d.Size/1024.0:0.#} KB")</dd>
+                    </div>
+                    @if (d.Width.HasValue)
+                    {
+                        <div class="flex justify-between">
+                            <dt class="text-slate-500">Chiều</dt>
+                            <dd class="font-medium text-slate-900">@d.Width × @d.Height px</dd>
+                        </div>
+                    }
+                    <div class="flex justify-between">
+                        <dt class="text-slate-500">Tải lên</dt>
+                        <dd class="font-medium text-slate-900">@d.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+                    </div>
+                </dl>
+                <a href="@d.FilePath" target="_blank" class="mt-4 inline-flex items-center justify-center gap-1 text-xs font-semibold text-indigo-600 hover:underline">Xem file gốc @AdminIcon.Svg("arrow-up-right")</a>
+            </section>
+        </aside>
+    }
+</div>

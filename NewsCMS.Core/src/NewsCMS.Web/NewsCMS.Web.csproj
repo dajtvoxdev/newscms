@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.4.1" />
+    <!-- Admin/KeoBia/Chat dùng ITelegramBotClient trực tiếp. -->
+    <PackageReference Include="Telegram.Bot" Version="22.10.0.1" />
+    <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NewsCMS.Infrastructure\NewsCMS.Infrastructure.csproj" />
+    <ProjectReference Include="..\NewsCMS.Application\NewsCMS.Application.csproj" />
+    <ProjectReference Include="..\NewsCMS.Domain\NewsCMS.Domain.csproj" />
+    <ProjectReference Include="..\NewsCMS.Shared\NewsCMS.Shared.csproj" />
+  </ItemGroup>
+
+  <!--
+    Theme là Razor Class Library: chứa controller, view và wwwroot (_content/...) của
+    từng site. Thiếu các ProjectReference này thì app build vẫn thành công nhưng KHÔNG
+    có endpoint public nào → mọi domain trả 404.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\NewsCMS.Theme.HaiLuuNguoc\NewsCMS.Theme.HaiLuuNguoc.csproj" />
+    <ProjectReference Include="..\NewsCMS.Theme.KeoBia2026\NewsCMS.Theme.KeoBia2026.csproj" />
+    <ProjectReference Include="..\NewsCMS.Theme.PhuPhucYaka\NewsCMS.Theme.PhuPhucYaka.csproj" />
+    <ProjectReference Include="..\NewsCMS.Theme.Universal\NewsCMS.Theme.Universal.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Areas\Admin\Pages\" />
+  </ItemGroup>
+
+</Project>

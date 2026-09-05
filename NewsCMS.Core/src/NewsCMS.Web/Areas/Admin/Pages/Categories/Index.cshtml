@@ -1,0 +1,65 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Chuyên mục";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Nội dung</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Chuyên mục</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/Categories/Create" class="admin-btn-primary">Thêm chuyên mục</a>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="hidden">@ok</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="hidden">@err</div>
+}
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full min-w-[700px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Tên</th>
+                <th class="px-5 py-4">Slug</th>
+                <th class="px-5 py-4">Chuyên mục cha</th>
+                <th class="px-5 py-4">Thứ tự</th>
+                <th class="px-5 py-4">Trạng thái</th>
+                <th class="px-5 py-4"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (!Model.Items.Any())
+            {
+                <tr><td colspan="6" class="px-5 py-10 text-center text-slate-500">Chưa có chuyên mục nào.</td></tr>
+            }
+            @foreach (var c in Model.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4 font-semibold text-slate-950">@c.Name</td>
+                    <td class="px-5 py-4 font-mono text-xs text-slate-500">@c.Slug</td>
+                    <td class="px-5 py-4 text-slate-600">@(c.ParentName ?? "—")</td>
+                    <td class="px-5 py-4 text-slate-600">@c.Order</td>
+                    <td class="px-5 py-4">
+                        <span class="admin-badge @(c.IsActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")">
+                            @(c.IsActive ? "Hiển thị" : "Ẩn")
+                        </span>
+                    </td>
+                    <td class="px-5 py-4 text-right flex gap-2 justify-end">
+                        <a asp-area="Admin" asp-page="/Categories/Edit" asp-route-id="@c.Id" class="admin-btn-secondary">Sửa</a>
+                        <form method="post" asp-page-handler="Delete" asp-route-id="@c.Id"
+                              data-confirm="Xoá chuyên mục này?" data-confirm-danger="true">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="admin-btn-secondary text-red-600">Xoá</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

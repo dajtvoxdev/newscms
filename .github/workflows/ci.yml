@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  SOLUTION: NewsCMS.Core/NewsCMS.Core.sln
+  WEB_PROJECT: NewsCMS.Core/src/NewsCMS.Web/NewsCMS.Web.csproj
+  TEST_PROJECT: NewsCMS.Core/tests/NewsCMS.Tests/NewsCMS.Tests.csproj
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+# Push mới trên cùng một branch sẽ huỷ run cũ đang chạy.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build & Unit Test (.NET 8)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Không có packages.lock.json nên key cache dựa trên csproj + Directory.Build.props.
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('NewsCMS.Core/**/*.csproj', 'NewsCMS.Core/Directory.Build.props') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION }}
+
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION }} --configuration Release --no-restore
+
+      # --no-build: build một lần ở step trên rồi test lại đúng output đó.
+      # Build song song + test cùng lúc từng gây flaky (khoá DLL) nên tách hẳn ra.
+      - name: Unit test
+        run: >
+          dotnet test ${{ env.TEST_PROJECT }}
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=unit-tests.trx"
+          --results-directory ${{ github.workspace }}/artifacts/test-results
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: artifacts/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: NewsCMS.Core/tests/e2e
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: NewsCMS.Core/tests/e2e/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      # playwright.config.cjs cố ý không có webServer: các spec tự dựng DOM/iframe
+      # bằng data: URL nên không cần app hay DB chạy trong CI.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: NewsCMS.Core/tests/e2e/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+  publish:
+    name: Publish artifact
+    needs: [build-test, e2e]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('NewsCMS.Core/**/*.csproj', 'NewsCMS.Core/Directory.Build.props') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      # Framework-dependent win-x64: server đích cần có ASP.NET Core 8 Runtime.
+      # Đổi -r sang linux-x64 nếu deploy lên Linux, hoặc bỏ -r nếu chạy portable.
+      - name: Publish
+        run: >
+          dotnet publish ${{ env.WEB_PROJECT }}
+          --configuration Release
+          -r win-x64
+          --self-contained false
+          -p:UseAppHost=true
+          -o ${{ github.workspace }}/publish
+
+      - name: Upload publish output
+        uses: actions/upload-artifact@v4
+        with:
+          name: newscms-web-${{ github.sha }}
+          path: publish
+          retention-days: 30

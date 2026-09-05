@@ -1,0 +1,105 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.Survey.IndexModel
+@{
+    ViewData["Title"] = "Khảo sát nhận thức";
+}
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="hidden">@ok</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="hidden">@err</div>
+}
+
+<form method="post" class="space-y-6">
+    @Html.AntiForgeryToken()
+
+    <div class="flex items-center justify-between">
+        <div>
+            <p class="text-sm font-semibold text-amber-600">Tương tác</p>
+            <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Khảo sát nhận thức</h2>
+            <p class="mt-1 text-sm text-slate-500">Cấu hình section khảo sát hiển thị bên dưới Bức tường cam kết.</p>
+        </div>
+        <button type="submit" class="admin-btn-primary">Lưu cấu hình</button>
+    </div>
+
+    <div asp-validation-summary="ModelOnly" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+    <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <section class="admin-card p-6">
+            <h3 class="text-lg font-bold text-slate-950">Nội dung</h3>
+            <div class="mt-5 grid gap-5 md:grid-cols-2">
+                <label class="space-y-2 md:col-span-2">
+                    <span class="admin-label">Tiêu đề</span>
+                    <input asp-for="Input.Title" class="admin-input" placeholder="VD: Chia sẻ góc nhìn của bạn" />
+                    <span asp-validation-for="Input.Title" class="text-sm text-red-600"></span>
+                </label>
+
+                <label class="space-y-2 md:col-span-2">
+                    <span class="admin-label">Phụ đề (italic, accent)</span>
+                    <input asp-for="Input.Subtitle" class="admin-input" placeholder="VD: Hải Lưu Ngược mong muốn lắng nghe bạn" />
+                    <span asp-validation-for="Input.Subtitle" class="text-sm text-red-600"></span>
+                </label>
+
+                <label class="space-y-2 md:col-span-2">
+                    <span class="admin-label">Mô tả ngắn</span>
+                    <textarea asp-for="Input.Description" rows="4" class="admin-input" placeholder="Hỗ trợ HTML inline (ví dụ &lt;strong&gt;)."></textarea>
+                    <span class="text-xs text-slate-500">Có thể dùng <code>&lt;strong&gt;</code>, <code>&lt;em&gt;</code> để in đậm/nghiêng cụm từ.</span>
+                    <span asp-validation-for="Input.Description" class="text-sm text-red-600"></span>
+                </label>
+
+                <label class="space-y-2">
+                    <span class="admin-label">Nhãn nút CTA</span>
+                    <input asp-for="Input.CtaLabel" class="admin-input" placeholder="Làm khảo sát" />
+                    <span class="text-xs text-slate-500">Chỉ hiển thị khi chế độ = "Mở tab mới".</span>
+                    <span asp-validation-for="Input.CtaLabel" class="text-sm text-red-600"></span>
+                </label>
+            </div>
+        </section>
+
+        <aside class="admin-card space-y-6 p-6">
+            <div>
+                <h3 class="text-lg font-bold text-slate-950">Hiển thị</h3>
+                <label class="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3">
+                    <input asp-for="Input.Enabled" class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                    <span>
+                        <span class="block font-bold text-slate-900">Bật section</span>
+                        <span class="block text-xs text-slate-500">Tắt sẽ ẩn hoàn toàn khỏi trang công khai.</span>
+                    </span>
+                </label>
+            </div>
+
+            <div>
+                <span class="admin-label">Chế độ hiển thị</span>
+                <div class="mt-2 space-y-2">
+                    <label class="flex items-start gap-3 rounded-2xl border border-slate-200 px-4 py-3">
+                        <input type="radio" asp-for="Input.DisplayMode" value="iframe" class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500" />
+                        <span>
+                            <span class="block font-bold text-slate-900">Nhúng iframe (Embed)</span>
+                            <span class="block text-xs text-slate-500">Hiển thị Google Form trực tiếp trên trang.</span>
+                        </span>
+                    </label>
+                    <label class="flex items-start gap-3 rounded-2xl border border-slate-200 px-4 py-3">
+                        <input type="radio" asp-for="Input.DisplayMode" value="link" class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500" />
+                        <span>
+                            <span class="block font-bold text-slate-900">Mở tab mới (Link)</span>
+                            <span class="block text-xs text-slate-500">Hiển thị nút CTA <code>target="_blank"</code>.</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label class="space-y-2">
+                    <span class="admin-label">URL Google Form</span>
+                    <input asp-for="Input.Url" class="admin-input" placeholder="https://docs.google.com/forms/d/e/.../viewform?embedded=true" />
+                    <span class="text-xs text-slate-500">Chế độ nhúng cần URL có <code>?embedded=true</code>. Cho phép host <code>docs.google.com</code> hoặc <code>forms.gle</code>.</span>
+                    <span asp-validation-for="Input.Url" class="text-sm text-red-600"></span>
+                </label>
+            </div>
+        </aside>
+    </div>
+</form>
+

@@ -1,0 +1,87 @@
+@using NewsCMS.Application.Ar.Dtos
+@model ArExperienceDetailDto
+@{
+    Layout = "~/Areas/Theme/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = Model.Title;
+    ViewData["BodyClass"] = "ar-immersive";
+    ViewData["OgImage"] = Model.TargetImageUrl;
+    ViewData["Description"] = Model.Description;
+    var fallbackUrl = $"/ar/{Model.Slug}/xem";
+}
+
+<meta name="ar-mind-url" content="@Model.MindFileUrl" />
+<meta name="ar-video-url" content="@Model.VideoUrl" />
+<meta name="ar-video-width" content="@Model.VideoWidth.ToString("G", System.Globalization.CultureInfo.InvariantCulture)" />
+<meta name="ar-video-height" content="@Model.VideoHeight.ToString("G", System.Globalization.CultureInfo.InvariantCulture)" />
+<meta name="ar-slug" content="@Model.Slug" />
+<meta name="ar-fallback-url" content="@fallbackUrl" />
+
+<div id="ar-root" class="ar-root">
+
+    <!-- Permission / loading card -->
+    <div id="ar-permission-card" class="ar-permission-card">
+        <div class="ar-permission-inner">
+            <div class="ar-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                    <circle cx="12" cy="13" r="3.2" />
+                </svg>
+            </div>
+            <h1 class="ar-title">@Model.Title</h1>
+            @if (!string.IsNullOrWhiteSpace(Model.Description))
+            {
+                <p class="ar-desc">@Model.Description</p>
+            }
+            <p class="ar-hint">Trải nghiệm AR - trỏ camera vào ảnh in để xem video.</p>
+            <button id="ar-start-btn" class="ar-start-btn">Bật camera AR</button>
+            <a href="@fallbackUrl" class="ar-fallback-link">Xem video trực tiếp (không cần camera)</a>
+        </div>
+    </div>
+
+    <!-- MindAR scene — injected by ar.js after user grants permission -->
+    <div id="ar-scene-container" class="ar-scene-container" hidden></div>
+
+    <!-- Top-right fallback button (visible inside AR) -->
+    <a id="ar-exit-btn" href="@fallbackUrl" class="ar-exit-btn" hidden>
+        <span>Xem video</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M7 17 17 7" /><path d="M7 7h10v10" />
+        </svg>
+    </a>
+
+    <!-- Bottom HUD -->
+    <div id="ar-hud" class="ar-hud" hidden>
+        <p class="ar-hud-title">@Model.Title</p>
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <p class="ar-hud-desc">@Model.Description</p>
+        }
+    </div>
+
+    <!-- Error state -->
+    <div id="ar-error-card" class="ar-permission-card" hidden>
+        <div class="ar-permission-inner">
+            <div class="ar-icon ar-error-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13.5" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+            </div>
+            <p class="ar-hint">Không thể khởi động AR trên thiết bị này.</p>
+            <a href="@fallbackUrl" class="ar-start-btn">Xem video thay thế</a>
+        </div>
+    </div>
+
+    <noscript>
+        <div class="ar-permission-card">
+            <div class="ar-permission-inner">
+                <p>JavaScript bị tắt. <a href="@fallbackUrl">Xem video tại đây.</a></p>
+            </div>
+        </div>
+    </noscript>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="~/_content/NewsCMS.Theme.HaiLuuNguoc/css/ar.css?v=20260618-brand-bg-refresh1" />
+    <script src="~/_content/NewsCMS.Theme.HaiLuuNguoc/js/ar.js?v=20260630-ar-video-optimized" defer></script>
+}

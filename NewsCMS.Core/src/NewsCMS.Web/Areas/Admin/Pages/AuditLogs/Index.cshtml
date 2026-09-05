@@ -1,0 +1,23 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.AuditLogs.IndexModel
+@{
+    ViewData["Title"] = "Audit log";
+}
+
+<div class="mb-6">
+    <p class="text-sm font-semibold text-indigo-600">Hệ thống</p>
+    <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Audit log</h2>
+</div>
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full min-w-[900px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500"><tr><th class="px-5 py-4">Thời gian</th><th class="px-5 py-4">User</th><th class="px-5 py-4">Action</th><th class="px-5 py-4">Entity</th><th class="px-5 py-4">EntityId</th><th class="px-5 py-4">IP</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Items.Count == 0) { <tr><td colspan="6" class="px-5 py-10 text-center text-slate-500">Chưa có log.</td></tr> }
+            @foreach (var x in Model.Items)
+            {
+                <tr class="bg-white"><td class="px-5 py-4 text-slate-600">@x.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td><td class="px-5 py-4">@(x.UserName ?? "-")</td><td class="px-5 py-4">@x.Action</td><td class="px-5 py-4">@x.Entity</td><td class="px-5 py-4 font-mono text-xs">@(x.EntityId ?? "-")</td><td class="px-5 py-4">@(x.IpAddress ?? "-")</td></tr>
+            }
+        </tbody>
+    </table>
+</div>

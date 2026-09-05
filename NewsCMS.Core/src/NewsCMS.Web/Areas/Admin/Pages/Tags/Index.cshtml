@@ -1,0 +1,58 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Tags";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Nội dung</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Tags</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/Tags/Create" class="admin-btn-primary">Thêm tag</a>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="hidden">@ok</div>
+}
+
+<form method="get" class="admin-card mb-6 grid gap-3 p-4 md:grid-cols-[1fr_140px]">
+    <input class="admin-input" name="q" value="@Model.Keyword" placeholder="Tìm tag..." />
+    <button class="admin-btn-secondary" type="submit">Lọc</button>
+</form>
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Tên</th>
+                <th class="px-5 py-4">Slug</th>
+                <th class="px-5 py-4">Số bài</th>
+                <th class="px-5 py-4"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (!Model.Items.Any())
+            {
+                <tr><td colspan="4" class="px-5 py-10 text-center text-slate-500">Chưa có tag nào.</td></tr>
+            }
+            @foreach (var t in Model.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4 font-semibold text-slate-950">@t.Name</td>
+                    <td class="px-5 py-4 font-mono text-xs text-slate-500">@t.Slug</td>
+                    <td class="px-5 py-4 text-slate-600">@t.PostCount</td>
+                    <td class="px-5 py-4 text-right flex gap-2 justify-end">
+                        <a asp-area="Admin" asp-page="/Tags/Edit" asp-route-id="@t.Id" class="admin-btn-secondary">Sửa</a>
+                        <form method="post" asp-page-handler="Delete" asp-route-id="@t.Id"
+                              data-confirm="Xoá tag này?" data-confirm-danger="true">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="admin-btn-secondary text-red-600">Xoá</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

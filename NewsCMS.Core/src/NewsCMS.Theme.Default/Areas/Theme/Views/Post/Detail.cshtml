@@ -1,0 +1,18 @@
+@{
+    ViewData["Title"] = "Chi tiết bài viết";
+    var catSlug = ViewBag.CategorySlug as string;
+    var postSlug = ViewBag.PostSlug as string;
+}
+<article class="bg-white p-4 rounded shadow-sm">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a asp-area="Theme" asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a asp-area="Theme" asp-controller="Category" asp-action="Index" asp-route-categorySlug="@catSlug">@catSlug</a></li>
+            <li class="breadcrumb-item active">@postSlug</li>
+        </ol>
+    </nav>
+    <h1 class="display-6">Tiêu đề bài viết</h1>
+    <p class="text-muted">Slug: <code>@catSlug / @postSlug</code></p>
+    <hr />
+    <p>Nội dung bài viết sẽ được load từ <code>IPostService.GetBySlugAsync(postSlug)</code>.</p>
+</article>

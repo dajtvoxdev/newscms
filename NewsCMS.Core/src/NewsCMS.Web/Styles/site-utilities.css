@@ -1,0 +1,161 @@
+/*
+ * site-utilities.css — nguồn Tailwind precompile cho TRANG PUBLIC của theme Universal.
+ *
+ * Vì sao cần: Tailwind compile ở trình duyệt, do màn hình builder điều khiển. Trang tạo qua
+ * MCP/API chưa từng mở builder nên không có utility nào được sinh (cột Page.CssDirty đánh dấu
+ * tình trạng này). File này precompile sẵn tập utility mà agent và block first-party thực sự
+ * dùng, để trang chạy được ngay mà không cần người mở builder.
+ *
+ * Build:  npm run css:site        (một lần)
+ *         npm run css:site:watch  (khi sửa safelist)
+ * Ra:     wwwroot/css/site-utilities.css  →  PageRenderer nhúng vào <head> mọi trang Universal.
+ *
+ * Token màu/font/spacing KHÔNG khai ở đây: chúng do SiteDesignToken sinh ra theo từng site
+ * (xem DesignTokenCssBuilder) và nạp qua /_nc/site/{slug}-{hash}.css. File này chỉ chứa
+ * utility cấu trúc — thứ giống nhau ở mọi site.
+ */
+
+@import "tailwindcss";
+
+/*
+ * Tailwind 4 quét file nguồn để tìm class. Trang public sinh từ DB nên không có file nào để
+ * quét — phải liệt kê tường minh. @source inline() là cách chính thức của Tailwind 4 cho việc này.
+ *
+ * Giữ danh sách này ĐỒNG BỘ với references/blocks.md trong skill newscms-site-builder:
+ * agent chỉ được hứa hẹn những utility có mặt ở đây.
+ */
+
+/* Bố cục: container, flex, grid */
+@source inline("{container,mx-auto,w-full,max-w-{xs,sm,md,lg,xl,2xl,3xl,4xl,5xl,6xl,7xl,full,prose}}");
+@source inline("{block,inline-block,inline,flex,inline-flex,grid,inline-grid,hidden}");
+@source inline("flex-{row,row-reverse,col,col-reverse,wrap,nowrap,1,auto,initial,none}");
+@source inline("{items,justify,content,self}-{start,end,center,between,around,evenly,stretch,baseline}");
+@source inline("grid-cols-{1,2,3,4,5,6,12}");
+@source inline("col-span-{1,2,3,4,5,6,full}");
+@source inline("gap-{0,1,2,3,4,5,6,8,10,12,16,20,24}");
+@source inline("{relative,absolute,fixed,sticky,static}");
+@source inline("{top,right,bottom,left,inset}-0");
+@source inline("z-{0,10,20,30,40,50,auto}");
+@source inline("overflow-{auto,hidden,visible,scroll}");
+
+/* Khoảng cách */
+@source inline("{p,px,py,pt,pr,pb,pl}-{0,1,2,3,4,5,6,8,10,12,16,20,24,32}");
+@source inline("{m,mx,my,mt,mr,mb,ml}-{0,1,2,3,4,5,6,8,10,12,16,20,24,auto}");
+@source inline("space-{x,y}-{0,1,2,3,4,6,8}");
+
+/* Kích thước */
+@source inline("{w,h}-{full,screen,auto,px,0,1,2,4,6,8,10,12,16,20,24,32,48,64}");
+@source inline("min-h-{0,full,screen}");
+@source inline("aspect-{auto,square,video}");
+@source inline("object-{contain,cover,fill,none,scale-down}");
+
+/* Chữ */
+@source inline("text-{xs,sm,base,lg,xl,2xl,3xl,4xl,5xl,6xl,7xl}");
+@source inline("font-{thin,light,normal,medium,semibold,bold,extrabold,black}");
+@source inline("text-{left,center,right,justify}");
+@source inline("leading-{none,tight,snug,normal,relaxed,loose}");
+@source inline("tracking-{tighter,tight,normal,wide,wider,widest}");
+@source inline("{uppercase,lowercase,capitalize,normal-case}");
+@source inline("{truncate,italic,not-italic,underline,line-through,no-underline}");
+
+/* Trang trí — dùng chung mọi site (màu cụ thể đến từ design token) */
+@source inline("rounded{,-none,-sm,-md,-lg,-xl,-2xl,-3xl,-full}");
+@source inline("border{,-0,-2,-4,-8}");
+@source inline("border-{t,r,b,l}{,-0,-2,-4}");
+@source inline("shadow{,-none,-sm,-md,-lg,-xl,-2xl,-inner}");
+@source inline("opacity-{0,5,10,20,25,50,75,90,95,100}");
+
+/* Tương tác — hover/focus phải có, nếu không nút bấm trông như chết */
+@source inline("{transition,transition-{all,colors,opacity,shadow,transform}}");
+@source inline("duration-{75,100,150,200,300,500,700,1000}");
+@source inline("ease-{linear,in,out,in-out}");
+@source inline("cursor-{pointer,default,not-allowed,wait}");
+@source inline("hover:{opacity-{75,90,100},shadow-{md,lg,xl},underline,scale-105}");
+@source inline("focus:{outline-none,ring,ring-2,ring-4,ring-offset-2}");
+@source inline("{scale,translate-x,translate-y}-{0,95,100,105,110}");
+
+/* Responsive: các breakpoint mà kế hoạch yêu cầu kiểm (320/768/1024/1440) */
+@source inline("{sm,md,lg,xl}:{block,flex,grid,hidden}");
+@source inline("{sm,md,lg,xl}:grid-cols-{1,2,3,4,6}");
+@source inline("{sm,md,lg,xl}:flex-{row,col}");
+@source inline("{sm,md,lg,xl}:text-{sm,base,lg,xl,2xl,3xl,4xl,5xl,6xl}");
+@source inline("{sm,md,lg,xl}:{p,px,py}-{0,2,4,6,8,12,16,24}");
+@source inline("{sm,md,lg,xl}:{w,h}-{full,auto}");
+@source inline("{sm,md,lg,xl}:gap-{2,4,6,8,12}");
+
+/*
+ * Màu theo design token: Tailwind 4 sinh utility từ khối @theme, mà khối đó nằm ở CSS
+ * per-site chứ không ở đây. Liệt kê các thang token CHUẨN mà mọi site đều nên có, để
+ * bg-brand-500 / text-ink có sẵn ngay cả trước lần mở builder đầu tiên.
+ * Site đặt tên token khác quy ước sẽ cần mở builder một lần để compile đầy đủ.
+ */
+@theme {
+  --color-brand-50: #f0fdf9;
+  --color-brand-100: #ccfbef;
+  --color-brand-200: #99f6e0;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #0d7c66;
+  --color-brand-600: #0a6352;
+  --color-brand-700: #075e54;
+  --color-brand-800: #134e4a;
+  --color-brand-900: #042f2e;
+
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+  --color-surface: #ffffff;
+  --color-subtle: #f8fafc;
+
+  --font-display: ui-sans-serif, system-ui, sans-serif;
+  --font-body: ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 14px;
+  --radius-pill: 999px;
+
+  --space-section: clamp(4rem, 3rem + 5vw, 8rem);
+}
+
+@source inline("{bg,text,border,ring}-brand-{50,100,200,300,400,500,600,700,800,900}");
+@source inline("{bg,text,border}-{ink,muted,surface,subtle}");
+@source inline("hover:{bg,text,border}-brand-{400,500,600,700}");
+@source inline("font-{display,body}");
+@source inline("rounded-{card,pill}");
+
+/*
+ * Tailwind 4 KHÔNG sinh utility spacing từ biến @theme tuỳ ý (--space-* không phải namespace
+ * spacing hợp lệ), nên py-section phải khai tay. Giá trị đọc từ --space-section để vẫn là một
+ * nguồn duy nhất với design token của site.
+ */
+@utility p-section {
+  padding: var(--space-section);
+}
+@utility py-section {
+  padding-block: var(--space-section);
+}
+@utility px-section {
+  padding-inline: var(--space-section);
+}
+@utility mt-section {
+  margin-top: var(--space-section);
+}
+@utility mb-section {
+  margin-bottom: var(--space-section);
+}
+
+/* @utility chỉ định nghĩa; vẫn phải liệt kê để được emit vào bundle tĩnh. */
+@source inline("{p,py,px,mt,mb}-section");
+
+/* Trang public không dùng preflight của admin — reset tối thiểu để nội dung DB hiển thị ổn. */
+@layer base {
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Nội dung sinh từ builder hay dùng inline style; đảm bảo bảng không tràn khung. */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+}

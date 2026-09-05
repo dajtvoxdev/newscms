@@ -1,0 +1,71 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Gửi Telegram nhóm";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Kèo Bia 2026</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Gửi tin nhắn Telegram</h2>
+    </div>
+    <a href="/Admin/KeoBia/Players" class="admin-btn-secondary">Quay lại</a>
+</div>
+
+@if (TempData["Success"] is string msg)
+{
+    <div class="hidden">@msg</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="hidden">@err</div>
+}
+
+@if (!Model.IsConfigured)
+{
+    <div class="admin-card p-6">
+        <p class="text-sm text-slate-600">Chưa cấu hình <code>KeoBia:Telegram:ShareBeer:GroupChatId</code> trong appsettings.json.</p>
+    </div>
+}
+else
+{
+    <form method="post" asp-page-handler="Send">
+        @Html.AntiForgeryToken()
+        <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+            <div class="space-y-6">
+                <section class="admin-card p-6">
+                    <div class="space-y-5">
+                        <label class="block space-y-2">
+                            <span class="admin-label">Nội dung tin nhắn</span>
+                            <textarea asp-for="MessageHtml" id="telegram-message" class="admin-input" rows="8" placeholder="Nhập nội dung gửi vào nhóm Telegram..."></textarea>
+                        </label>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="space-y-4">
+                <section class="admin-card p-5">
+                    <h3 class="font-bold text-slate-950">Ảnh đính kèm (tuỳ chọn)</h3>
+                    <p class="mt-1 text-xs text-slate-500">Nếu có ảnh, tin nhắn sẽ gửi dưới dạng ảnh + caption.</p>
+                    <div class="mt-4">
+                        <partial name="~/Areas/Admin/Shared/_MediaPicker.cshtml"
+                                 model='new NewsCMS.Web.Areas.Admin.Shared.MediaPickerOptions { For = "ImageUrl", Value = null, Accept = "image/*", Label = "Chọn ảnh" }' />
+                    </div>
+                </section>
+
+                <section class="admin-card p-5">
+                    <h3 class="font-bold text-slate-950">Gửi tới</h3>
+                    <p class="mt-2 text-sm text-slate-600">
+                        <span class="inline-block rounded-lg bg-slate-100 px-2 py-1 font-mono text-xs">@Model.GroupChatId</span>
+                    </p>
+                </section>
+
+                <button type="submit" class="admin-btn-primary w-full">Gửi tin nhắn</button>
+            </aside>
+        </div>
+    </form>
+}
+
+@section Scripts {
+    <partial name="~/Areas/Admin/Shared/_TinyMce.cshtml" model='new TinyMceOptions { Selector = "#telegram-message", Height = 400 }' />
+}

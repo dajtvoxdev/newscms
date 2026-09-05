@@ -1,0 +1,62 @@
+@page "{id:guid}"
+@model EditModel
+@{ ViewData["Title"] = "Sửa người dùng"; }
+
+<div class="mb-6">
+    <p class="text-sm font-semibold text-indigo-600">Người dùng</p>
+    <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Sửa người dùng — @Model.UserEmail</h2>
+</div>
+
+<div class="space-y-6">
+    <form method="post" class="space-y-6">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+        <div class="admin-card grid gap-5 p-6 md:grid-cols-2">
+            <div>
+                <label class="admin-label">Tên đăng nhập</label>
+                <input value="@Model.UserName" readonly class="admin-input cursor-not-allowed bg-slate-100 text-slate-500" />
+                <p class="mt-1 text-xs text-slate-400">Tên đăng nhập không thể thay đổi.</p>
+            </div>
+            <div>
+                <label class="admin-label">Email</label>
+                <input value="@Model.UserEmail" readonly class="admin-input cursor-not-allowed bg-slate-100 text-slate-500" />
+                <p class="mt-1 text-xs text-slate-400">Email không thể thay đổi.</p>
+            </div>
+            <div>
+                <label class="admin-label">Họ và tên</label>
+                <input asp-for="Input.FullName" class="admin-input" />
+            </div>
+            <div>
+                <label class="admin-label">Vai trò</label>
+                <select asp-for="Input.RoleName" asp-items="Model.RoleOptions" class="admin-select">
+                    <option value="">-- Chưa gán --</option>
+                </select>
+            </div>
+            <div>
+                <label class="admin-label">Site</label>
+                <select asp-for="Input.SiteId" asp-items="Model.SiteOptions" class="admin-select">
+                    <option value="">-- Không thuộc site --</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-3">
+                <input asp-for="Input.IsActive" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                <label asp-for="Input.IsActive" class="text-sm font-medium text-slate-700">Tài khoản đang hoạt động</label>
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+            <button type="submit" class="admin-btn-primary">Lưu thay đổi</button>
+            <a asp-page="/Users/Index" class="admin-btn-secondary">Huỷ</a>
+        </div>
+    </form>
+
+    <div class="admin-card p-6">
+        <h3 class="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">Đặt lại mật khẩu</h3>
+        <form method="post" asp-page-handler="ResetPassword" class="flex gap-3">
+            @Html.AntiForgeryToken()
+            <input name="NewPassword" type="password" class="admin-input max-w-xs" placeholder="Mật khẩu mới (≥ 8 ký tự)" autocomplete="new-password" />
+            <button type="submit" class="admin-btn-secondary">Đặt lại</button>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,99 @@
+@page "{id:guid}"
+@model DetailsModel
+@{
+    ViewData["Title"] = Model.Item?.Title ?? "Chi tiết AR";
+    var publicUrl = $"/ar/{Model.Item?.Slug}";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Trải nghiệm AR</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">@Model.Item!.Title</h2>
+    </div>
+    <div class="flex gap-2">
+        <a href="@publicUrl" target="_blank" class="admin-btn-secondary inline-flex items-center gap-1.5">Mở trang AR @AdminIcon.Svg("arrow-up-right")</a>
+        <a asp-page="/ArExperiences/Edit" asp-route-id="@Model.Id" class="admin-btn-primary">Sửa</a>
+    </div>
+</div>
+
+<div class="admin-card grid gap-6 p-6 md:grid-cols-2">
+    <div>
+        <p class="admin-label">Slug / URL công khai</p>
+        <p class="font-mono text-sm text-indigo-600"><a href="@publicUrl" target="_blank">@publicUrl</a></p>
+    </div>
+
+    <div>
+        <p class="admin-label">Trạng thái</p>
+        <span class="admin-badge @(Model.Item.IsPublished ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")">
+            @(Model.Item.IsPublished ? "Đã xuất bản" : "Bản nháp")
+        </span>
+    </div>
+
+    <div>
+        <p class="admin-label">Lượt xem</p>
+        <p class="text-slate-800">@Model.Item.ViewCount</p>
+    </div>
+
+    @if (Model.Item.Description is not null)
+    {
+        <div class="col-span-2">
+            <p class="admin-label">Mô tả</p>
+            <p class="text-slate-700">@Model.Item.Description</p>
+        </div>
+    }
+
+    <div>
+        <p class="admin-label">Ảnh target</p>
+        <img src="@Model.Item.TargetImageUrl" class="h-32 rounded border object-contain" alt="target" />
+    </div>
+
+    <div>
+        <p class="admin-label">Video</p>
+        @{
+            var ratio = Model.Item.VideoHeight > 0
+                ? (Model.Item.VideoWidth / Model.Item.VideoHeight).ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)
+                : "1.7778";
+        }
+        <video src="@Model.Item.VideoUrl" controls muted
+               style="aspect-ratio: @ratio; max-height: 360px; width: auto; max-width: 100%;"
+               class="rounded border bg-black object-contain"></video>
+    </div>
+
+    <div class="col-span-2">
+        <p class="admin-label">File .mind</p>
+        <a href="@Model.Item.MindFileUrl" class="text-sm text-indigo-600 underline" download>Tải xuống .mind</a>
+    </div>
+
+    <div class="col-span-2">
+        <p class="admin-label mb-2">QR Code — trỏ thẳng tới trang AR</p>
+        <div id="qrcode" class="inline-block rounded border bg-white p-3"></div>
+        <p class="mt-1 text-xs text-slate-500">URL: <a id="arUrl" href="@publicUrl" target="_blank" class="text-indigo-600 underline"></a></p>
+    </div>
+</div>
+
+<div class="mt-4 flex gap-3">
+    <a asp-page="/ArExperiences/Delete" asp-route-id="@Model.Id" class="admin-btn-danger">Xoá</a>
+    <a asp-page="/ArExperiences/Index" class="admin-btn-secondary">Quay lại danh sách</a>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script>
+        (function () {
+            var base = window.location.origin;
+            var slug = '@Model.Item.Slug';
+            var url = base + '/ar/' + slug;
+            var arUrl = document.getElementById('arUrl');
+            arUrl.textContent = url;
+            arUrl.href = url;
+
+            var box = document.getElementById('qrcode');
+            if (typeof QRCode === 'undefined') {
+                box.textContent = url;
+                return;
+            }
+            // qrcodejs (davidshimjs) renders a <canvas>/<img> into the element.
+            new QRCode(box, { text: url, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M });
+        })();
+    </script>
+}

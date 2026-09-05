@@ -1,0 +1,8 @@
+{
+  "name": "Universal",
+  "displayName": "Universal Site Builder",
+  "version": "0.1.0",
+  "author": "NewsCMS.Core",
+  "description": "Data-driven drag-and-drop site builder theme. Renders pages/layouts stored in the database via a single catch-all route — no rebuild needed to create new sites or pages.",
+  "supports": ["home", "category", "post", "page", "landing", "builder"]
+}

@@ -1,0 +1,88 @@
+@using NewsCMS.Application.Ar
+@model ArScannerData
+@{
+    Layout = "~/Areas/Theme/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Quét ảnh — Trải nghiệm AR";
+    var targetsJson = System.Text.Json.JsonSerializer.Serialize(
+        Model.Targets.Select(t => new
+        {
+            index = t.Index,
+            slug = t.Slug,
+            videoUrl = t.VideoUrl,
+            width = t.VideoWidth,
+            height = t.VideoHeight
+        }));
+}
+
+<meta name="ar-master-mind" content="@Model.MasterMindUrl" />
+
+<div id="ar-root" class="ar-root">
+    <div id="ar-permission-card" class="ar-permission-card">
+        <div class="ar-permission-inner">
+            <div class="ar-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                    <circle cx="12" cy="13" r="3.2" />
+                </svg>
+            </div>
+            <h1 class="ar-title">Quét ảnh để xem AR</h1>
+            <div class="ar-guide">
+                <p class="ar-guide-label">Hướng dẫn sử dụng</p>
+                <video class="ar-guide-video" controls playsinline webkit-playsinline preload="metadata" aria-label="Video hướng dẫn sử dụng trải nghiệm AR">
+                    <source src="~/_content/NewsCMS.Theme.HaiLuuNguoc/Hướng dẫn Ar resize ngang.mp4?v=20260816-faststart" type="video/mp4" />
+                    Trình duyệt không hỗ trợ phát video. <a href="~/_content/NewsCMS.Theme.HaiLuuNguoc/Hướng dẫn Ar resize ngang.mp4?v=20260816-faststart" target="_blank" rel="noopener noreferrer">Mở video hướng dẫn</a>.
+                </video>
+            </div>
+            <p class="ar-hint">Trỏ camera vào ảnh in của chiến dịch - video sẽ hiện ngay trên ảnh.</p>
+            <button id="ar-start-btn" class="ar-start-btn">Bật camera AR</button>
+        </div>
+    </div>
+
+    <div id="ar-scene-container" class="ar-scene-container" hidden></div>
+
+    <a id="ar-exit-btn" href="/" class="ar-exit-btn" hidden>
+        <svg class="ar-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="m3 9.5 9-7 9 7V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M9 22V12h6v10" />
+        </svg>
+        <span>Thoát</span>
+    </a>
+
+    <div id="ar-hud" class="ar-hud" hidden>
+        <p class="ar-hud-title">Đang quét…</p>
+        <p class="ar-hud-desc">Hướng camera vào ảnh in để xem video.</p>
+    </div>
+
+    <div id="ar-error-card" class="ar-permission-card" hidden>
+        <div class="ar-permission-inner">
+            <div class="ar-icon ar-error-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13.5" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+            </div>
+            <p class="ar-hint">Không thể khởi động AR trên thiết bị này.</p>
+            <a href="/" class="ar-start-btn">
+                <svg class="ar-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="m3 9.5 9-7 9 7V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M9 22V12h6v10" />
+                </svg>
+                <span>Về trang chủ</span>
+            </a>
+        </div>
+    </div>
+
+    <noscript>
+        <div class="ar-permission-card">
+            <div class="ar-permission-inner"><p>Vui lòng bật JavaScript để dùng AR.</p></div>
+        </div>
+    </noscript>
+</div>
+
+<script id="ar-targets" type="application/json">@Html.Raw(targetsJson)</script>
+
+@section Head {
+    <link rel="stylesheet" href="~/_content/NewsCMS.Theme.HaiLuuNguoc/css/ar.css?v=20260618-brand-bg-refresh1" />
+}
+
+@section Scripts {
+    <script src="~/_content/NewsCMS.Theme.HaiLuuNguoc/js/ar-scanner.js?v=20260630-ar-video-optimized" defer></script>
+}

@@ -1,0 +1,106 @@
+@page
+@using NewsCMS.Application.KeoBia
+@model CreateModel
+@{
+    ViewData["Title"] = "Tạo câu hỏi nhanh";
+    var currentUnitCode = KeoBiaUnitRules.GetCurrentUnitCode();
+    var currentUnitLabel = KeoBiaUnitRules.FullLabel(currentUnitCode);
+}
+
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Kèo Bia 2026</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Tạo câu hỏi nhanh</h2>
+    </div>
+    <a href="/Admin/KeoBia/Quiz" class="admin-btn-secondary inline-flex items-center gap-1.5">@AdminIcon.Svg("arrow-left") Danh sách</a>
+</div>
+
+<form method="post" class="admin-card max-w-2xl space-y-5 p-6" onsubmit="this.querySelector('button[type=submit]').disabled=true">
+    <div>
+        <label class="mb-1 block text-sm font-bold text-slate-700">Câu hỏi</label>
+        <textarea name="Text" rows="2" maxlength="400" required class="admin-input w-full"
+                  placeholder="VD: Đội nào vô địch World Cup 2026?">@Model.Text</textarea>
+    </div>
+
+    <div>
+        <label class="mb-1 block text-sm font-bold text-slate-700">Các lựa chọn (tối thiểu 2)</label>
+        <div class="space-y-2" data-choice-list>
+            @{ var labels = Model.ChoiceLabels.Count > 0 ? Model.ChoiceLabels : new List<string> { "", "", "", "" }; }
+            @for (var i = 0; i < labels.Count; i++)
+            {
+                <div class="flex gap-2" data-choice-row>
+                    <input name="ChoiceLabels" maxlength="120" class="admin-input w-full"
+                           value="@labels[i]"
+                           placeholder="Lựa chọn @(i + 1)@(i < 2 ? " (bắt buộc)" : " (tuỳ chọn)")" />
+                    <button type="button" class="admin-btn-secondary !px-3" data-remove-choice aria-label="Xoá lựa chọn">×</button>
+                </div>
+            }
+        </div>
+        <button type="button" class="admin-btn-secondary mt-2 !px-3 !py-2 !text-xs" data-add-choice>+ Thêm lựa chọn</button>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+            <label class="mb-1 block text-sm font-bold text-slate-700">Số @currentUnitLabel thưởng nếu đúng</label>
+            <input type="number" name="RewardCups" min="1" max="99" value="@Model.RewardCups" required class="admin-input w-full" />
+            <p class="mt-1 text-xs text-slate-500">Người trả lời đúng được giảm số @currentUnitLabel phải nộp (tối đa tới 0).</p>
+        </div>
+        <div>
+            <label class="mb-1 block text-sm font-bold text-slate-700">Số @currentUnitLabel phạt nếu sai</label>
+            <input type="number" name="PenaltyCups" min="0" max="99" value="@Model.PenaltyCups" required class="admin-input w-full" />
+            <p class="mt-1 text-xs text-slate-500">Mặc định 0 = sai không mất gì.</p>
+        </div>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+            <label class="mb-1 block text-sm font-bold text-slate-700">Đóng bình chọn lúc (tuỳ chọn)</label>
+            <input type="datetime-local" name="ClosesAt" class="admin-input w-full"
+                   value="@(Model.ClosesAt?.ToString("yyyy-MM-ddTHH:mm"))" />
+            <p class="mt-1 text-xs text-slate-500">Để trống = mở tới khi công bố đáp án.</p>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-3 pt-2">
+        <button type="submit" class="admin-btn-primary disabled:cursor-not-allowed disabled:opacity-60">Tạo & gửi Telegram</button>
+        <a href="/Admin/KeoBia/Quiz" class="text-sm font-semibold text-slate-500 hover:text-slate-700">Huỷ</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        (() => {
+            const list = document.querySelector("[data-choice-list]");
+            const add = document.querySelector("[data-add-choice]");
+            if (!list || !add) return;
+
+            function refresh() {
+                list.querySelectorAll("[data-choice-row]").forEach((row, i) => {
+                    const input = row.querySelector("input");
+                    const remove = row.querySelector("[data-remove-choice]");
+                    input.placeholder = `Lựa chọn ${i + 1}${i < 2 ? " (bắt buộc)" : " (tuỳ chọn)"}`;
+                    remove.disabled = list.children.length <= 2;
+                });
+            }
+
+            add.addEventListener("click", () => {
+                const row = document.createElement("div");
+                row.className = "flex gap-2";
+                row.dataset.choiceRow = "";
+                row.innerHTML = '<input name="ChoiceLabels" maxlength="120" class="admin-input w-full" /><button type="button" class="admin-btn-secondary !px-3" data-remove-choice aria-label="Xoá lựa chọn">×</button>';
+                list.appendChild(row);
+                refresh();
+                row.querySelector("input").focus();
+            });
+
+            list.addEventListener("click", (event) => {
+                const button = event.target.closest("[data-remove-choice]");
+                if (!button || list.children.length <= 2) return;
+                button.closest("[data-choice-row]").remove();
+                refresh();
+            });
+
+            refresh();
+        })();
+    </script>
+}

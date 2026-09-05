@@ -1,0 +1,9 @@
+{
+  "name": "PhuPhucYaka",
+  "displayName": "Thế Giới Xe Điện Phú Phúc",
+  "version": "1.0.0",
+  "author": "NewsCMS.Core",
+  "description": "Đại lý ủy quyền Yaka Bike — showroom xe điện Phú Phúc tại Hải Phòng. Theme bán hàng phong cách automotive đỏ/trắng.",
+  "screenshot": "/_content/NewsCMS.Theme.PhuPhucYaka/design-preview.png",
+  "supports": ["home", "product"]
+}

@@ -1,0 +1,133 @@
+@page
+@using NewsCMS.Application.KeoBia
+@model IndexModel
+@{
+    ViewData["Title"] = "Hỏi đáp nhanh";
+    static string StatusLabel(string s) => s switch
+    {
+        "Open" => "Đang mở",
+        "Closed" => "Đã đóng",
+        "Revealed" => "Đã công bố",
+        _ => s
+    };
+    static string StatusClass(string s) => s switch
+    {
+        "Open" => "bg-emerald-100 text-emerald-700",
+        "Closed" => "bg-amber-100 text-amber-700",
+        "Revealed" => "bg-indigo-100 text-indigo-700",
+        _ => "bg-slate-100 text-slate-600"
+    };
+    static string ChoiceLabel(IReadOnlyList<KeoBiaQuestionChoiceDto> choices, string key) =>
+        choices.FirstOrDefault(x => string.Equals(x.Key, key, StringComparison.OrdinalIgnoreCase))?.Label ?? key;
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Kèo Bia 2026</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Hỏi đáp nhanh</h2>
+        <p class="mt-1 text-sm text-slate-500">Xem câu hỏi, ai đã chọn đáp án nào, rồi công bố kết quả.</p>
+    </div>
+    <a href="/Admin/KeoBia/Quiz/Create" class="admin-btn-primary">+ Tạo câu hỏi</a>
+</div>
+
+<div class="admin-card overflow-x-auto">
+    <table class="w-full min-w-[1180px] text-left text-sm">
+        <thead class="bg-slate-100/95 text-[11px] font-bold uppercase tracking-wide text-slate-600">
+            <tr>
+                <th class="px-5 py-3">Câu hỏi & người bình chọn</th>
+                <th class="px-3 py-3 text-center whitespace-nowrap">Thưởng và phạt</th>
+                <th class="px-3 py-3 text-center whitespace-nowrap">Trạng thái</th>
+                <th class="px-3 py-3 text-center whitespace-nowrap">Telegram</th>
+                <th class="px-5 py-3 text-right whitespace-nowrap">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Items.Count == 0)
+            {
+                <tr><td colspan="5" class="px-5 py-10 text-center text-slate-500">Chưa có câu hỏi nào.</td></tr>
+            }
+            @foreach (var q in Model.Items)
+            {
+                var votes = Model.VotesByQuestion.GetValueOrDefault(q.Id);
+                <tr class="align-top odd:bg-white even:bg-slate-50/60">
+                    <td class="px-5 py-4">
+                        <div class="font-bold leading-6 text-slate-950">@q.Text</div>
+                        <div class="mt-2 flex flex-wrap gap-1.5">
+                            @foreach (var c in q.Choices)
+                            {
+                                var isAnswer = q.CorrectChoiceKey != null && string.Equals(q.CorrectChoiceKey, c.Key, StringComparison.OrdinalIgnoreCase);
+                                var count = votes?.Choices.FirstOrDefault(x => x.Key == c.Key)?.VoteCount ?? 0;
+                                <span class="rounded-lg px-2 py-1 text-[11px] font-semibold @(isAnswer ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")">
+                                    @c.Label <span class="text-slate-400">(@count)</span>@if (isAnswer)
+                                    {
+                                        <span class="ms-1 inline-block align-middle text-emerald-600">@AdminIcon.Svg("check")</span>
+                                    }
+                                </span>
+                            }
+                        </div>
+                        <div class="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
+                            <div class="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Người bình chọn (@q.TotalVotes)</div>
+                            @if (votes is null || votes.Voters.Count == 0)
+                            {
+                                <div class="text-xs text-slate-400">Chưa ai bình chọn.</div>
+                            }
+                            else
+                            {
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach (var voter in votes.Voters.OrderByDescending(x => x.CreatedAt))
+                                    {
+                                        <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs shadow-sm">
+                                            @if (!string.IsNullOrWhiteSpace(voter.AvatarUrl))
+                                            {
+                                                <img src="@voter.AvatarUrl" alt="" class="h-5 w-5 rounded-full object-cover" />
+                                            }
+                                            <strong class="text-slate-800">@voter.DisplayName</strong>
+                                            <span class="text-slate-400">@AdminIcon.Svg("arrow-right")</span>
+                                            <span class="font-semibold text-indigo-700">@ChoiceLabel(q.Choices, voter.ChoiceKey)</span>
+                                        </span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </td>
+                    <td class="px-3 py-4 text-center font-bold text-amber-600 whitespace-nowrap">
+                        <div>Đúng giảm @KeoBiaUnitRules.FormatCount(q.RewardCups, q.UnitCode)</div>
+                        <div class="mt-1">Sai @(q.PenaltyCups > 0 ? $"mất {KeoBiaUnitRules.FormatCount(q.PenaltyCups, q.UnitCode)}" : "không mất")</div>
+                    </td>
+                    <td class="px-3 py-4 text-center whitespace-nowrap">
+                        <span class="inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold @StatusClass(q.Status)">@StatusLabel(q.Status)</span>
+                    </td>
+                    <td class="px-3 py-4 text-center whitespace-nowrap">@(q.SentToTelegram ? Html.Raw("<span class=\"inline-block align-middle text-emerald-600\">" + AdminIcon.Tag("check") + "</span>") : Html.Raw("<span class=\"inline-block align-middle text-slate-300\">—</span>"))</td>
+                    <td class="px-5 py-4">
+                        <div class="flex w-[360px] flex-col items-stretch gap-2">
+                            <form method="post" asp-page-handler="Reveal" class="grid grid-cols-[1fr_auto] gap-2">
+                                <input type="hidden" name="id" value="@q.Id" />
+                                <select name="correctChoiceKey" class="admin-input !py-2 text-xs" required>
+                                    <option value="">— Đáp án đúng —</option>
+                                    @foreach (var c in q.Choices)
+                                    {
+                                        <option value="@c.Key" selected="@(q.CorrectChoiceKey == c.Key)">@c.Label</option>
+                                    }
+                                </select>
+                                <button type="submit" class="admin-btn-primary !px-3 !py-2 !text-xs whitespace-nowrap">@(q.Status == "Revealed" ? "Công bố lại" : "Công bố")</button>
+                            </form>
+                            <div class="flex items-center justify-end gap-2">
+                                @if (q.Status == "Open")
+                                {
+                                    <form method="post" asp-page-handler="Close">
+                                        <input type="hidden" name="id" value="@q.Id" />
+                                        <button type="submit" class="admin-btn-secondary !border-amber-200 !bg-amber-50 !px-3 !py-2 !text-xs !text-amber-700 hover:!bg-amber-100 whitespace-nowrap">Đóng bình chọn</button>
+                                    </form>
+                                }
+                                <form method="post" asp-page-handler="Delete" data-confirm="Xoá câu hỏi này?" data-confirm-danger="true">
+                                    <input type="hidden" name="id" value="@q.Id" />
+                                    <button type="submit" class="admin-btn-secondary !border-red-200 !px-3 !py-2 !text-xs !text-red-600 hover:!bg-red-50 whitespace-nowrap">Xoá</button>
+                                </form>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

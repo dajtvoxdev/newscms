@@ -1,0 +1,226 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.Builder.LayoutsModel
+@{
+    ViewData["Title"] = "Layout Builder";
+}
+
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-indigo-600">Site Builder</p>
+        <h2 class="text-xl font-bold text-slate-900 mt-1">Layout & Global Parts</h2>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(TempData["Success"] as string))
+{
+    <div class="hidden">@TempData["Success"]</div>
+}
+@if (!string.IsNullOrEmpty(TempData["Error"] as string))
+{
+    <div class="hidden">@TempData["Error"]</div>
+}
+
+<!-- Tabs -->
+<div class="mb-6 flex gap-1 rounded-xl bg-slate-100 p-1" id="tabs">
+    <button class="tab-btn active flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all" data-tab="layouts">@AdminIcon.Svg("layout-template") Layouts</button>
+    <button class="tab-btn flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all" data-tab="site-code">@AdminIcon.Svg("code") Custom Code (Site)</button>
+</div>
+
+<!-- Tab: Layouts -->
+<div id="tab-layouts" class="tab-content">
+    <form id="layout-create-form" class="mb-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        @Html.AntiForgeryToken()
+        <p class="mb-3 text-sm font-semibold text-slate-900">Tạo layout mới</p>
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div>
+                <label class="admin-label">Key</label>
+                <input id="nl-key" class="admin-input font-mono text-sm" placeholder="shell-default" required
+                       pattern="[a-z0-9\-]+" title="Chỉ chữ thường, số và dấu gạch ngang" />
+            </div>
+            <div>
+                <label class="admin-label">Tên</label>
+                <input id="nl-name" class="admin-input" placeholder="Shell mặc định" required />
+            </div>
+            <div>
+                <label class="admin-label">Loại</label>
+                <select id="nl-kind" class="admin-input">
+                    <option value="Shell">Shell (bọc trang)</option>
+                    <option value="Header">Header</option>
+                    <option value="Footer">Footer</option>
+                    <option value="Sidebar">Sidebar</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="admin-btn-primary inline-flex w-full items-center justify-center gap-1.5">@AdminIcon.Svg("layout-template") Tạo &amp; thiết kế</button>
+            </div>
+        </div>
+        <p class="mt-2 text-xs text-slate-500">
+            Shell mới được tạo kèm khung mặc định (header có menu, vùng nội dung trang, footer) rồi mở luôn trình thiết kế trực quan.
+        </p>
+        <div id="create-error" class="mt-3 hidden rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"></div>
+    </form>
+
+    <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                <tr>
+                    <th class="px-4 py-3 font-semibold">Tên</th>
+                    <th class="px-4 py-3 font-semibold">Key</th>
+                    <th class="px-4 py-3 font-semibold">Loại</th>
+                    <th class="px-4 py-3 font-semibold">Mặc định</th>
+                    <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100" id="layout-list">
+                <tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">Đang tải…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Tab: Site Custom Code -->
+<div id="tab-site-code" class="tab-content hidden">
+    <form id="site-code-form" class="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        @Html.AntiForgeryToken()
+        <div>
+            <label class="admin-label">Custom CSS (toàn site)</label>
+            <textarea id="sc-css" class="admin-input font-mono text-xs" rows="6" placeholder="/* CSS áp dụng cho mọi trang */"></textarea>
+        </div>
+        <div>
+            <label class="admin-label">Custom JavaScript (toàn site)</label>
+            <textarea id="sc-js" class="admin-input font-mono text-xs" rows="6" placeholder="// JS chạy ở cuối body mọi trang"></textarea>
+        </div>
+        <div>
+            <label class="admin-label">Head HTML (analytics, meta tags…)</label>
+            <textarea id="sc-head" class="admin-input font-mono text-xs" rows="4" placeholder="<!-- Chèn vào cuối <head> -->"></textarea>
+        </div>
+        <div>
+            <label class="admin-label">Body End HTML (pixel, chat widget…)</label>
+            <textarea id="sc-bodyend" class="admin-input font-mono text-xs" rows="4" placeholder="<!-- Chèn trước </body> -->"></textarea>
+        </div>
+        <button type="submit" class="admin-btn-primary inline-flex items-center gap-1.5">@AdminIcon.Svg("save") Lưu Custom Code</button>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+(function() {
+    var TOKEN = document.querySelector('input[name="__RequestVerificationToken"]').value;
+    // Icon SVG render từ server (AdminIcon) — dùng cho HTML do JS sinh ra.
+    var ICONS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(AdminIcon.All()));
+    function headers(json) {
+        var h = { 'RequestVerificationToken': TOKEN };
+        if (json) h['Content-Type'] = 'application/json';
+        return h;
+    }
+
+    // ── Tabs ──────────────────────────────────────────────────────────────
+    document.querySelectorAll('.tab-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active','bg-white','shadow-sm'); });
+            btn.classList.add('active','bg-white','shadow-sm');
+            document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.add('hidden'); });
+            document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+            if (btn.dataset.tab === 'site-code') loadSiteCode();
+        });
+    });
+
+    // ── Load layouts ──────────────────────────────────────────────────────
+    async function loadLayouts() {
+        var res = await fetch('/admin/api/builder/layouts', { headers: headers(false), credentials: 'include' });
+        if (!res.ok) return;
+        var list = await res.json();
+        var tbody = document.getElementById('layout-list');
+        if (!list.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">Chưa có layout nào.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = list.map(function(l) {
+            var kindBadge = l.kind === 'Shell' ? 'bg-indigo-100 text-indigo-700' :
+                           l.kind === 'Header' ? 'bg-blue-100 text-blue-700' :
+                           l.kind === 'Footer' ? 'bg-amber-100 text-amber-700' :
+                           'bg-slate-100 text-slate-600';
+            return '<tr class="hover:bg-slate-50/80">' +
+                '<td class="px-4 py-3 font-medium text-slate-900">' + esc(l.name) + '</td>' +
+                '<td class="px-4 py-3 font-mono text-xs text-slate-500">' + esc(l.key) + '</td>' +
+                '<td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-xs font-medium ' + kindBadge + '">' + l.kind + '</span></td>' +
+                '<td class="px-4 py-3">' + (l.isDefault ? '<span class="text-emerald-600 font-semibold">' + ICONS['check'] + '</span>' : '') + '</td>' +
+                '<td class="px-4 py-3 text-right"><div class="inline-flex items-center gap-1.5">' +
+                '<a href="/admin/Builder/EditShell/' + l.id + '" title="Dựng header/footer bằng kéo-thả" class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">' + ICONS['layout-template'] + ' Thiết kế</a>' +
+                '<a href="/admin/Builder/EditLayout/' + l.id + '" title="Sửa metadata, HTML/CSS/JS bằng tay" class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100">' + ICONS['pencil'] + ' Code</a>' +
+                '</div></td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    // ── Tạo layout mới ────────────────────────────────────────────────────
+    // Không gửi compiledHtml: service tự seed khung shell mặc định (có data-nc-body) khi thiếu,
+    // nên layout sinh ra là mở được ngay trong trình thiết kế thay vì canvas trắng.
+    document.getElementById('layout-create-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var err = document.getElementById('create-error');
+        err.classList.add('hidden');
+        var btn = e.target.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        try {
+            var payload = {
+                key: document.getElementById('nl-key').value.trim(),
+                name: document.getElementById('nl-name').value.trim(),
+                kind: document.getElementById('nl-kind').value,
+                builderJson: null, compiledHtml: null, compiledCss: null,
+                customCss: null, customJs: null, isDefault: false
+            };
+            var res = await fetch('/admin/api/builder/layouts', {
+                method: 'POST', headers: headers(true), credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                var e2 = await res.json().catch(function(){return {error:'Tạo thất bại'}});
+                err.textContent = e2.error || 'Tạo thất bại';
+                err.classList.remove('hidden');
+                return;
+            }
+            var created = await res.json();
+            window.location.href = '/admin/Builder/EditShell/' + created.id;
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // ── Load site custom code ─────────────────────────────────────────────
+    var siteCodeLoaded = false;
+    async function loadSiteCode() {
+        if (siteCodeLoaded) return;
+        var res = await fetch('/admin/api/builder/site-code', { headers: headers(false), credentials: 'include' });
+        if (!res.ok) return;
+        var d = await res.json();
+        document.getElementById('sc-css').value = d.customCss || '';
+        document.getElementById('sc-js').value = d.customJs || '';
+        document.getElementById('sc-head').value = d.headHtml || '';
+        document.getElementById('sc-bodyend').value = d.bodyEndHtml || '';
+        siteCodeLoaded = true;
+    }
+
+    // ── Save site custom code ─────────────────────────────────────────────
+    document.getElementById('site-code-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var payload = {
+            customCss: document.getElementById('sc-css').value,
+            customJs: document.getElementById('sc-js').value,
+            headHtml: document.getElementById('sc-head').value,
+            bodyEndHtml: document.getElementById('sc-bodyend').value
+        };
+        var res = await fetch('/admin/api/builder/site-code', {
+            method: 'PUT', headers: headers(true), credentials: 'include',
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) window.toast?.success('Đã lưu custom code!');
+        else { var err = await res.json().catch(function(){return {error:'Lỗi'}}); window.toast?.error(err.error || 'Lưu thất bại'); }
+    });
+
+    function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    loadLayouts();
+})();
+</script>
+}

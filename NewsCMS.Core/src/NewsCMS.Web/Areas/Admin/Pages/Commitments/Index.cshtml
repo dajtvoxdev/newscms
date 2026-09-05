@@ -1,0 +1,80 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.Commitments.IndexModel
+@{
+    ViewData["Title"] = "Cam kết Hải Lưu Ngược";
+}
+
+@if (TempData["Error"] is string err)
+{
+    <div class="hidden">@err</div>
+}
+
+<section class="admin-card overflow-hidden">
+    <div class="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h2 class="text-lg font-bold text-slate-950">Danh sách chữ ký cam kết</h2>
+            <p class="mt-1 text-sm text-slate-500">Tổng: @Model.Items.TotalItems chữ ký. Ẩn / hiện để duyệt nội dung không phù hợp.</p>
+        </div>
+        <form method="get" class="flex gap-2">
+            <input class="admin-input" type="search" name="q" value="@Model.Keyword" placeholder="Tìm theo tên hoặc nội dung..." />
+            <button class="admin-btn-secondary" type="submit">Tìm</button>
+        </form>
+    </div>
+
+    @if (Model.Items.Items.Count == 0)
+    {
+        <div class="px-6 py-16 text-center text-slate-500">Chưa có cam kết nào.</div>
+    }
+    else
+    {
+        <table class="w-full min-w-[920px] text-left text-sm">
+            <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+                <tr>
+                    <th class="px-6 py-4">Chữ ký</th>
+                    <th class="px-6 py-4">Tên</th>
+                    <th class="px-6 py-4">Cam kết</th>
+                    <th class="px-6 py-4">Kiểu</th>
+                    <th class="px-6 py-4">Thời gian</th>
+                    <th class="px-6 py-4 text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @foreach (var item in Model.Items.Items)
+                {
+                    <tr class="@(item.IsHidden ? "bg-slate-50/60" : "")">
+                        <td class="px-6 py-4">
+                            <img src="@item.SignatureUrl" alt="chữ ký" class="h-12 w-24 rounded border border-slate-200 bg-white object-contain" />
+                        </td>
+                        <td class="px-6 py-4 font-semibold text-slate-900">@item.DisplayName</td>
+                        <td class="px-6 py-4 text-slate-700">@item.Message</td>
+                        <td class="px-6 py-4 text-slate-500">@item.SignatureKind</td>
+                        <td class="px-6 py-4 text-slate-500">@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="px-6 py-4 text-right">
+                            <form method="post" asp-page-handler="Toggle" asp-route-id="@item.Id"
+                                  asp-route-q="@Model.Keyword" asp-route-p="@Model.CurrentPage" class="inline-block">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="admin-btn-secondary">
+                                    @(item.IsHidden ? "Hiện" : "Ẩn")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="flex items-center justify-between border-t border-slate-100 px-6 py-4 text-sm text-slate-500">
+            <div>Trang @Model.Items.Page / @Math.Max(1, Model.Items.TotalPages)</div>
+            <div class="flex gap-2">
+                @if (Model.Items.HasPrev)
+                {
+                    <a class="admin-btn-secondary" asp-page="/Commitments/Index" asp-route-q="@Model.Keyword" asp-route-p="@(Model.Items.Page - 1)">@AdminIcon.Svg("arrow-left") Trước</a>
+                }
+                @if (Model.Items.HasNext)
+                {
+                    <a class="admin-btn-secondary" asp-page="/Commitments/Index" asp-route-q="@Model.Keyword" asp-route-p="@(Model.Items.Page + 1)">Sau @AdminIcon.Svg("arrow-right")</a>
+                }
+            </div>
+        </div>
+    }
+</section>

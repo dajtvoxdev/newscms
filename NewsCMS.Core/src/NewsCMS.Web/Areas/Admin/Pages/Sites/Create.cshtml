@@ -1,0 +1,93 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.Sites.CreateModel
+@{
+    ViewData["Title"] = "Tạo site";
+}
+
+<form method="post" class="space-y-6">
+    @Html.AntiForgeryToken()
+    <div class="flex items-center justify-between">
+        <div>
+            <p class="text-sm font-semibold text-indigo-600">Sites</p>
+            <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Tạo site mới</h2>
+        </div>
+        <button type="submit" class="admin-btn-primary">Tạo site</button>
+    </div>
+
+    <div asp-validation-summary="ModelOnly" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+    <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <section class="admin-card p-6">
+            <h3 class="text-lg font-bold text-slate-950">Thông tin site</h3>
+            <div class="mt-5 grid gap-5 md:grid-cols-2">
+                <label class="space-y-2 md:col-span-2">
+                    <span class="admin-label">Tên site</span>
+                    <input asp-for="Input.Name" class="admin-input" />
+                    <span asp-validation-for="Input.Name" class="text-sm text-red-600"></span>
+                </label>
+                <label class="space-y-2">
+                    <span class="admin-label">Slug</span>
+                    <input asp-for="Input.Slug" class="admin-input" placeholder="vi-du-site" />
+                    <span asp-validation-for="Input.Slug" class="text-sm text-red-600"></span>
+                </label>
+                <label class="space-y-2">
+                    <span class="admin-label">Domain chính</span>
+                    <input asp-for="Input.PrimaryDomain" class="admin-input" placeholder="example.com" />
+                    <span asp-validation-for="Input.PrimaryDomain" class="text-sm text-red-600"></span>
+                    <span class="text-xs text-slate-400">Để trống nếu chưa có. Có thể thêm nhiều domain sau ở trang chỉnh sửa.</span>
+                </label>
+                <label class="space-y-2">
+                    <span class="admin-label">Theme mặc định</span>
+                    <input asp-for="Input.DefaultTheme" class="admin-input" />
+                    <span asp-validation-for="Input.DefaultTheme" class="text-sm text-red-600"></span>
+                </label>
+                <label class="flex items-center gap-3 pt-8">
+                    <input asp-for="Input.IsActive" class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                    <span class="admin-label">Kích hoạt site</span>
+                </label>
+            </div>
+        </section>
+
+        <aside class="admin-card p-6">
+            <h3 class="text-lg font-bold text-slate-950">Modules</h3>
+            <div class="mt-5 space-y-3">
+                @foreach (var module in Model.Modules)
+                {
+                    <label class="flex gap-3 rounded-2xl border border-slate-200 p-4">
+                        <input type="checkbox" name="Input.EnabledModuleCodes" value="@module.Code" checked="@Model.Input.EnabledModuleCodes.Contains(module.Code)" class="mt-1 h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                        <span>
+                            <span class="block font-bold text-slate-900">@module.Name</span>
+                            <span class="block text-sm text-slate-500">@module.Description</span>
+                        </span>
+                    </label>
+                }
+            </div>
+        </aside>
+    </div>
+
+    <section class="admin-card p-6">
+        <h3 class="text-lg font-bold text-slate-950">Admin mặc định</h3>
+        <div class="mt-5 grid gap-5 md:grid-cols-2">
+            <label class="space-y-2">
+                <span class="admin-label">Username</span>
+                <input asp-for="Input.AdminUserName" class="admin-input" />
+                <span asp-validation-for="Input.AdminUserName" class="text-sm text-red-600"></span>
+            </label>
+            <label class="space-y-2">
+                <span class="admin-label">Email</span>
+                <input asp-for="Input.AdminEmail" class="admin-input" />
+                <span asp-validation-for="Input.AdminEmail" class="text-sm text-red-600"></span>
+            </label>
+            <label class="space-y-2">
+                <span class="admin-label">Họ tên</span>
+                <input asp-for="Input.AdminFullName" class="admin-input" />
+                <span asp-validation-for="Input.AdminFullName" class="text-sm text-red-600"></span>
+            </label>
+            <label class="space-y-2">
+                <span class="admin-label">Mật khẩu tạm</span>
+                <input asp-for="Input.AdminPassword" class="admin-input" />
+                <span asp-validation-for="Input.AdminPassword" class="text-sm text-red-600"></span>
+            </label>
+        </div>
+    </section>
+</form>

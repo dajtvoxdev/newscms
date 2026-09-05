@@ -1,0 +1,190 @@
+@page
+@using NewsCMS.Application.KeoBia
+@using NewsCMS.Domain.Entities.KeoBia
+@model IndexModel
+@{
+    ViewData["Title"] = "Lịch & kết quả Kèo Bia";
+    string StatusLabel(string value) => value switch
+    {
+        KeoBiaMatchStatus.Live => "Đang live",
+        KeoBiaMatchStatus.Finished => "Đã kết thúc",
+        KeoBiaMatchStatus.Cancelled => "Đã hủy",
+        _ => "Sắp diễn ra"
+    };
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Kèo Bia 2026</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Lịch thi đấu & kết quả</h2>
+    </div>
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <form method="post" asp-page-handler="SyncResults"
+              asp-route-q="@Model.Keyword" asp-route-status="@Model.FilterStatus" asp-route-p="@Model.CurrentPage">
+            @Html.AntiForgeryToken()
+            <button class="admin-btn-primary" type="submit">Cập nhật kết quả & kèo bet</button>
+        </form>
+        <a href="/Admin/KeoBia/Import" class="admin-btn-secondary">Đồng bộ lịch</a>
+    </div>
+</div>
+
+@if (TempData["Success"] is string msg)
+{
+    <div class="hidden">@msg</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="hidden">@err</div>
+}
+<div id="analysis-status" class="fixed bottom-4 left-4 z-50 hidden max-w-sm rounded-2xl px-4 py-3 text-sm shadow-xl ring-1 ring-black/5"></div>
+
+<form method="get" class="admin-card mb-6 grid gap-3 p-4 md:grid-cols-[1fr_220px_140px]">
+    <input class="admin-input" name="q" value="@Model.Keyword" placeholder="Tìm đội, bảng, mã trận..." />
+    <select class="admin-select" name="status" asp-items="Model.StatusOptions">
+    </select>
+    <button class="admin-btn-secondary" type="submit">Lọc</button>
+</form>
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full min-w-[1120px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Trận</th>
+                <th class="px-5 py-4">Thời gian</th>
+                <th class="px-5 py-4">Trạng thái</th>
+                <th class="px-5 py-4">Kèo và số lượng</th>
+                <th class="px-5 py-4">Kết quả</th>
+                <th class="px-5 py-4">Cập nhật</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Items.Items.Count == 0)
+            {
+                <tr><td colspan="6" class="px-5 py-10 text-center text-slate-500">Chưa có trận nào.</td></tr>
+            }
+            @foreach (var item in Model.Items.Items)
+            {
+                <tr class="bg-white align-top">
+                    <td class="px-5 py-4">
+                        <div class="font-bold text-slate-950">@item.HomeName <span class="text-slate-400">vs</span> @item.AwayName</div>
+                        <div class="mt-1 text-xs text-slate-500">@item.ExternalId · @item.Stage · @item.Venue</div>
+                    </td>
+                    <td class="px-5 py-4 text-slate-600">@item.KickoffAt.ToLocalTime().ToString("HH:mm dd/MM/yyyy")</td>
+                    <td class="px-5 py-4">
+                        <span class="admin-badge bg-slate-100 text-slate-700">@StatusLabel(item.Status)</span>
+                    </td>
+                    <td class="px-5 py-4 text-slate-600">@item.BetCount kèo · @KeoBiaUnitRules.FormatCount(item.CupCount, item.UnitCode)</td>
+                    <td class="px-5 py-4 font-semibold text-slate-900">
+                        @(item.HomeScore.HasValue && item.AwayScore.HasValue ? $"{item.HomeScore}-{item.AwayScore}" : "—")
+                        @if (item.PenaltyHomeScore.HasValue && item.PenaltyAwayScore.HasValue)
+                        {
+                            <span class="ml-1 text-xs text-slate-500">(pen @item.PenaltyHomeScore-@item.PenaltyAwayScore)</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(item.ResultChoice))
+                        {
+                            <span class="ml-2 text-xs text-emerald-700">@item.ResultChoice</span>
+                        }
+                    </td>
+                    <td class="px-5 py-4">
+                        <div class="space-y-2">
+                        <form method="post" asp-page-handler="Result" asp-route-id="@item.Id"
+                              asp-route-q="@Model.Keyword" asp-route-status="@Model.FilterStatus" asp-route-p="@Model.CurrentPage"
+                              class="grid grid-cols-[70px_70px_70px_70px_150px_100px] gap-2">
+                            @Html.AntiForgeryToken()
+                            <input class="admin-input h-10" name="homeScore" value="@item.HomeScore" placeholder="@item.HomeCode" />
+                            <input class="admin-input h-10" name="awayScore" value="@item.AwayScore" placeholder="@item.AwayCode" />
+                            <input class="admin-input h-10" name="penaltyHomeScore" value="@item.PenaltyHomeScore" placeholder="Pen @item.HomeCode" />
+                            <input class="admin-input h-10" name="penaltyAwayScore" value="@item.PenaltyAwayScore" placeholder="Pen @item.AwayCode" />
+                            <select class="admin-select h-10" name="status">
+                                <option value="@KeoBiaMatchStatus.Scheduled" selected="@(item.Status == KeoBiaMatchStatus.Scheduled)">Sắp diễn ra</option>
+                                <option value="@KeoBiaMatchStatus.Live" selected="@(item.Status == KeoBiaMatchStatus.Live)">Đang live</option>
+                                <option value="@KeoBiaMatchStatus.Finished" selected="@(item.Status == KeoBiaMatchStatus.Finished)">Đã kết thúc</option>
+                                <option value="@KeoBiaMatchStatus.Cancelled" selected="@(item.Status == KeoBiaMatchStatus.Cancelled)">Đã hủy</option>
+                            </select>
+                            <button class="admin-btn-secondary h-10" type="submit">Lưu</button>
+                        </form>
+                        <form method="post" asp-page-handler="Odds" asp-route-id="@item.Id"
+                              asp-route-q="@Model.Keyword" asp-route-status="@Model.FilterStatus" asp-route-p="@Model.CurrentPage"
+                              class="space-y-2">
+                            @Html.AntiForgeryToken()
+                            <textarea class="admin-input min-h-[92px] font-mono text-xs" name="correctScoreOddsJson" placeholder='{"0-0":7.5,"1-0":6.5,"home_other":21,"away_other":29,"draw_other":34}'>@item.CorrectScoreOddsJson</textarea>
+                            <div class="flex items-center justify-between gap-2 text-xs text-slate-500">
+                                <span>JSON tỉ số gợi ý. Cược tỉ số luôn mở; đoán sai mất @KeoBiaUnitRules.FormatCount(1, item.UnitCode), đoán đúng được giảm @KeoBiaUnitRules.FormatCount(3, item.UnitCode).</span>
+                                <button class="admin-btn-secondary h-9" type="submit">Lưu gợi ý</button>
+                            </div>
+                        </form>
+                        <form method="post" asp-page-handler="ForceAnalysis" asp-route-id="@item.Id"
+                              asp-route-q="@Model.Keyword" asp-route-status="@Model.FilterStatus" asp-route-p="@Model.CurrentPage"
+                              data-confirm="Chạy lại phân tích AI cho trận này?">
+                            @Html.AntiForgeryToken()
+                            <button class="admin-btn-primary h-10 w-full" type="submit"
+                                    data-queue-analysis="@item.Id">Force phân tích AI</button>
+                        </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Items.TotalPages > 1)
+{
+    <div class="mt-4 flex gap-2">
+        @for (int i = 1; i <= Model.Items.TotalPages; i++)
+        {
+            <a asp-page="/KeoBia/Matches/Index" asp-route-q="@Model.Keyword" asp-route-status="@Model.FilterStatus" asp-route-p="@i"
+               class="admin-btn-secondary @(i == Model.CurrentPage ? "font-bold" : "")">@i</a>
+        }
+    </div>
+}
+
+<script>
+    (() => {
+        const box = document.getElementById('analysis-status');
+        const queryId = '@(Model.QueuedAnalysisId?.ToString() ?? string.Empty)';
+        const queuedId = queryId || sessionStorage.getItem('keobiaQueuedAnalysisId');
+        if (!box || !queuedId) return;
+
+        const show = (className, message) => {
+            box.className = `fixed bottom-4 left-4 z-50 max-w-sm rounded-2xl px-4 py-3 text-sm shadow-xl ring-1 ring-black/5 ${className}`;
+            box.innerHTML = message;
+        };
+
+        show('bg-sky-50 text-sky-700', '<span class="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-sky-500"></span>Đang phân tích AI...');
+
+        const url = new URL('@Url.Page(null, "AnalysisEvents")', location.origin);
+        url.searchParams.set('id', queuedId);
+        const source = new EventSource(url.toString());
+
+        source.addEventListener('running', e => show('bg-sky-50 text-sky-700', `<span class="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-sky-500"></span>${JSON.parse(e.data)}`));
+        source.addEventListener('done', e => {
+            sessionStorage.removeItem('keobiaQueuedAnalysisId');
+            show('bg-emerald-50 text-emerald-700', JSON.parse(e.data));
+            window.toast?.success(JSON.parse(e.data));
+            source.close();
+            setTimeout(() => location.replace('@Url.Page(null, null, new { q = Model.Keyword, status = Model.FilterStatus, p = Model.CurrentPage })'), 1200);
+        });
+        source.addEventListener('failed', e => {
+            sessionStorage.removeItem('keobiaQueuedAnalysisId');
+            show('bg-rose-50 text-rose-700', JSON.parse(e.data));
+            window.toast?.error(JSON.parse(e.data));
+            source.close();
+        });
+        source.onerror = () => {
+            show('bg-amber-50 text-amber-700', 'Mất kết nối trạng thái AI. Task vẫn có thể đang chạy nền.');
+            window.toast?.warning('Mất kết nối trạng thái AI. Task vẫn có thể đang chạy nền.');
+            source.close();
+        };
+
+        // Khi người dùng xác nhận "Force phân tích AI" qua dialog chung, cần lưu id trận
+        // vào sessionStorage trước khi form submit (thay cho onsubmit confirm cũ).
+        // confirm-dialog.js bắn sự kiện 'nc-confirm-accepted' trên form ngay trước khi submit lại.
+        document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+            form.addEventListener('nc-confirm-accepted', function () {
+                const btn = form.querySelector('[data-queue-analysis]');
+                if (btn) sessionStorage.setItem('keobiaQueuedAnalysisId', btn.getAttribute('data-queue-analysis'));
+            });
+        });
+    })();
+</script>

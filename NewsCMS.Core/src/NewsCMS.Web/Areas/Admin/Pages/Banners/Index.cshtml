@@ -1,0 +1,44 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.Banners.IndexModel
+@{
+    ViewData["Title"] = "Banner";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Giao diện</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Banner</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/Banners/Create" class="admin-btn-primary">Thêm banner</a>
+</div>
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full min-w-[860px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr><th class="px-5 py-4">Tiêu đề</th><th class="px-5 py-4">Vị trí</th><th class="px-5 py-4">Thứ tự</th><th class="px-5 py-4">Trạng thái</th><th class="px-5 py-4">Thời gian</th><th class="px-5 py-4"></th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Items.Count == 0)
+            {
+                <tr><td colspan="6" class="px-5 py-10 text-center text-slate-500">Chưa có banner.</td></tr>
+            }
+            @foreach (var b in Model.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4 font-semibold text-slate-950">@b.Title</td>
+                    <td class="px-5 py-4 text-slate-600">@b.Position</td>
+                    <td class="px-5 py-4 text-slate-600">@b.Order</td>
+                    <td class="px-5 py-4"><span class="admin-badge @(b.IsActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")">@(b.IsActive ? "Hiển thị" : "Ẩn")</span></td>
+                    <td class="px-5 py-4 text-slate-600">@(b.StartAt?.ToString("dd/MM/yyyy") ?? "-") <span class="text-slate-400">@AdminIcon.Svg("arrow-right")</span> @(b.EndAt?.ToString("dd/MM/yyyy") ?? "-")</td>
+                    <td class="px-5 py-4 text-right flex gap-2 justify-end">
+                        <a asp-area="Admin" asp-page="/Banners/Edit" asp-route-id="@b.Id" class="admin-btn-secondary">Sửa</a>
+                        <form method="post" asp-page-handler="Delete" asp-route-id="@b.Id" data-confirm="Xoá banner này?" data-confirm-danger="true">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="admin-btn-secondary text-red-600">Xoá</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

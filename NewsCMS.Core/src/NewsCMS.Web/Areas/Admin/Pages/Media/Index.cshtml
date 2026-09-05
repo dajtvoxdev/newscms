@@ -1,0 +1,211 @@
+@page
+@model IndexModel
+@using NewsCMS.Shared.Constants
+@{
+    ViewData["Title"] = "Thư viện Media";
+    var isSuperAdmin = User.IsInRole("SuperAdmin");
+    bool Can(string p) => isSuperAdmin || User.HasClaim(Permissions.Prefix, p);
+    var canEdit = Can(Permissions.Media.Edit);
+    var canDelete = Can(Permissions.Media.Delete);
+    var canUpload = Can(Permissions.Media.Upload);
+    var canManageFolder = Can(Permissions.Media.ManageFolder);
+
+    string KindTab(string? k) => (Model.KindFilter ?? "") == (k ?? "")
+        ? "border-b-2 border-indigo-600 font-semibold text-indigo-600"
+        : "font-medium text-slate-500 hover:text-slate-900";
+
+    string FormatSize(long bytes)
+    {
+        if (bytes >= 1048576) return $"{bytes / 1048576.0:0.#} MB";
+        if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
+        return $"{bytes} B";
+    }
+
+    string KindIcon(string kind) => kind switch
+    {
+        "video" => AdminIcon.Tag("film"),
+        "audio" => AdminIcon.Tag("music"),
+        "document" => AdminIcon.Tag("file-text"),
+        _ => ""
+    };
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Nội dung</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Thư viện Media</h2>
+    </div>
+    <div class="flex gap-2">
+        <a asp-area="Admin" asp-page="/Media/Trash" class="admin-btn-secondary">Thùng rác</a>
+        @if (canUpload)
+        {
+            <label id="bulk-upload-trigger" class="admin-btn-primary cursor-pointer">Tải lên</label>
+            <input type="file" id="bulk-upload-input" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" class="hidden" />
+        }
+    </div>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="hidden">@ok</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="hidden">@err</div>
+}
+
+<div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+    <form method="get" class="flex flex-1 gap-2">
+        <input type="hidden" name="kind" value="@Model.KindFilter" />
+        <input type="hidden" name="folder" value="@Model.FolderFilter" />
+        <input type="text" name="q" value="@Model.Keyword" placeholder="Tìm tên file, tiêu đề…" class="admin-input flex-1" />
+        <button type="submit" class="admin-btn-secondary">Tìm</button>
+    </form>
+    @if (Model.Folders.Count > 0)
+    {
+        <form method="get" class="flex gap-2">
+            <input type="hidden" name="q" value="@Model.Keyword" />
+            <input type="hidden" name="kind" value="@Model.KindFilter" />
+            <select name="folder" class="admin-select" onchange="this.form.submit()">
+                <option value="">Tất cả thư mục</option>
+                @foreach (var f in Model.Folders)
+                {
+                    <option value="@f.Id" selected="@(f.Id == Model.FolderFilter)">@f.Name</option>
+                }
+            </select>
+        </form>
+    }
+    @if (canManageFolder)
+    {
+        <button type="button" class="admin-btn-secondary" onclick="document.getElementById('add-folder-dialog').showModal()">+ Thư mục</button>
+    }
+</div>
+
+<div class="mb-5 flex gap-1 border-b border-slate-200">
+    @foreach (var (label, value) in new[] { ("Tất cả",""), ("Ảnh","image"), ("Video","video"), ("Âm thanh","audio"), ("Tài liệu","document") })
+    {
+        <a asp-area="Admin" asp-page="/Media/Index"
+           asp-route-q="@Model.Keyword" asp-route-folder="@Model.FolderFilter" asp-route-kind="@value"
+           class="px-4 py-2.5 text-sm @KindTab(value)">@label</a>
+    }
+</div>
+
+@if (Model.Items.TotalItems == 0)
+{
+    <div class="py-20 text-center text-slate-400">
+        <div class="mb-3 text-slate-300">@AdminIcon.Svg("folder-open", "h-10 w-10")</div>
+        <p class="text-base font-medium">Chưa có media nào.</p>
+    </div>
+}
+else
+{
+    <div class="media-grid">
+        @foreach (var item in Model.Items.Items)
+        {
+            <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                @if (item.Kind == "image")
+                {
+                    <img src="@item.FilePath" alt="@item.AltText"
+                         class="media-thumb" loading="lazy" />
+                }
+                else if (item.Kind == "video" && !string.IsNullOrEmpty(item.PosterUrl))
+                {
+                    // Poster ffmpeg sinh lúc upload — hiển thị thay icon film.
+                    <img src="@item.PosterUrl" alt="@item.AltText"
+                         class="media-thumb" loading="lazy" />
+                }
+                else
+                {
+                    <div class="media-thumb-placeholder">
+                        @KindIcon(item.Kind)
+                    </div>
+                }
+                <div class="p-2">
+                    <p class="truncate text-xs font-medium text-slate-800" title="@item.FileName">@(item.Title ?? item.FileName)</p>
+                    <p class="text-xs text-slate-400">@FormatSize(item.Size)</p>
+                    @if (item.Width.HasValue)
+                    {
+                        <p class="text-xs text-slate-400">@item.Width×@item.Height</p>
+                    }
+                </div>
+                <div class="absolute inset-x-0 bottom-0 flex gap-1 bg-white/95 p-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    @if (canEdit)
+                    {
+                        <a asp-area="Admin" asp-page="/Media/Edit" asp-route-id="@item.Id"
+                           class="flex-1 rounded-lg bg-slate-100 py-1 text-center text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Sửa</a>
+                    }
+                    @if (canDelete)
+                    {
+                        <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id"
+                              data-confirm="Xoá file này vào thùng rác?" data-confirm-danger="true">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-slate-100 px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">@AdminIcon.Svg("x")</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (Model.Items.TotalPages > 1)
+    {
+        <nav class="mt-6 flex items-center justify-center gap-1">
+            @if (Model.Items.HasPrev)
+            {
+                <a asp-area="Admin" asp-page="/Media/Index"
+                   asp-route-q="@Model.Keyword" asp-route-kind="@Model.KindFilter" asp-route-folder="@Model.FolderFilter" asp-route-p="@(Model.CurrentPage - 1)"
+                   class="admin-btn-secondary">@AdminIcon.Svg("arrow-left")</a>
+            }
+            <span class="px-3 text-sm text-slate-500">Trang @Model.CurrentPage / @Model.Items.TotalPages</span>
+            @if (Model.Items.HasNext)
+            {
+                <a asp-area="Admin" asp-page="/Media/Index"
+                   asp-route-q="@Model.Keyword" asp-route-kind="@Model.KindFilter" asp-route-folder="@Model.FolderFilter" asp-route-p="@(Model.CurrentPage + 1)"
+                   class="admin-btn-secondary">@AdminIcon.Svg("arrow-right")</a>
+            }
+        </nav>
+    }
+}
+
+@if (canManageFolder)
+{
+    <dialog id="add-folder-dialog" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl backdrop:bg-black/40 w-80">
+        <h3 class="mb-4 font-bold text-slate-950">Tạo thư mục mới</h3>
+        <form method="post" asp-page-handler="CreateFolder">
+            @Html.AntiForgeryToken()
+            <label class="block space-y-2">
+                <span class="admin-label">Tên thư mục</span>
+                <input type="text" name="name" class="admin-input" required autofocus />
+            </label>
+            <div class="mt-4 flex gap-2">
+                <button type="submit" class="admin-btn-primary flex-1">Tạo</button>
+                <button type="button" class="admin-btn-secondary" onclick="this.closest('dialog').close()">Huỷ</button>
+            </div>
+        </form>
+    </dialog>
+}
+
+@section Scripts {
+    <script>
+        const bulkInput = document.getElementById('bulk-upload-input');
+        const bulkTrigger = document.getElementById('bulk-upload-trigger');
+        if (bulkInput && bulkTrigger) {
+            bulkTrigger.addEventListener('click', () => bulkInput.click());
+            bulkInput.addEventListener('change', (e) => {
+                const files = Array.from(e.target.files);
+                const folderId = '@Model.FolderFilter';
+                if (files.length > 1) window.toast?.info('Đang tải lên ' + files.length + ' file…');
+                let doneCount = 0;
+                files.forEach(file => {
+                    window.uploadManager?.enqueue(file, {
+                        folderId: folderId || null,
+                        onDone: () => {
+                            doneCount++;
+                            if (doneCount === files.length) location.reload();
+                        }
+                    });
+                });
+            });
+        }
+    </script>
+}

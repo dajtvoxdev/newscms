@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Đã Tạm Dừng</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        :root {
+            --primary: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .maintenance-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15);
+            max-width: 480px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(to right, #1e40af, #3b82f6);
+            color: white;
+            padding: 40px 30px 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(to right, #3b82f6, #60a5fa);
+        }
+
+        .icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+        }
+
+        .content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            color: #1e40af;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        p {
+            color: #64748b;
+            font-size: 1.125rem;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .action {
+            background: #f1f5f9;
+            border: 2px solid #e2e8f0;
+            color: #475569;
+            font-weight: 500;
+            padding: 14px 28px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 32px;
+        }
+
+        .contact {
+            font-size: 0.95rem;
+            color: #94a3b8;
+        }
+
+        .footer {
+            background: #f8fafc;
+            padding: 24px 30px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 9999px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="maintenance-container">
+        <div class="header">
+            <div class="icon">⏸️</div>
+            <h1>Trang web đang tạm dừng</h1>
+            <p style="opacity:0.9; font-size:1.05rem;">Cảm ơn bạn đã ghé thăm</p>
+        </div>
+
+        <div class="content">
+            <div class="action">
+                <span>🛠️</span>
+                <span>Đang bảo trì</span>
+            </div>
+            <p>
+                Site của chúng tôi đang được nâng cấp và cải tiến.<br>
+                Chúng tôi sẽ quay lại sớm nhất có thể.
+            </p>
+            <button onclick="window.location.reload()" class="btn">Tải lại trang</button>
+        </div>
+
+        <div class="footer">
+            <p class="contact">
+                Liên hệ hỗ trợ: <a href="mailto:support@hailuunguoc.com" style="color:#3b82f6; text-decoration:none;">support@hailuunguoc.com</a><br>
+                Hoặc <a href="tel:+84123456789" style="color:#3b82f6; text-decoration:none;">+84 123 456 789</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Simple script
+        console.log('Maintenance page loaded');
+    </script>
+</body>
+</html>

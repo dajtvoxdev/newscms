@@ -1,0 +1,388 @@
+@using NewsCMS.Theme.HaiLuuNguoc.Areas.Theme.Controllers
+@model CommitmentPageViewModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    ViewData["Title"] = "Cam kết Hải Lưu Ngược";
+    var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+    var initialWallJson = System.Text.Json.JsonSerializer.Serialize(
+        Model.Wall.Select(x => new {
+            id = x.Id,
+            name = x.DisplayName,
+            message = x.Message,
+            signatureUrl = x.SignatureUrl,
+            createdAt = x.CreatedAt
+        }));
+}
+
+@section Head {
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" />
+    <link rel="stylesheet" href="~/_content/NewsCMS.Theme.HaiLuuNguoc/css/commitment.css?v=20260627-111501" />
+}
+
+<section class="pledge-hero" aria-labelledby="pledge-hero-title">
+    <div class="pledge-hero-bg" aria-hidden="true">
+        <span class="pledge-bubble pledge-bubble-1"></span>
+        <span class="pledge-bubble pledge-bubble-2"></span>
+        <span class="pledge-bubble pledge-bubble-3"></span>
+        <span class="pledge-bubble pledge-bubble-4"></span>
+        <span class="pledge-bubble pledge-bubble-5"></span>
+        <span class="pledge-bubble pledge-bubble-6"></span>
+    </div>
+
+    <a class="pledge-scroll-btn" href="#pledge-wall" aria-label="Cuộn xuống bức tường cam kết">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>
+        </svg>
+    </a>
+
+    <div class="pledge-hero-inner">
+        <div>
+            <p class="pledge-eyebrow">Cam kết · 2026</p>
+            <h1 id="pledge-hero-title" class="pledge-title">MỘT CHỮ KÝ,<br/>MỘT HẢI TRÌNH <span class="pledge-title-accent">XANH</span></h1>
+            <p class="pledge-lede">
+                Hải Lưu Ngược mời bạn để lại một cam kết nhỏ: giảm nhựa dùng một lần, sống có trách nhiệm hơn với biển
+                và cùng gìn giữ một phần nguồn cội của chúng ta.
+            </p>
+        </div>
+
+        <div class="pledge-card" data-pledge-card data-has-signed="@(Model.HasSigned ? "true" : "false")">
+            <div class="pledge-form-wrap" data-pledge-form-wrap @(Model.HasSigned ? "hidden" : "")>
+                <form id="pledge-form" class="pledge-form" novalidate>
+                    <input type="hidden" name="__RequestVerificationToken" value="@afToken" />
+
+                    <label class="pledge-label">
+                        <span>Tên hiển thị</span>
+                        <input type="text" name="displayName" id="pledge-display-name" required maxlength="80" placeholder="VD: Hằng, Minh, Lớp 11A2 …" />
+                    </label>
+
+                    <label class="pledge-label">
+                        <span>Cam kết của bạn</span>
+                        <textarea name="message" required maxlength="280" rows="3" placeholder="Giảm nhựa vì biển xanh">Giảm nhựa vì biển xanh</textarea>
+                    </label>
+
+                    <div class="pledge-tabs" role="tablist" aria-label="Cách ký">
+                        <button type="button" class="pledge-tab is-active" data-pledge-tab="draw"   role="tab" aria-selected="true">Vẽ bằng chuột</button>
+                        <button type="button" class="pledge-tab"           data-pledge-tab="auto"   role="tab" aria-selected="false">Tạo tự động</button>
+                        <button type="button" class="pledge-tab"           data-pledge-tab="upload" role="tab" aria-selected="false">Tải ảnh lên</button>
+                    </div>
+
+                    <div class="pledge-pane" data-pledge-pane="draw">
+                        <div class="pledge-pad-shell">
+                            <canvas id="pledge-pad" class="pledge-pad" width="640" height="200" aria-label="Khung vẽ chữ ký"></canvas>
+                            <button type="button" class="pledge-pad-clear" data-pledge-clear>Xoá</button>
+                        </div>
+                        <p class="pledge-hint">Dùng chuột hoặc ngón tay để vẽ chữ ký của bạn.</p>
+                    </div>
+
+                    <div class="pledge-pane" data-pledge-pane="auto" hidden>
+                        <div class="pledge-auto-preview">
+                            <canvas class="pledge-auto-canvas" data-pledge-auto-canvas width="640" height="120" aria-label="Xem trước chữ ký tự động"></canvas>
+                        </div>
+                        <p class="pledge-hint">Chữ ký sẽ được tạo từ tên hiển thị ở trên.</p>
+                    </div>
+
+                    <div class="pledge-pane" data-pledge-pane="upload" hidden>
+                        <label class="pledge-upload">
+                            <input type="file" name="uploadedImage" accept="image/png,image/jpeg" data-pledge-upload-input />
+                            <span class="pledge-upload-cta">Chọn ảnh chữ ký (PNG / JPG, tối đa 2 MB)</span>
+                        </label>
+                        <div class="pledge-upload-preview" data-pledge-upload-preview hidden>
+                            <img alt="Xem trước chữ ký tải lên" />
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="signatureKind" value="Drawn" data-pledge-kind />
+                    <input type="hidden" name="signatureBase64" data-pledge-base64 />
+
+                    <p class="pledge-error" data-pledge-error hidden></p>
+
+                    <button type="submit" class="button pledge-submit" data-pledge-submit>
+                        Ký cam kết
+                    </button>
+                </form>
+            </div>
+
+            <div class="pledge-signed-panel" data-pledge-signed-panel @(Model.HasSigned ? "" : "hidden")>
+                <h2>Bạn đã ký cam kết</h2>
+                <p>Cảm ơn bạn vì đã cùng Hải Lưu Ngược bắt đầu một lựa chọn nhỏ cho biển. Mỗi cam kết hôm nay là một dòng chảy tích cực góp phần bảo vệ đại dương.</p>
+                <a class="button button-outline" href="#pledge-wall">Xem bức tường cam kết</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="pledge-wall" class="pledge-wall" aria-labelledby="pledge-wall-title">
+    <header class="pledge-wall-head">
+        <h2 id="pledge-wall-title">BỨC TƯỜNG CAM KẾT</h2>
+        <p class="pledge-wall-lede">Mỗi chữ ký là một dòng chảy. Hàng nghìn dòng chảy sẽ làm nên một con sóng đổi chiều.</p>
+        <div class="pledge-wall-controls" data-current-view="flow">
+            <svg
+                class="pledge-control-svg"
+                viewBox="0 0 1200 240"
+                preserveAspectRatio="none"
+                aria-hidden="true">
+                <defs>
+                    <linearGradient id="pledgeBarGradient" x1="0" y1="55" x2="0" y2="185" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#fbfeff" />
+                        <stop offset="48%" stop-color="#edf7fa" />
+                        <stop offset="100%" stop-color="#d7e6ec" />
+                    </linearGradient>
+                    <linearGradient id="pledgePearlGradient" x1="0" y1="15" x2="0" y2="205" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#fbffff" />
+                        <stop offset="38%" stop-color="#eff9fb" />
+                        <stop offset="76%" stop-color="#d7eef1" />
+                        <stop offset="100%" stop-color="#f9ffff" />
+                    </linearGradient>
+                    <linearGradient id="pledgeNeckGradient" x1="0" y1="60" x2="0" y2="185" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#fbffff" />
+                        <stop offset="48%" stop-color="#edf7fa" />
+                        <stop offset="100%" stop-color="#d9e8ed" />
+                    </linearGradient>
+                    <linearGradient id="pledgeActiveGradient" x1="0" y1="68" x2="0" y2="172" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#83d8d5" />
+                        <stop offset="52%" stop-color="#3e8b98" />
+                        <stop offset="100%" stop-color="#1d586b" />
+                    </linearGradient>
+                    <filter id="pledgeSoftShadow" x="-20%" y="-40%" width="160%" height="190%">
+                        <feDropShadow dx="0" dy="14" stdDeviation="13" flood-color="#001425" flood-opacity="0.32" />
+                        <feDropShadow dx="0" dy="0" stdDeviation="14" flood-color="#99fff7" flood-opacity="0.28" />
+                    </filter>
+                    <filter id="pledgePearlShadow" x="-20%" y="-40%" width="160%" height="190%">
+                        <feDropShadow dx="0" dy="16" stdDeviation="14" flood-color="#001425" flood-opacity="0.34" />
+                        <feDropShadow dx="0" dy="0" stdDeviation="18" flood-color="#9afff7" flood-opacity="0.38" />
+                    </filter>
+                    <filter id="pledgeActiveShadow" x="-20%" y="-40%" width="160%" height="190%">
+                        <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#002236" flood-opacity="0.35" />
+                    </filter>
+                    <filter id="pledgeBlurGlow">
+                        <feGaussianBlur stdDeviation="12" />
+                    </filter>
+                </defs>
+                <path
+                    d="M330 55 H1105 C1148 55 1178 83 1178 120 C1178 157 1148 185 1105 185 H330 C287 185 260 157 260 120 C260 83 287 55 330 55 Z"
+                    fill="url(#pledgeBarGradient)"
+                    filter="url(#pledgeSoftShadow)" />
+                <path
+                    d="M338 67 H1095 C1132 67 1160 90 1160 120 C1160 150 1132 173 1095 173 H338 C303 173 280 150 280 120 C280 90 303 67 338 67 Z"
+                    fill="white"
+                    opacity="0.22" />
+                <path
+                    class="pledge-neck-shape"
+                    d="M365 66 C420 55 503 62 550 94 C580 114 584 145 556 164 C515 192 426 184 360 168 C398 145 400 92 365 66 Z"
+                    fill="url(#pledgeNeckGradient)"
+                    opacity="0.98" />
+                <ellipse cx="430" cy="150" rx="115" ry="26" fill="#9afff7" opacity="0.16" filter="url(#pledgeBlurGlow)" />
+                <path
+                    class="pledge-pearl-shape"
+                    d="M24 122 C24 63 92 25 205 15 C306 6 407 31 448 80 C475 112 462 152 416 175 C362 202 250 210 150 192 C72 178 24 153 24 122 Z"
+                    fill="url(#pledgePearlGradient)"
+                    filter="url(#pledgePearlShadow)" />
+                <ellipse cx="160" cy="54" rx="112" ry="34" fill="white" opacity="0.34" filter="url(#pledgeBlurGlow)" />
+                <ellipse cx="245" cy="168" rx="150" ry="30" fill="#91fff7" opacity="0.16" filter="url(#pledgeBlurGlow)" />
+                <rect
+                    class="pledge-active-pill"
+                    x="578"
+                    y="68"
+                    width="270"
+                    height="104"
+                    rx="50"
+                    fill="url(#pledgeActiveGradient)"
+                    filter="url(#pledgeActiveShadow)" />
+                <ellipse
+                    class="pledge-active-highlight"
+                    cx="713"
+                    cy="88"
+                    rx="96"
+                    ry="25"
+                    fill="white"
+                    opacity="0.18"
+                    filter="url(#pledgeBlurGlow)" />
+            </svg>
+            <div class="pledge-counter" data-pledge-total-counter data-value="@Model.TotalCount" aria-live="polite">
+                <span class="pledge-counter-main">
+                    <span class="pledge-counter-plus">+</span><span data-pledge-total-value>0</span>
+                </span>
+                <span class="pledge-counter-label">cam kết</span>
+                <span class="pledge-counter-delta" data-pledge-total-delta hidden></span>
+            </div>
+            <div class="pledge-wall-switch" role="group" aria-label="Chế độ hiển thị chữ ký">
+                <button type="button" class="pledge-wall-view-btn is-active" data-pledge-wall-view="flow" aria-pressed="true">Dòng hải lưu</button>
+                <button type="button" class="pledge-wall-view-btn" data-pledge-wall-view="jelly" aria-pressed="false">Bức tường xanh</button>
+                <button type="button" class="pledge-wall-view-btn" data-pledge-wall-view="list" aria-pressed="false">Danh sách</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="pledge-wall-glow pledge-wall-glow-1" aria-hidden="true"></div>
+    <div class="pledge-wall-glow pledge-wall-glow-2" aria-hidden="true"></div>
+
+    <div class="pledge-current-flow" data-pledge-wall>
+        <div class="pledge-jellyfish-stage" data-pledge-jellyfish-stage hidden aria-hidden="true">
+            <div class="pledge-jellyfish-silhouette" aria-hidden="true">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <linearGradient id="pledgeJellySil" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%"   stop-color="rgba(198, 243, 249, 0.16)" />
+                            <stop offset="55%"  stop-color="rgba(120, 220, 230, 0.10)" />
+                            <stop offset="100%" stop-color="rgba(70, 160, 180, 0.04)" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M50 4
+                             C 76 6, 96 22, 95 42
+                             C 94 56, 84 64, 78 64
+                             L 22 64
+                             C 16 64, 6 56, 5 42
+                             C 4 22, 24 6, 50 4 Z"
+                          fill="url(#pledgeJellySil)" />
+                    <path d="M14 60
+                             C 18 72, 22 82, 24 96" stroke="rgba(198, 243, 249, 0.18)" stroke-width="0.8" fill="none" stroke-linecap="round" />
+                    <path d="M26 62
+                             C 28 76, 26 88, 30 98" stroke="rgba(198, 243, 249, 0.14)" stroke-width="0.7" fill="none" stroke-linecap="round" />
+                    <path d="M40 63
+                             C 40 78, 42 90, 40 99" stroke="rgba(198, 243, 249, 0.16)" stroke-width="0.8" fill="none" stroke-linecap="round" />
+                    <path d="M50 63
+                             C 50 80, 52 92, 50 100" stroke="rgba(198, 243, 249, 0.18)" stroke-width="0.9" fill="none" stroke-linecap="round" />
+                    <path d="M60 63
+                             C 60 78, 58 90, 60 99" stroke="rgba(198, 243, 249, 0.16)" stroke-width="0.8" fill="none" stroke-linecap="round" />
+                    <path d="M74 62
+                             C 72 76, 74 88, 70 98" stroke="rgba(198, 243, 249, 0.14)" stroke-width="0.7" fill="none" stroke-linecap="round" />
+                    <path d="M86 60
+                             C 82 72, 78 82, 76 96" stroke="rgba(198, 243, 249, 0.18)" stroke-width="0.8" fill="none" stroke-linecap="round" />
+                </svg>
+            </div>
+            <canvas class="pledge-jellyfish-canvas" data-pledge-jellyfish-canvas></canvas>
+            <div class="pledge-jellyfish-tooltip" data-pledge-jellyfish-tooltip hidden>
+                <img class="pledge-jellyfish-tooltip-img" alt="" data-pledge-jellyfish-tip-img />
+                <p class="pledge-jellyfish-tooltip-name" data-pledge-jellyfish-tip-name></p>
+                <p class="pledge-jellyfish-tooltip-msg" data-pledge-jellyfish-tip-msg></p>
+            </div>
+        </div>
+        @if (Model.Wall.Count == 0)
+        {
+            <p class="pledge-wall-empty">Hãy là người đầu tiên ký cam kết để khởi đầu dòng hải lưu.</p>
+        }
+        @foreach (var item in Model.Wall)
+        {
+            var rnd = new Random(item.Id.GetHashCode());
+            var tier = rnd.NextDouble();
+            double scale, topPct, driftDur, bobDur;
+            if (tier < 0.30) {
+                scale = 0.54 + rnd.NextDouble() * 0.16;
+                topPct = 4 + rnd.NextDouble() * 24;
+                driftDur = 42 + rnd.NextDouble() * 14;
+                bobDur = 6.5 + rnd.NextDouble() * 3;
+            } else if (tier < 0.68) {
+                scale = 0.73 + rnd.NextDouble() * 0.22;
+                topPct = 27 + rnd.NextDouble() * 31;
+                driftDur = 28 + rnd.NextDouble() * 16;
+                bobDur = 4.5 + rnd.NextDouble() * 3;
+            } else {
+                scale = 0.98 + rnd.NextDouble() * 0.34;
+                topPct = 56 + rnd.NextDouble() * 26;
+                driftDur = 17 + rnd.NextDouble() * 13;
+                bobDur = 2.8 + rnd.NextDouble() * 2.4;
+            }
+            var driftDelay = -(rnd.NextDouble() * driftDur);
+            var bobDelay   = -(rnd.NextDouble() * bobDur);
+            var ic = System.Globalization.CultureInfo.InvariantCulture;
+            var cssVars = $"--drift-dur:{driftDur.ToString("F1",ic)}s;--drift-delay:{driftDelay.ToString("F1",ic)}s;--bob-dur:{bobDur.ToString("F1",ic)}s;--bob-delay:{bobDelay.ToString("F1",ic)}s;--sig-scale:{scale.ToString("F3",ic)};--sig-top:{topPct.ToString("F1",ic)}%";
+            <div class="pledge-sig-item" data-pledge-card-id="@item.Id" style="@cssVars">
+                <div class="pledge-sig-inner">
+                    <img class="pledge-sig-img" src="@item.SignatureUrl" alt="Chu ky cua @item.DisplayName" loading="lazy" />
+                    <div class="pledge-sig-meta">
+                        <span class="pledge-sig-name">@item.DisplayName</span>
+                        <span class="pledge-sig-msg">@item.Message</span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+@if (Model.Survey.Enabled)
+{
+    var hasUrl = !string.IsNullOrWhiteSpace(Model.Survey.Url);
+    var useIframe = Model.Survey.DisplayMode == NewsCMS.Theme.HaiLuuNguoc.Areas.Theme.Controllers.SurveyConfigDto.DisplayModeIframe && hasUrl;
+
+    <section class="survey-section" id="khao-sat" aria-labelledby="survey-title">
+        <span class="survey-wave" aria-hidden="true"></span>
+        <div class="survey-shell" data-reveal data-aos="fade-up" data-aos-anchor-placement="top-bottom">
+            <div class="survey-card">
+                <picture>
+                    <source srcset="~/_content/NewsCMS.Theme.HaiLuuNguoc/survey-bottle.webp" type="image/webp" />
+                    <img class="survey-illustration"
+                         src="~/_content/NewsCMS.Theme.HaiLuuNguoc/survey-bottle.png"
+                         alt="" loading="lazy" width="160" height="160" />
+                </picture>
+                <p class="survey-eyebrow">Khảo sát · Hải Lưu Ngược</p>
+                <h2 id="survey-title" class="survey-title">@Model.Survey.Title</h2>
+                <p class="survey-subtitle">@Model.Survey.Subtitle</p>
+                <p class="survey-desc">@Html.Raw(Model.Survey.Description)</p>
+
+                @if (useIframe)
+                {
+                    <div class="survey-frame">
+                        <iframe src="@Model.Survey.Url"
+                                title="Khảo sát Hải Lưu Ngược"
+                                loading="lazy"
+                                referrerpolicy="strict-origin-when-cross-origin"
+                                allow="clipboard-write"></iframe>
+                    </div>
+                    <p class="survey-fallback">
+                        Form không hiển thị đúng?
+                        <a href="@Model.Survey.Url" target="_blank" rel="noopener noreferrer">Mở khảo sát trong tab mới ↗</a>
+                    </p>
+                }
+                else if (hasUrl)
+                {
+                    <a class="button button-primary survey-cta"
+                       href="@Model.Survey.Url"
+                       target="_blank" rel="noopener noreferrer">
+                        @Model.Survey.CtaLabel
+                        <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M5 12h14"></path>
+                            <path d="m13 6 6 6-6 6"></path>
+                        </svg>
+                    </a>
+                }
+                else
+                {
+                    <p class="survey-empty">Khảo sát đang được cập nhật. Vui lòng quay lại sau.</p>
+                }
+            </div>
+        </div>
+    </section>
+}
+
+<div class="pledge-thanks" data-pledge-thanks hidden role="dialog" aria-modal="true" aria-labelledby="pledge-thanks-title">
+    <div class="pledge-thanks-card">
+        <button class="pledge-thanks-close" type="button" data-pledge-thanks-close aria-label="Đóng">×</button>
+        <p class="pledge-eyebrow">Cảm ơn bạn</p>
+        <h2 id="pledge-thanks-title">Cảm ơn bạn đã ký cam kết!</h2>
+        <p>
+            Cảm ơn bạn vì đã cùng Hải Lưu Ngược bắt đầu một lựa chọn nhỏ cho biển.
+            Mỗi cam kết hôm nay là một dòng chảy tích cực góp phần bảo vệ đại dương và gìn giữ nguồn cội.
+        </p>
+        <div class="pledge-thanks-actions">
+            <a class="button button-primary" href="#pledge-wall" data-pledge-thanks-see>Xem chữ ký của tôi</a>
+            <button class="button button-outline" type="button" data-pledge-thanks-share>Chia sẻ cam kết</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/_content/NewsCMS.Theme.HaiLuuNguoc/lib/signature_pad.umd.min.js"></script>
+    <script src="~/_content/NewsCMS.Theme.HaiLuuNguoc/js/pledge-jellyfish-points.js"></script>
+    <script>
+        window.PLEDGE_INITIAL_WALL = @Html.Raw(initialWallJson);
+        window.PLEDGE_INITIAL_TOTAL = @Model.TotalCount;
+        window.PLEDGE_ENDPOINTS = {
+            sign: '/cam-ket/sign',
+            wall: '/cam-ket/wall',
+            status: '/cam-ket/status'
+        };
+    </script>
+    <script src="~/_content/NewsCMS.Theme.HaiLuuNguoc/js/commitment.js?v=20260627-111500"></script>
+}

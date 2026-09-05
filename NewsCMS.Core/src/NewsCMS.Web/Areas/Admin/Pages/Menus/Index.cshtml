@@ -1,0 +1,53 @@
+@page
+@model IndexModel
+@{ ViewData["Title"] = "Menu"; }
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Giao diện</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Menu</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/Menus/Create" class="admin-btn-primary">Thêm menu</a>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="hidden">@ok</div>
+}
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Tên menu</th>
+                <th class="px-5 py-4">Vị trí</th>
+                <th class="px-5 py-4">Số mục</th>
+                <th class="px-5 py-4"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (!Model.Items.Any())
+            {
+                <tr><td colspan="4" class="px-5 py-10 text-center text-slate-500">Chưa có menu nào.</td></tr>
+            }
+            @foreach (var m in Model.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4 font-semibold text-slate-950">@m.Name</td>
+                    <td class="px-5 py-4"><span class="admin-badge bg-sky-100 text-sky-700">@m.Location</span></td>
+                    <td class="px-5 py-4 text-slate-600">@m.ItemCount mục</td>
+                    <td class="px-5 py-4 text-right">
+                        <div class="flex gap-2 justify-end">
+                            <a asp-area="Admin" asp-page="/Menus/Edit" asp-route-id="@m.Id" class="admin-btn-secondary">Sửa mục</a>
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@m.Id"
+                                  data-confirm='Xoá menu "@m.Name"?' data-confirm-danger="true">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="admin-btn-secondary text-red-600">Xoá</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

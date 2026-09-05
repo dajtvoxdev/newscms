@@ -1,0 +1,88 @@
+@page
+@model TrashModel
+@{
+    ViewData["Title"] = "Thùng rác Media";
+    string FormatSize(long bytes) =>
+        bytes >= 1048576 ? $"{bytes / 1048576.0:0.#} MB" :
+        bytes >= 1024 ? $"{bytes / 1024.0:0.#} KB" : $"{bytes} B";
+}
+
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Media</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Thùng rác</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/Media/Index" class="admin-btn-secondary inline-flex items-center gap-1.5">@AdminIcon.Svg("arrow-left") Thư viện</a>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="hidden">@ok</div>
+}
+
+<p class="mb-4 text-sm text-slate-500">File trong thùng rác không thể truy cập qua URL. Khôi phục để dùng lại, hoặc Xoá vĩnh viễn để giải phóng dung lượng.</p>
+
+@if (Model.Items.TotalItems == 0)
+{
+    <div class="py-20 text-center text-slate-400">
+        <div class="mb-3 text-slate-300">@AdminIcon.Svg("trash", "h-10 w-10")</div>
+        <p class="text-base font-medium">Thùng rác trống.</p>
+    </div>
+}
+else
+{
+    <div class="admin-card overflow-hidden">
+        <table class="w-full min-w-[640px] text-left text-sm">
+            <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+                <tr>
+                    <th class="px-5 py-4">File</th>
+                    <th class="px-5 py-4">Loại</th>
+                    <th class="px-5 py-4">Kích thước</th>
+                    <th class="px-5 py-4">Xoá lúc</th>
+                    <th class="px-5 py-4 text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @foreach (var item in Model.Items.Items)
+                {
+                    <tr class="bg-white">
+                        <td class="px-5 py-4 font-semibold text-slate-950">
+                            <span class="truncate block max-w-xs" title="@item.FileName">@(item.Title ?? item.FileName)</span>
+                        </td>
+                        <td class="px-5 py-4 capitalize text-slate-600">@item.Kind</td>
+                        <td class="px-5 py-4 text-slate-600">@FormatSize(item.Size)</td>
+                        <td class="px-5 py-4 text-slate-600">@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                        <td class="px-5 py-4 text-right">
+                            <div class="flex justify-end gap-2">
+                                <form method="post" asp-page-handler="Restore" asp-route-id="@item.Id">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="admin-btn-secondary text-emerald-700">Khôi phục</button>
+                                </form>
+                                <form method="post" asp-page-handler="Purge" asp-route-id="@item.Id"
+                                      data-confirm="Xoá vĩnh viễn? Không thể hoàn tác." data-confirm-danger="true">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="admin-btn-secondary text-red-600">Xoá vĩnh viễn</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.Items.TotalPages > 1)
+    {
+        <nav class="mt-6 flex items-center justify-center gap-1">
+            @if (Model.Items.HasPrev)
+            {
+                <a asp-area="Admin" asp-page="/Media/Trash" asp-route-p="@(Model.CurrentPage - 1)" class="admin-btn-secondary">@AdminIcon.Svg("arrow-left")</a>
+            }
+            <span class="px-3 text-sm text-slate-500">Trang @Model.CurrentPage / @Model.Items.TotalPages</span>
+            @if (Model.Items.HasNext)
+            {
+                <a asp-area="Admin" asp-page="/Media/Trash" asp-route-p="@(Model.CurrentPage + 1)" class="admin-btn-secondary">@AdminIcon.Svg("arrow-right")</a>
+            }
+        </nav>
+    }
+}

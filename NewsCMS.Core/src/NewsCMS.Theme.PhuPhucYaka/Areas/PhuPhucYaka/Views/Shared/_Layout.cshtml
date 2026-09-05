@@ -1,0 +1,144 @@
+@{
+    var title = ViewData["Title"] as string ?? "Thế Giới Xe Điện Phú Phúc — Đại Lý Ủy Quyền Yaka Bike";
+    const string hotline = "0917.171.869";
+    const string hotlineTel = "0917171869";
+}
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Thế Giới Xe Điện Phú Phúc — đại lý ủy quyền Yaka Bike chính hãng tại Hải Phòng. Xe máy điện cao cấp, trả góp 0%, bảo hành chính hãng." />
+    <title>@title</title>
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#bb0013",
+                        "primary-dark": "#93000d",
+                        "primary-glow": "#ff3447",
+                        ivory: "#fff8ee",
+                        ink: "#111318",
+                        graphite: "#23272f",
+                        mist: "#eef1f5",
+                        line: "#d7dce3"
+                    },
+                    fontFamily: {
+                        display: ["Outfit", "sans-serif"],
+                        body: ["Outfit", "sans-serif"]
+                    },
+                    boxShadow: {
+                        soft: "0 24px 80px rgba(17,19,24,0.14)",
+                        glow: "0 24px 80px rgba(187,0,19,0.22)"
+                    },
+                    maxWidth: { content: "1440px" },
+                    backgroundImage: {
+                        mesh: "radial-gradient(circle at 20% 20%, rgba(255,52,71,.28), transparent 30%), radial-gradient(circle at 85% 10%, rgba(255,248,238,.18), transparent 28%), linear-gradient(135deg, #111318 0%, #23272f 50%, #4d0710 100%)"
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+        body { font-family: 'Outfit', sans-serif; }
+        .grain::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .18; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E"); mix-blend-mode: soft-light; }
+    </style>
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body class="bg-ivory text-ink antialiased selection:bg-primary selection:text-white">
+    <header class="fixed inset-x-0 top-4 z-50 px-4">
+        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-full border border-white/30 bg-white/80 px-4 py-3 shadow-soft backdrop-blur-xl lg:px-6">
+            <a href="/" class="flex items-center gap-3 shrink-0">
+                <span class="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-line">
+                    <img src="~/_content/NewsCMS.Theme.PhuPhucYaka/images/yaka-logo.png" alt="Yaka Bike" class="h-7 w-auto" />
+                </span>
+                <span class="hidden font-display text-sm font-black uppercase leading-tight tracking-[0.18em] text-ink sm:block">
+                    Phú Phúc<br />Yaka Bike
+                </span>
+            </a>
+
+            <nav class="hidden items-center gap-1 rounded-full bg-ink/5 p-1 lg:flex" aria-label="Menu chính">
+                <a href="/" class="rounded-full px-4 py-2 text-sm font-bold text-ink/70 transition hover:bg-white hover:text-primary">Trang chủ</a>
+                <a href="/san-pham" class="rounded-full px-4 py-2 text-sm font-bold text-ink/70 transition hover:bg-white hover:text-primary">Sản phẩm</a>
+                <a href="/#dich-vu" class="rounded-full px-4 py-2 text-sm font-bold text-ink/70 transition hover:bg-white hover:text-primary">Dịch vụ</a>
+                <a href="/#lien-he" class="rounded-full px-4 py-2 text-sm font-bold text-ink/70 transition hover:bg-white hover:text-primary">Liên hệ</a>
+            </nav>
+
+            <a href="tel:@hotlineTel" class="hidden rounded-full bg-ink px-5 py-3 text-sm font-black text-white shadow-soft transition hover:bg-primary sm:inline-flex">
+                @hotline
+            </a>
+
+            <button type="button" id="navToggle" class="lg:hidden rounded-full bg-ink p-3 text-white" aria-label="Mở menu" aria-expanded="false">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+        </div>
+
+        <nav id="mobileNav" class="mx-auto mt-3 hidden max-w-6xl rounded-3xl border border-white/40 bg-white/95 p-4 shadow-soft backdrop-blur-xl lg:hidden" aria-label="Menu di động">
+            <a href="/" class="block rounded-2xl px-4 py-3 font-bold text-ink/75 hover:bg-mist hover:text-primary">Trang chủ</a>
+            <a href="/san-pham" class="block rounded-2xl px-4 py-3 font-bold text-ink/75 hover:bg-mist hover:text-primary">Sản phẩm</a>
+            <a href="/#dich-vu" class="block rounded-2xl px-4 py-3 font-bold text-ink/75 hover:bg-mist hover:text-primary">Dịch vụ</a>
+            <a href="/#lien-he" class="block rounded-2xl px-4 py-3 font-bold text-ink/75 hover:bg-mist hover:text-primary">Liên hệ</a>
+            <a href="tel:@hotlineTel" class="mt-3 flex items-center justify-center rounded-full bg-primary px-5 py-3 font-black text-white">@hotline</a>
+        </nav>
+    </header>
+
+    <main class="w-full max-w-full overflow-x-hidden">
+        @RenderBody()
+    </main>
+
+    <footer class="relative overflow-hidden bg-ink text-white grain">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(187,0,19,.38),transparent_34%)]"></div>
+        <div class="relative mx-auto grid max-w-content grid-cols-1 gap-12 px-5 py-20 md:grid-cols-4 lg:px-10">
+            <div class="md:col-span-2">
+                <div class="flex items-center gap-3">
+                    <span class="rounded-2xl bg-white p-2"><img src="~/_content/NewsCMS.Theme.PhuPhucYaka/images/yaka-logo.png" alt="Yaka Bike" class="h-9 w-auto" /></span>
+                    <h3 class="font-display text-2xl font-black">Thế Giới Xe Điện Phú Phúc</h3>
+                </div>
+                <p class="mt-6 max-w-md text-base leading-8 text-white/68">Đại lý ủy quyền Yaka Bike tại Hải Phòng. Xe máy điện cao cấp, dịch vụ minh bạch, bảo hành chính hãng và tư vấn tận nơi.</p>
+            </div>
+            <div>
+                <h4 class="text-sm font-black uppercase tracking-[0.18em] text-white/45">Dịch vụ</h4>
+                <ul class="mt-5 space-y-3 text-white/72">
+                    <li><a href="/#dich-vu" class="hover:text-white">Trả góp linh hoạt</a></li>
+                    <li><a href="/#dich-vu" class="hover:text-white">Bảo hành chính hãng</a></li>
+                    <li><a href="/san-pham" class="hover:text-white">Sản phẩm sẵn hàng</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-sm font-black uppercase tracking-[0.18em] text-white/45">Liên hệ</h4>
+                <ul class="mt-5 space-y-3 text-white/72">
+                    <li>869 Trường Chinh, Kiến An</li>
+                    <li><a href="tel:@hotlineTel" class="hover:text-white">@hotline</a></li>
+                    <li><a href="https://zalo.me/@hotlineTel" target="_blank" rel="noopener" class="hover:text-white">Zalo tư vấn</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="relative border-t border-white/10 px-5 py-6 text-center text-sm text-white/45">© @DateTime.Now.Year Phú Phúc Yaka Bike Authorized Dealer.</div>
+    </footer>
+
+    <a href="tel:@hotlineTel" class="fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-glow sm:hidden" aria-label="Gọi hotline">
+        <span class="material-symbols-outlined">call</span>
+    </a>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script>
+        (function () {
+            var t = document.getElementById('navToggle'), m = document.getElementById('mobileNav');
+            if (t && m) t.addEventListener('click', function () {
+                var hidden = m.classList.toggle('hidden');
+                t.setAttribute('aria-expanded', String(!hidden));
+            });
+        })();
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

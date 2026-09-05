@@ -1,0 +1,149 @@
+@page "{id:guid}"
+@model NewsCMS.Web.Areas.Admin.Pages.Builder.EditLayoutModel
+@{
+    ViewData["Title"] = "Sửa Layout";
+}
+
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-indigo-600">Site Builder</p>
+        <h2 class="text-xl font-bold text-slate-900 mt-1">Layout: <span id="layout-name" class="font-mono text-base">…</span></h2>
+    </div>
+    <div class="flex gap-2">
+        <a asp-page="/Builder/Layouts" class="admin-btn-secondary">@AdminIcon.Svg("arrow-left") Danh sách</a>
+        <a href="/admin/Builder/EditShell/@Model.Id" class="admin-btn-secondary inline-flex items-center gap-1.5" title="Dựng header/footer bằng kéo-thả">@AdminIcon.Svg("layout-template") Thiết kế trực quan</a>
+        <button type="button" id="btn-save-layout" class="admin-btn-primary inline-flex items-center gap-1.5">@AdminIcon.Svg("save") Lưu Layout</button>
+    </div>
+</div>
+
+<div id="layout-error" class="mb-4 hidden rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"></div>
+
+<form id="layout-form" class="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    @Html.AntiForgeryToken()
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label class="admin-label">Key</label>
+            <input id="l-key" class="admin-input font-mono text-sm" readonly title="Key không đổi được sau khi tạo" />
+        </div>
+        <div>
+            <label class="admin-label">Tên</label>
+            <input id="l-name" class="admin-input" required />
+        </div>
+        <div>
+            <label class="admin-label">Loại</label>
+            <select id="l-kind" class="admin-input">
+                <option value="Shell">Shell (bọc trang, cần data-nc-body)</option>
+                <option value="Header">Header</option>
+                <option value="Footer">Footer</option>
+                <option value="Sidebar">Sidebar</option>
+            </select>
+        </div>
+    </div>
+    <label class="flex items-center gap-2 text-sm text-slate-700">
+        <input type="checkbox" id="l-default" class="rounded border-slate-300" />
+        <span>Đặt làm mặc định cho loại này (mọi trang không chọn shell riêng sẽ dùng layout này)</span>
+    </label>
+    <div>
+        <label class="admin-label">Compiled HTML</label>
+        <textarea id="l-html" class="admin-input font-mono text-xs" rows="14" spellcheck="false"></textarea>
+        <p class="mt-1 text-xs text-slate-500">
+            Sửa tay ở đây sẽ <strong>bỏ cây component</strong> của trình thiết kế trực quan (lần mở sau nó dựng lại từ HTML này).
+            Shell bắt buộc có đúng một phần tử mang <code class="font-mono">data-nc-body</code>.
+        </p>
+    </div>
+    <div>
+        <label class="admin-label">Custom CSS</label>
+        <textarea id="l-css" class="admin-input font-mono text-xs" rows="8" spellcheck="false"></textarea>
+        <p class="mt-1 text-xs text-slate-500">
+            CSS viết tay, đi đường riêng khỏi CSS do trình thiết kế compile nên hai bên không ghi đè nhau.
+            Khi render, khối này nối <em>sau</em> nên luôn thắng.
+        </p>
+    </div>
+    <div id="js-wrap" class="hidden">
+        <label class="admin-label">Custom JavaScript</label>
+        <textarea id="l-js" class="admin-input font-mono text-xs" rows="8" spellcheck="false"></textarea>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+(function() {
+    var TOKEN = document.querySelector('input[name="__RequestVerificationToken"]').value;
+    var ID = '@Model.Id';
+    var CAN_JS = @((Model.HasCodeScope).ToString().ToLowerInvariant());
+    function headers(json) {
+        var h = { 'RequestVerificationToken': TOKEN };
+        if (json) h['Content-Type'] = 'application/json';
+        return h;
+    }
+    function showError(msg) {
+        var el = document.getElementById('layout-error');
+        if (!msg) { el.classList.add('hidden'); return; }
+        el.textContent = msg;
+        el.classList.remove('hidden');
+    }
+
+    // HTML lúc nạp — so sánh để biết người dùng có sửa tay hay không. Không sửa thì gửi null
+    // (service hiểu là "giữ nguyên") để không đụng tới thành quả của trình thiết kế trực quan.
+    var loadedHtml = '';
+
+    async function load() {
+        var res = await fetch('/admin/api/builder/layouts/' + ID, { headers: headers(false), credentials: 'include' });
+        if (!res.ok) { showError('Không tải được layout.'); return; }
+        var l = await res.json();
+        document.getElementById('layout-name').textContent = l.name || l.key;
+        document.getElementById('l-key').value = l.key || '';
+        document.getElementById('l-name').value = l.name || '';
+        document.getElementById('l-kind').value = l.kind || 'Shell';
+        document.getElementById('l-default').checked = !!l.isDefault;
+        loadedHtml = l.compiledHtml || '';
+        document.getElementById('l-html').value = loadedHtml;
+        // CustomCss, KHÔNG phải CompiledCss: CompiledCss là output Tailwind của trình thiết kế,
+        // hiện ra đây thì người dùng sẽ sửa vào một file sinh tự động rồi mất khi compile lại.
+        document.getElementById('l-css').value = l.customCss || '';
+        if (CAN_JS) {
+            document.getElementById('js-wrap').classList.remove('hidden');
+            document.getElementById('l-js').value = l.customJs || '';
+        }
+    }
+
+    document.getElementById('btn-save-layout').addEventListener('click', async function() {
+        showError('');
+        var kind = document.getElementById('l-kind').value;
+        var html = document.getElementById('l-html').value;
+        var htmlChanged = html !== loadedHtml;
+
+        if (kind === 'Shell' && htmlChanged && html.indexOf('data-nc-body') < 0) {
+            showError('Shell phải có một phần tử mang data-nc-body — nếu không, header/footer sẽ không bọc quanh nội dung trang.');
+            return;
+        }
+
+        var payload = {
+            key: document.getElementById('l-key').value,
+            name: document.getElementById('l-name').value,
+            kind: kind,
+            // Sửa HTML tay làm cây component cũ lạc hậu → gửi '' để service xoá BuilderJson,
+            // lần mở trình thiết kế sau sẽ parse lại từ HTML này. Không sửa thì null = giữ nguyên.
+            builderJson: htmlChanged ? '' : null,
+            compiledHtml: htmlChanged ? html : null,
+            compiledCss: null,  // sản phẩm compile của trình thiết kế — không đụng tới từ đây
+            customCss: document.getElementById('l-css').value,
+            customJs: CAN_JS ? document.getElementById('l-js').value : null,
+            isDefault: document.getElementById('l-default').checked
+        };
+        var res = await fetch('/admin/api/builder/layouts/' + ID, {
+            method: 'PUT', headers: headers(true), credentials: 'include',
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            var saved = await res.json().catch(function(){return null});
+            if (saved) { loadedHtml = saved.compiledHtml || ''; document.getElementById('l-html').value = loadedHtml; }
+            window.toast?.success('Đã lưu layout!');
+        }
+        else { var err = await res.json().catch(function(){return {error:'Lỗi'}}); showError(err.error || 'Lưu thất bại'); }
+    });
+
+    load();
+})();
+</script>
+}

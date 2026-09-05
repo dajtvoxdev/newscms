@@ -1,0 +1,16 @@
+@{
+    ViewData["Title"] = (string)(ViewBag.PageTitle ?? "Trang — Hải lưu ngược");
+}
+
+<section class="static-page">
+    <div class="static-page-content">
+        @if (ViewBag.PageContent != null)
+        {
+            @Html.Raw((string)ViewBag.PageContent)
+        }
+        else
+        {
+            <p>Nội dung đang được cập nhật.</p>
+        }
+    </div>
+</section>

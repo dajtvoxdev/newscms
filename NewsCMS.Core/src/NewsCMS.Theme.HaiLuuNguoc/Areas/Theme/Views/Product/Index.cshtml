@@ -1,0 +1,89 @@
+@using NewsCMS.Application.Catalog.Dtos
+@using NewsCMS.Application.Common
+@model PagedList<ProductListItemDto>
+@{
+    ViewData["Title"] = "Sản phẩm — Hải lưu ngược";
+    var categories = ViewBag.Categories as IReadOnlyList<ProductCategoryDto> ?? new List<ProductCategoryDto>();
+    var selectedSlug = ViewBag.SelectedCategorySlug as string;
+}
+
+<section class="product-list">
+    <header class="product-list-header">
+        <h1>Sản phẩm</h1>
+        <p>Tổng @Model.TotalItems sản phẩm</p>
+    </header>
+
+    <nav class="product-cats">
+        <a class="@(string.IsNullOrEmpty(selectedSlug) ? "active" : "")" href="/san-pham">Tất cả</a>
+        @foreach (var c in categories.Where(x => x.IsActive))
+        {
+            <a class="@(c.Slug == selectedSlug ? "active" : "")" href="/san-pham?cat=@c.Slug">@c.Name</a>
+        }
+    </nav>
+
+    <div class="product-grid">
+        @if (Model.Items.Count == 0)
+        {
+            <p class="empty">Chưa có sản phẩm.</p>
+        }
+        @foreach (var item in Model.Items)
+        {
+            <a class="product-card" href="/san-pham/@item.Slug">
+                @if (!string.IsNullOrEmpty(item.ThumbnailUrl))
+                {
+                    <img src="@item.ThumbnailUrl" alt="@item.Name" loading="lazy" />
+                }
+                else
+                {
+                    <div class="thumb-placeholder"></div>
+                }
+                <div class="meta">
+                    <h3>@item.Name</h3>
+                    <div class="price">
+                        @if (item.SalePrice.HasValue)
+                        {
+                            <span class="sale">@item.SalePrice.Value.ToString("N0") đ</span>
+                            <span class="original">@item.Price.ToString("N0") đ</span>
+                        }
+                        else
+                        {
+                            <span>@item.Price.ToString("N0") đ</span>
+                        }
+                    </div>
+                </div>
+            </a>
+        }
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <div class="pager">
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                <a class="@(i == Model.Page ? "active" : "")" href="/san-pham?cat=@selectedSlug&p=@i">@i</a>
+            }
+        </div>
+    }
+</section>
+
+<style>
+    .product-list { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
+    .product-list-header { text-align: center; margin-bottom: 2rem; }
+    .product-list-header h1 { font-size: 2.5rem; font-weight: 800; margin: 0; }
+    .product-list-header p { color: #64748b; }
+    .product-cats { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; margin-bottom: 2rem; }
+    .product-cats a { padding: .4rem 1rem; border: 1px solid #cbd5e1; border-radius: 999px; text-decoration: none; color: #475569; font-size: .9rem; }
+    .product-cats a.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; }
+    .product-card { display: flex; flex-direction: column; background: #fff; border-radius: 1rem; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.06); text-decoration: none; color: inherit; transition: transform .2s; }
+    .product-card:hover { transform: translateY(-4px); }
+    .product-card img, .thumb-placeholder { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #f1f5f9; }
+    .product-card .meta { padding: 1rem; }
+    .product-card h3 { margin: 0 0 .5rem; font-size: 1rem; font-weight: 700; }
+    .price .sale { color: #e11d48; font-weight: 700; }
+    .price .original { color: #94a3b8; text-decoration: line-through; margin-left: .5rem; font-size: .85rem; }
+    .pager { display: flex; gap: .5rem; justify-content: center; margin-top: 2rem; }
+    .pager a { padding: .4rem .8rem; border: 1px solid #cbd5e1; border-radius: .5rem; text-decoration: none; color: #475569; }
+    .pager a.active { background: #0f172a; color: #fff; }
+    .empty { grid-column: 1 / -1; text-align: center; color: #64748b; padding: 3rem; }
+</style>

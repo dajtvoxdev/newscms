@@ -1,0 +1,99 @@
+@page
+@using NewsCMS.Application.KeoBia
+@using NewsCMS.Domain.Entities.KeoBia
+@model IndexModel
+@{
+    ViewData["Title"] = "Nộp cốc bia và gói lạc";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Kèo Bia 2026</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Giao dịch nộp cốc bia và gói lạc</h2>
+    </div>
+</div>
+
+@if (TempData["Success"] is string msg)
+{
+    <div class="hidden">@msg</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="hidden">@err</div>
+}
+
+<form method="get" class="admin-card mb-6 grid gap-3 p-4 md:grid-cols-[1fr_220px_140px]">
+    <input class="admin-input" name="q" value="@Model.Keyword" placeholder="Tìm mã, nội dung, người chơi..." />
+    <select class="admin-select" name="status" asp-items="Model.StatusOptions"></select>
+    <button class="admin-btn-secondary" type="submit">Lọc</button>
+</form>
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full min-w-[1120px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Mã</th>
+                <th class="px-5 py-4">Người chơi</th>
+                <th class="px-5 py-4">Cốc bia và gói lạc</th>
+                <th class="px-5 py-4">Nội dung</th>
+                <th class="px-5 py-4">Trạng thái</th>
+                <th class="px-5 py-4">Thời gian</th>
+                <th class="px-5 py-4">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Items.Items.Count == 0)
+            {
+                <tr><td colspan="7" class="px-5 py-10 text-center text-slate-500">Chưa có giao dịch.</td></tr>
+            }
+            @foreach (var item in Model.Items.Items)
+            {
+                <tr class="bg-white align-top">
+                    <td class="px-5 py-4 font-mono text-xs text-slate-700">@item.Code</td>
+                    <td class="px-5 py-4">
+                        <div class="font-bold text-slate-950">@item.DisplayName</div>
+                        <div class="text-xs text-slate-500">@item.TelegramUsername</div>
+                    </td>
+                    <td class="px-5 py-4 text-slate-700">
+                        <div class="inline-flex items-center gap-1">@AdminIcon.Svg("beer") @item.BeerCups cốc bia</div>
+                        <div class="mt-1 inline-flex items-center gap-1">@AdminIcon.Svg("peanut") @item.PeanutPacks gói lạc</div>
+                    </td>
+                    <td class="px-5 py-4 font-mono text-xs text-slate-700">@item.TransferContent</td>
+                    <td class="px-5 py-4"><span class="admin-badge bg-slate-100 text-slate-700">@item.Status</span></td>
+                    <td class="px-5 py-4 text-slate-600">
+                        @item.CreatedAt.ToLocalTime().ToString("HH:mm dd/MM/yyyy")
+                        @if (item.PaidAt.HasValue)
+                        {
+                            <div class="text-xs text-emerald-700">Paid @item.PaidAt.Value.ToLocalTime().ToString("HH:mm dd/MM")</div>
+                        }
+                    </td>
+                    <td class="px-5 py-4">
+                        @if (item.Status == KeoBiaBeerPaymentStatus.Pending)
+                        {
+                            <div class="flex gap-2">
+                                <form method="post" asp-page-handler="Paid" asp-route-id="@item.Id" asp-route-q="@Model.Keyword" asp-route-status="@Model.FilterStatus" asp-route-p="@Model.CurrentPage">
+                                    @Html.AntiForgeryToken()
+                                    <button class="admin-btn-primary" type="submit">Paid</button>
+                                </form>
+                                <form method="post" asp-page-handler="Failed" asp-route-id="@item.Id" asp-route-q="@Model.Keyword" asp-route-status="@Model.FilterStatus" asp-route-p="@Model.CurrentPage">
+                                    @Html.AntiForgeryToken()
+                                    <button class="admin-btn-secondary" type="submit">Failed</button>
+                                </form>
+                            </div>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Items.TotalPages > 1)
+{
+    <div class="mt-4 flex gap-2">
+        @for (int i = 1; i <= Model.Items.TotalPages; i++)
+        {
+            <a asp-page="/KeoBia/Payments/Index" asp-route-q="@Model.Keyword" asp-route-status="@Model.FilterStatus" asp-route-p="@i" class="admin-btn-secondary @(i == Model.CurrentPage ? "font-bold" : "")">@i</a>
+        }
+    </div>
+}

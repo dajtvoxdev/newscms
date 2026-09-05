@@ -1,0 +1,192 @@
+@{
+    ViewData["Title"] = "Cuộc thi Hải Trình Xanh";
+    ViewData["Description"] = "Cuộc thi Hải Trình Xanh của Hải Lưu Ngược. Nộp bài vòng 2 từ 17/07 đến 23:59 ngày 22/07.";
+    var bookletUrl = "/_content/NewsCMS.Theme.HaiLuuNguoc/" + System.Uri.EscapeDataString("Booklet_hanh_trinh_xanh_compressed.pdf") + "?v=20260711-booklet-6";
+    var deBaiVong2Url = "/_content/NewsCMS.Theme.HaiLuuNguoc/" + System.Uri.EscapeDataString("HTX2026_DE_BAI_VONG_2.pdf") + "?v=20260717-vong2";
+}
+
+@section Head {
+    <link rel="canonical" href="/cuoc-thi" />
+    <meta property="og:title" content="Cuộc thi Hải Trình Xanh" />
+    <meta property="og:description" content="Đếm ngược thời gian nộp bài vòng 2, xem đề bài và thể lệ cuộc thi Hải Trình Xanh." />
+    <meta property="og:image" content="/_content/NewsCMS.Theme.HaiLuuNguoc/cuocthi.png?v=20260709-contest-assets-3" />
+}
+
+<article class="contest-page">
+    <section class="contest-hero" aria-labelledby="contest-hero-title">
+        <h1 class="sr-only" id="contest-hero-title">Hải Trình Xanh</h1>
+        <div class="contest-hero-countdown" data-contest-countdown data-deadline="2026-07-22T23:59:00+07:00">
+            <p class="contest-hero-kicker" data-countdown-label>Đếm ngược thời gian nộp bài vòng 2</p>
+            <div class="contest-clock" aria-live="polite">
+                <span><strong data-countdown-days>00</strong><em>Ngày</em></span>
+                <span><strong data-countdown-hours>00</strong><em>Giờ</em></span>
+                <span><strong data-countdown-minutes>00</strong><em>Phút</em></span>
+                <span><strong data-countdown-seconds>00</strong><em>Giây</em></span>
+            </div>
+            <p class="contest-hero-time">
+                <span class="contest-hero-time-label">Thời gian nộp bài vòng 2:</span>
+                <span class="contest-hero-time-range">17/07 - 23:59 22/07</span>
+            </p>
+            <a class="button button-primary contest-hero-cta contest-hero-brief" href="@deBaiVong2Url" target="_blank" rel="noopener noreferrer">
+                Đề bài vòng 2
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                </svg>
+            </a>
+            <a class="button button-primary contest-hero-cta contest-hero-submit" href="https://forms.gle/UgJ82pJf84eH9zF27" target="_blank" rel="noopener noreferrer">
+                Nộp bài
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                </svg>
+            </a>
+        </div>
+        <a class="contest-booklet-jump" href="#booklet-cuoc-thi">
+            Booklet cuộc thi
+            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14"></path>
+                <path d="m19 12-7 7-7-7"></path>
+            </svg>
+        </a>
+    </section>
+
+    <section class="contest-pdf-section" id="booklet-cuoc-thi" aria-labelledby="contest-rules-title">
+        <div class="contest-pdf-head">
+            <p class="eyebrow">Thể lệ</p>
+            <h2 id="contest-rules-title">Thông tin cuộc thi</h2>
+        </div>
+        <div class="contest-pdf-wrap" data-pdf-viewer data-pdf-url="@bookletUrl">
+            <p class="contest-pdf-status" data-pdf-status hidden></p>
+            <div class="contest-pdf-pages" data-pdf-pages>
+                <figure class="contest-pdf-page" aria-hidden="true"></figure>
+            </div>
+            <p class="contest-pdf-fallback">
+                <a href="@bookletUrl" target="_blank" rel="noopener noreferrer">Mở PDF trong tab mới</a>
+            </p>
+        </div>
+    </section>
+</article>
+
+@section Scripts {
+    <script type="module">
+        const viewer = document.querySelector('[data-pdf-viewer]');
+
+        if (viewer) {
+            const status = viewer.querySelector('[data-pdf-status]');
+            const pages = viewer.querySelector('[data-pdf-pages]');
+            const pdfUrl = viewer.dataset.pdfUrl;
+
+            try {
+                const pdfjs = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs');
+                pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs';
+
+                const loadingTask = pdfjs.getDocument({
+                    url: pdfUrl,
+                    disableAutoFetch: false,
+                    disableRange: false,
+                    disableStream: false,
+                    rangeChunkSize: 262144
+                });
+                const pdf = await loadingTask.promise;
+                const maxWidth = () => Math.min(pages.clientWidth || viewer.clientWidth || 960, 980);
+                const figures = new Map();
+                const rendered = new Set();
+                const rendering = new Set();
+                let renderQueue = Promise.resolve();
+
+                pages.replaceChildren();
+
+                for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+                    const figure = document.createElement('figure');
+                    figure.className = 'contest-pdf-page';
+                    figure.dataset.pageNumber = pageNumber;
+                    figure.setAttribute('aria-label', `Trang ${pageNumber}`);
+                    pages.appendChild(figure);
+                    figures.set(pageNumber, figure);
+                }
+
+                const renderPage = async (pageNumber) => {
+                    if (rendered.has(pageNumber)) return;
+
+                    const figure = figures.get(pageNumber);
+                    if (!figure) return;
+
+                    figure.classList.add('is-loading');
+                    const page = await pdf.getPage(pageNumber);
+                    const baseViewport = page.getViewport({ scale: 1 });
+                    const scale = Math.min(figure.clientWidth || maxWidth(), 980) / baseViewport.width;
+                    const viewport = page.getViewport({ scale });
+                    const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.6);
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.floor(viewport.width * pixelRatio);
+                    canvas.height = Math.floor(viewport.height * pixelRatio);
+                    canvas.style.width = `${Math.floor(viewport.width)}px`;
+                    canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+                    const context = canvas.getContext('2d');
+                    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+                    await page.render({ canvasContext: context, viewport }).promise;
+
+                    figure.replaceChildren(canvas);
+                    figure.classList.remove('is-loading');
+                    figure.classList.add('is-rendered');
+                    rendered.add(pageNumber);
+
+                    if (rendered.size === 1) {
+                        status.hidden = true;
+                    }
+                };
+
+                const queueRender = (pageNumber) => {
+                    if (rendered.has(pageNumber) || rendering.has(pageNumber)) return renderQueue;
+
+                    rendering.add(pageNumber);
+                    renderQueue = renderQueue
+                        .then(() => renderPage(pageNumber))
+                        .catch(() => {
+                            const figure = figures.get(pageNumber);
+                            figure?.classList.add('is-error');
+                        })
+                        .finally(() => {
+                            rendering.delete(pageNumber);
+                        });
+
+                    return renderQueue;
+                };
+
+                const initialPages = Math.min(1, pdf.numPages);
+                for (let pageNumber = 1; pageNumber <= initialPages; pageNumber += 1) {
+                    queueRender(pageNumber);
+                }
+
+                if ('IntersectionObserver' in window) {
+                    const observer = new IntersectionObserver((entries) => {
+                        for (const entry of entries) {
+                            if (!entry.isIntersecting) continue;
+
+                            const pageNumber = Number(entry.target.dataset.pageNumber);
+                            queueRender(pageNumber);
+                            observer.unobserve(entry.target);
+                        }
+                    }, { rootMargin: '900px 0px' });
+
+                    for (let pageNumber = initialPages + 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+                        observer.observe(figures.get(pageNumber));
+                    }
+                } else {
+                    for (let pageNumber = initialPages + 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+                        queueRender(pageNumber);
+                    }
+                }
+
+            } catch (error) {
+                pages.replaceChildren();
+                status.hidden = false;
+                status.textContent = 'Không thể tải booklet. Bạn có thể mở PDF bằng liên kết bên dưới.';
+                console.error(error);
+            }
+        }
+    </script>
+}

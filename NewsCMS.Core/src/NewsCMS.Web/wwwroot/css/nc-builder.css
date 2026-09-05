@@ -1,0 +1,638 @@
+/*
+ * nc-builder.css — stylesheet cho các phần mở rộng Site Builder (variant + preview block động).
+ *
+ * Nạp vào iframe canvas bởi nc-builder-extensions.js (#nc-builder-css-link) VÀ nối nội dung
+ * vào compiledCss khi lưu trang (Edit.cshtml đọc file này qua fetch) — nhờ vậy trang public
+ * hiển thị variant y hệt canvas mà không cần nạp thêm file nào.
+ *
+ * LƯU Ý: mọi selector variant đều phải bám design token (var(--color-*), var(--radius-*))
+ * để đổi theme site không làm vỡ variant.
+ */
+
+/* ── Kiểu hiển thị (style variant) cho section/div ──────────────────────────── */
+
+.ncv-center {
+  text-align: center;
+}
+.ncv-center .nc-inner,
+.ncv-center > * {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ncv-dark {
+  background: linear-gradient(160deg, var(--color-ink, #0f172a), #1e293b);
+  color: #e2e8f0;
+}
+.ncv-dark h1, .ncv-dark h2, .ncv-dark h3 { color: #fff; }
+.ncv-dark a:not(.btn-gradient) { color: #93c5fd; }
+
+.ncv-brand {
+  background: linear-gradient(135deg, var(--color-brand-500, #0d7c66), var(--color-brand-700, #075e54));
+  color: #fff;
+}
+.ncv-brand h1, .ncv-brand h2, .ncv-brand h3 { color: #fff; }
+
+.ncv-card {
+  background: var(--color-surface, #fff);
+  border: 1px solid color-mix(in srgb, var(--color-ink, #0f172a) 8%, transparent);
+  border-radius: calc(var(--radius-card, 14px) * 1.6);
+  box-shadow: 0 18px 60px -24px rgba(15, 23, 42, .18);
+}
+
+.ncv-tight {
+  padding-top: calc(var(--space-section, 72px) / 3);
+  padding-bottom: calc(var(--space-section, 72px) / 3);
+}
+
+/* ── Placeholder block dữ liệu trong canvas ─────────────────────────────────── */
+
+[data-nc-block] {
+  min-height: 48px;
+}
+
+/* ── Trait UI (panel bên phải của GrapesJS — nằm ở document chính) ──────────── */
+
+.nc-trait-btn {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nc-trait-btn:hover { background: #f1f5f9; }
+
+.nc-variant-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px 0 8px;
+}
+.nc-variant-opt {
+  padding: 7px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s;
+}
+.nc-variant-opt:hover { border-color: #0d7c66; }
+.nc-variant-opt.active {
+  border-color: #0d7c66;
+  background: rgba(13, 124, 102, .08);
+  color: #0a6352;
+}
+
+/* ── Panel cấu hình khối động (dựng từ catalog server) ─────────────────────── */
+
+/* Tiêu đề chia nhóm: kiểu hiển thị → nguồn dữ liệu → hiện những gì → nâng cao. */
+.nc-grp-label {
+  margin: 14px 0 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+}
+.nc-grp-label:first-child { margin-top: 4px; border-top: 0; padding-top: 0; }
+
+/* Preset dùng lại khung .nc-variant-wrap nhưng mỗi ô có thêm hình minh hoạ bố cục. */
+.nc-preset-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 6px;
+}
+.nc-preset-thumb {
+  display: block;
+  width: 100%;
+}
+.nc-preset-thumb svg {
+  display: block;
+  width: 100%;
+  height: 34px;
+}
+.nc-preset-name { font-size: 11px; line-height: 1.25; }
+
+/* Chip nhiều lựa chọn — không dùng <select multiple> vì ctrl-click rất dễ mất lựa chọn cũ. */
+.nc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 4px 0 8px;
+}
+.nc-chip {
+  padding: 4px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.nc-chip:hover { border-color: #0d7c66; }
+.nc-chip.active {
+  border-color: #0d7c66;
+  background: rgba(13, 124, 102, .1);
+  color: #0a6352;
+  font-weight: 600;
+}
+
+/* Chọn bản ghi cụ thể + kéo sắp thứ tự (thứ tự này có nghĩa thật: server sắp lại theo nó). */
+.nc-picker { padding: 4px 0 8px; }
+.nc-picker-search {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.nc-picker-list { display: flex; flex-direction: column; gap: 4px; }
+.nc-picker-row,
+.nc-picker-hit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 7px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.nc-picker-row { cursor: grab; }
+.nc-picker-row.dragging { opacity: .45; }
+.nc-picker-hit:hover { border-color: #0d7c66; }
+.nc-picker-row img,
+.nc-picker-hit img,
+.nc-picker-noimg {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: #f1f5f9;
+}
+.nc-picker-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nc-picker-label em {
+  display: block;
+  font-style: normal;
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+.nc-picker-del {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.nc-picker-del:hover { background: #fee2e2; color: #b91c1c; }
+.nc-picker-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 5px;
+  max-height: 190px;
+  overflow-y: auto;
+}
+/* .nc-hint trong panel: dùng lại nhãn nhạt nhưng bỏ nền/viền của bản dùng trong modal. */
+.nc-picker .nc-hint,
+.nc-chips .nc-hint {
+  padding: 6px 0;
+  background: none;
+  border: 0;
+  font-size: 11.5px;
+}
+
+/* Dòng "Khớp 12 bài, hiển thị 6" — trả lời tại chỗ câu "sao khối này trống?". */
+.nc-match {
+  margin: 2px 0 10px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+/* 0 kết quả là trạng thái cần chú ý, không phải thông tin trung tính. */
+.nc-match-empty {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+/* Hàng nút cuối panel: làm mới preview / nhân bản / lưu thành preset của site. */
+.nc-blk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+}
+.nc-blk-actions .nc-trait-btn { flex: 1 1 auto; }
+.nc-blk-actions .nc-act-msg {
+  flex: 1 1 100%;
+  font-size: 11px;
+  color: #0a6352;
+}
+.nc-blk-actions .nc-act-msg.nc-act-err { color: #b91c1c; }
+
+/* ── Truy vết CSS đang áp lên phần tử đang chọn ─────────────────────────────── */
+
+.nc-csstrace {
+  margin-top: 14px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+}
+.nc-csstrace-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #475569;
+}
+.nc-csstrace-refresh {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 1px 7px;
+  font-size: 12px;
+  color: #475569;
+}
+.nc-csstrace-refresh:hover { background: #f1f5f9; }
+
+/* Chữ ký phần tử: trả lời ngay "#ic5kz thật ra là thẻ gì, class gì". */
+.nc-csstrace-sig {
+  margin: 6px 0 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 4px 7px;
+  overflow-wrap: anywhere;
+}
+
+/* Danh sách dài thì cuộn trong panel, không đẩy các trait khác xuống mất hút. */
+.nc-csstrace-list {
+  max-height: 340px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.nc-csstrace-rule {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: #fff;
+}
+/* Rule không sửa được (file theme đã build) để nền xám cho khỏi bấm nhầm kỳ vọng. */
+.nc-csstrace-ro { background: #f8fafc; }
+
+.nc-csstrace-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+.nc-csstrace-badge {
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: #e2e8f0;
+  color: #334155;
+}
+.nc-csstrace-block { background: #dcfce7; color: #166534; }
+.nc-csstrace-page  { background: #dbeafe; color: #1e40af; }
+.nc-csstrace-site  { background: #fef3c7; color: #92400e; }
+.nc-csstrace-sm    { background: #ede9fe; color: #5b21b6; }
+
+.nc-csstrace-line { font-size: 10px; color: #64748b; }
+.nc-csstrace-chip {
+  font-size: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 0 6px;
+  color: #475569;
+}
+
+.nc-csstrace-sel {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+  margin-bottom: 4px;
+}
+
+.nc-csstrace-decls {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #475569;
+  padding-left: 8px;
+  border-left: 2px solid #e2e8f0;
+}
+.nc-csstrace-decl { overflow-wrap: anywhere; }
+.nc-csstrace-win { color: #0f172a; font-weight: 600; }
+/* Bị rule ưu tiên cao hơn ghi đè — sửa dòng này sẽ không thấy gì đổi, phải nói rõ. */
+.nc-csstrace-dead { text-decoration: line-through; color: #94a3b8; }
+
+.nc-csstrace-act { margin-top: 6px; }
+.nc-csstrace-act .nc-trait-btn { width: 100%; }
+
+/* Dòng chứa rule vừa nhảy tới trong CodeMirror — nháy sáng một nhịp rồi tắt. */
+.CodeMirror .nc-cm-hit { background: rgba(250, 204, 21, .28); }
+
+/* ── Modal code editor ──────────────────────────────────────────────────────── */
+
+#nc-code-modal,
+#nc-blockcode-modal,
+#nc-seo-modal,
+#nc-history-modal { display: none; }
+#nc-code-modal.open,
+#nc-blockcode-modal.open,
+#nc-seo-modal.open,
+#nc-history-modal.open { display: block; }
+
+#nc-code-modal .nc-modal-backdrop,
+#nc-blockcode-modal .nc-modal-backdrop,
+#nc-seo-modal .nc-modal-backdrop,
+#nc-history-modal .nc-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .55);
+  z-index: 9998;
+}
+
+#nc-code-modal .nc-modal,
+#nc-blockcode-modal .nc-modal,
+#nc-seo-modal .nc-modal,
+#nc-history-modal .nc-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(920px, calc(100vw - 40px));
+  max-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 32px 80px -20px rgba(15, 23, 42, .4);
+  z-index: 9999;
+  overflow: hidden;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.nc-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.nc-modal-close {
+  border: none;
+  background: none;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: #64748b;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+.nc-modal-close:hover { background: #f1f5f9; color: #0f172a; }
+
+.nc-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 18px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+.nc-tab {
+  padding: 8px 18px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.nc-tab.active { color: #0d7c66; border-bottom-color: #0d7c66; }
+
+.nc-tab-pane { display: none; }
+.nc-tab-pane.active { display: block; }
+
+.nc-tab-pane textarea { width: 100%; }
+.CodeMirror {
+  height: 340px !important;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important;
+  font-size: 12.5px !important;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.nc-hint {
+  padding: 10px 18px;
+  font-size: 12px;
+  color: #64748b;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  line-height: 1.5;
+}
+
+/* ── Library snippet ────────────────────────────────────────────────────────── */
+
+#nc-lib-list {
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 8px 18px;
+}
+.nc-lib-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin: 12px 0 6px;
+}
+.nc-lib-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  transition: border-color .15s;
+}
+.nc-lib-item:hover { border-color: #94a3b8; }
+.nc-lib-item.disabled { opacity: .55; }
+.nc-lib-name { font-size: 13px; font-weight: 700; color: #0f172a; }
+.nc-lib-desc { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+/* ── Footer modal ───────────────────────────────────────────────────────────── */
+
+.nc-modal-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+.nc-lib-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #334155;
+}
+.nc-spacer { flex: 1; }
+
+#nc-code-modal .nc-btn,
+#nc-blockcode-modal .nc-btn,
+#nc-seo-modal .nc-btn,
+#nc-history-modal .nc-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#nc-code-modal .nc-btn:hover,
+#nc-blockcode-modal .nc-btn:hover,
+#nc-seo-modal .nc-btn:hover,
+#nc-history-modal .nc-btn:hover { background: #f1f5f9; }
+#nc-code-modal .nc-btn-primary,
+#nc-blockcode-modal .nc-btn-primary,
+#nc-seo-modal .nc-btn-primary,
+#nc-history-modal .nc-btn-primary {
+  background: #0d7c66;
+  border-color: #0d7c66;
+  color: #fff;
+}
+#nc-code-modal .nc-btn-primary:hover,
+#nc-blockcode-modal .nc-btn-primary:hover,
+#nc-seo-modal .nc-btn-primary:hover,
+#nc-history-modal .nc-btn-primary:hover { background: #0a6352; }
+
+/* ── SEO form ───────────────────────────────────────────────────────────────── */
+
+.nc-form { padding: 16px 18px; overflow-y: auto; max-height: calc(100vh - 220px); }
+.nc-field { margin-bottom: 14px; }
+.nc-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 5px;
+}
+.nc-field input[type="text"],
+.nc-field textarea,
+.nc-field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #fff;
+}
+.nc-field textarea { resize: vertical; min-height: 68px; }
+.nc-field input:focus,
+.nc-field textarea:focus,
+.nc-field select:focus { outline: none; border-color: #0d7c66; box-shadow: 0 0 0 3px rgba(13,124,102,.12); }
+.nc-field .nc-charcount { float: right; font-weight: 400; color: #94a3b8; }
+.nc-field .nc-charcount.over { color: #f87171; }
+
+/* ── History / revision list ────────────────────────────────────────────────── */
+
+#nc-history-list { padding: 8px 18px 16px; overflow-y: auto; max-height: calc(100vh - 220px); }
+.nc-rev {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+.nc-rev-info { min-width: 0; }
+.nc-rev-ver { font-size: 13px; font-weight: 700; color: #0f172a; }
+.nc-rev-meta { font-size: 12px; color: #64748b; margin-top: 2px; }
+.nc-rev-note { font-size: 12px; color: #334155; font-style: italic; }
+.nc-empty { padding: 24px; text-align: center; color: #94a3b8; font-size: 13px; }
+
+/* ── Shell layout dropdown trên topbar ──────────────────────────────────────── */
+
+.nc-shell-select {
+  height: 30px;
+  max-width: 190px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-size: 12px;
+  cursor: pointer;
+}
+.nc-shell-select:focus { outline: none; border-color: #0d7c66; }
+
+/* ── Block card trong panel Blocks ──────────────────────────────────────────── */
+
+.gjs-block .ncblk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.gjs-block .ncblk-icon svg {
+  width: 22px;
+  height: 22px;
+}

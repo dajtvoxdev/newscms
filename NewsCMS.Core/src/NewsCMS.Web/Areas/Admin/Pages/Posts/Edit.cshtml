@@ -1,0 +1,135 @@
+@page "{id:guid}"
+@model EditModel
+@{
+    ViewData["Title"] = "Sửa bài viết";
+    var statusLabels = new Dictionary<NewsCMS.Domain.Enums.PostStatus, string>
+    {
+        [NewsCMS.Domain.Enums.PostStatus.Draft] = "Bản nháp",
+        [NewsCMS.Domain.Enums.PostStatus.PendingReview] = "Chờ duyệt",
+        [NewsCMS.Domain.Enums.PostStatus.Scheduled] = "Hẹn giờ",
+        [NewsCMS.Domain.Enums.PostStatus.Published] = "Đã xuất bản",
+        [NewsCMS.Domain.Enums.PostStatus.Archived] = "Lưu trữ"
+    };
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Nội dung</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Sửa bài viết</h2>
+    </div>
+    <div class="flex gap-2">
+        <a asp-area="Admin" asp-page="/Posts/Index" class="admin-btn-secondary">Quay lại</a>
+        <form method="post" asp-page-handler="Delete" asp-route-id="@Model.Input.Id" data-confirm="Xoá bài này?" data-confirm-danger="true">
+            @Html.AntiForgeryToken()
+            <button class="admin-btn-secondary text-red-600 hover:border-red-200 hover:bg-red-50" type="submit">Xoá</button>
+        </form>
+    </div>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="hidden">@ok</div>
+}
+
+<form method="post">
+    @Html.AntiForgeryToken()
+    <input asp-for="Input.Id" type="hidden" />
+    <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div class="space-y-6">
+            <section class="admin-card p-6">
+                <div class="space-y-5">
+                    <label class="block space-y-2">
+                        <span class="admin-label">Tiêu đề</span>
+                        <input asp-for="Input.Title" class="admin-input text-lg font-semibold" id="post-title" autocomplete="off" required data-ai-field="post.title" />
+                        <span asp-validation-for="Input.Title" class="text-sm text-red-600"></span>
+                    </label>
+                    <label class="block space-y-2">
+                        <span class="admin-label">Slug</span>
+                        <div class="flex gap-2">
+                            <span class="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-500">/</span>
+                            <input asp-for="Input.Slug" class="admin-input" id="post-slug" placeholder="tu-dong-sinh-tu-tieu-de" />
+                            <button type="button" class="admin-btn-secondary inline-flex items-center justify-center" id="btn-regen-slug" title="Sinh lại slug từ tiêu đề">@AdminIcon.Svg("rotate-cw")</button>
+                        </div>
+                    </label>
+                    <label class="block space-y-2">
+                        <span class="admin-label">Tóm tắt</span>
+                        <textarea asp-for="Input.Excerpt" class="admin-input" rows="3" maxlength="500" data-ai-field="post.excerpt"></textarea>
+                    </label>
+                    <label class="block space-y-2">
+                        <span class="admin-label">Nội dung</span>
+                        <textarea asp-for="Input.Content" id="post-content" class="admin-input" data-ai-target="post.body"></textarea>
+                    </label>
+                </div>
+            </section>
+        </div>
+
+        <aside class="space-y-4">
+            <section class="admin-card p-5">
+                <h3 class="font-bold text-slate-950">Xuất bản</h3>
+                <div class="mt-4 space-y-4">
+                    <label class="block space-y-2">
+                        <span class="admin-label">Trạng thái</span>
+                        <select asp-for="Input.Status" class="admin-select">
+                            @foreach (var status in statusLabels)
+                            {
+                                <option value="@((int)status.Key)">@status.Value</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="block space-y-2">
+                        <span class="admin-label">Ngày đăng</span>
+                        <input asp-for="Input.PublishedAt" type="datetime-local" class="admin-input" />
+                    </label>
+                    <label class="flex items-center gap-3">
+                        <input asp-for="Input.IsFeatured" class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                        <span class="admin-label">Bài nổi bật</span>
+                    </label>
+                    <div class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                        Đã đọc: <strong>@Model.ViewCount</strong> · Cập nhật: @Model.UpdatedAtLocal?.ToString("dd/MM/yyyy HH:mm")
+                    </div>
+                </div>
+            </section>
+
+            <section class="admin-card p-5">
+                <h3 class="font-bold text-slate-950">Chuyên mục</h3>
+                <select asp-for="Input.CategoryId" class="admin-select mt-4" required>
+                    @foreach (var c in Model.Categories)
+                    {
+                        <option value="@c.Id" selected="@(c.Id == Model.Input.CategoryId)">@c.Name</option>
+                    }
+                </select>
+            </section>
+
+            <section class="admin-card p-5">
+                <h3 class="mb-4 font-bold text-slate-950">Ảnh đại diện</h3>
+                <partial name="~/Areas/Admin/Shared/_MediaPicker.cshtml"
+                         model='new NewsCMS.Web.Areas.Admin.Shared.MediaPickerOptions { For = "Input.FeaturedImageUrl", Value = Model.Input.FeaturedImageUrl }' />
+            </section>
+
+            <button type="submit" class="admin-btn-primary w-full">Cập nhật</button>
+        </aside>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="~/Areas/Admin/Shared/_TinyMce.cshtml" model='new TinyMceOptions { Selector = "#post-content", Height = 600 }' />
+    <script>
+        const $title = document.getElementById('post-title');
+        const $slug = document.getElementById('post-slug');
+        const slugify = (s) => s.toLowerCase()
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        let lastGeneratedSlug = $slug.value;
+        $title.addEventListener('input', () => {
+            if (!$slug.value || $slug.value === lastGeneratedSlug) {
+                lastGeneratedSlug = slugify($title.value);
+                $slug.value = lastGeneratedSlug;
+            }
+        });
+        document.getElementById('btn-regen-slug').onclick = () => {
+            lastGeneratedSlug = slugify($title.value);
+            $slug.value = lastGeneratedSlug;
+        };
+    </script>
+    <script src="~/js/admin/ai-assist.js" asp-append-version="true"></script>
+}

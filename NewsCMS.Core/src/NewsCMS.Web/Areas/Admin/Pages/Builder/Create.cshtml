@@ -1,0 +1,68 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.Builder.CreateModel
+@{
+    ViewData["Title"] = "Tạo trang builder";
+}
+
+<div class="max-w-2xl">
+    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-indigo-600">Site Builder</p>
+    <h2 class="text-xl font-bold text-slate-900 mt-1 mb-6">Tạo trang mới</h2>
+
+    @if (!string.IsNullOrEmpty(TempData["Error"] as string))
+    {
+        <div class="hidden">@TempData["Error"]</div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.ParentTitle))
+    {
+        <div class="mb-5 rounded-xl border border-indigo-200 bg-indigo-50/80 p-4 text-sm text-indigo-900 flex items-start gap-3">
+            <span class="mt-0.5 text-indigo-600">@AdminIcon.Svg("layout-template")</span>
+            <div>
+                <p class="font-bold">Đang tạo template chi tiết cho trang: @Model.ParentTitle (@(string.IsNullOrEmpty(Model.ParentSlug) ? "/" : "/" + Model.ParentSlug))</p>
+                <p class="text-xs text-indigo-700 mt-0.5">Template này sẽ liên kết qua <code>ParentPageId</code> để tự động render các URL chi tiết thuộc nhánh trang này.</p>
+            </div>
+        </div>
+    }
+
+    <form method="post" class="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Input.ParentPageId" />
+
+        <div>
+            <label asp-for="Input.Title" class="admin-label">Tiêu đề *</label>
+            <input asp-for="Input.Title" class="admin-input" required autofocus />
+            <span asp-validation-for="Input.Title" class="admin-validation"></span>
+        </div>
+
+        <div>
+            <label asp-for="Input.Slug" class="admin-label">Slug (URL path) — để trống = trang chủ /</label>
+            <div class="flex items-center gap-2">
+                <span class="text-slate-400 font-mono text-sm">/</span>
+                <input asp-for="Input.Slug" class="admin-input flex-1" pattern="[a-z0-9\-]*" placeholder="home (để trống = /)" />
+            </div>
+            <span asp-validation-for="Input.Slug" class="admin-validation"></span>
+            <p class="mt-1 text-xs text-slate-400">Để trống cho landing trang chủ (sẽ map về <code>/</code>). Nếu nhập, chỉ chữ thường, số và dấu gạch ngang. Từ khoá <code>home</code>/<code>index</code> cũng được coi là trang chủ.</p>
+        </div>
+
+        <div>
+            <label asp-for="Input.Kind" class="admin-label">Loại trang</label>
+            <select asp-for="Input.Kind" class="admin-input">
+                <option value="Landing">Landing Page</option>
+                <option value="Static">Trang tĩnh</option>
+                <option value="PostTemplate">Template bài viết chi tiết</option>
+                <option value="ProductTemplate">Template sản phẩm chi tiết</option>
+                <option value="CategoryTemplate">Template chuyên mục</option>
+            </select>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <input asp-for="Input.IsDefaultTemplate" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <label asp-for="Input.IsDefaultTemplate" class="text-sm font-medium text-slate-700">Template dự phòng mặc định toàn site cho loại này</label>
+        </div>
+
+        <div class="flex items-center gap-3 pt-2">
+            <button type="submit" class="admin-btn-primary">Tạo trang & mở Builder</button>
+            <a asp-page="/Builder/Index" class="admin-btn-secondary">Huỷ</a>
+        </div>
+    </form>
+</div>

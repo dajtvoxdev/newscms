@@ -1,0 +1,1461 @@
+@model HomeViewModel
+@{
+    var nowUtc = DateTime.UtcNow;
+    // "Trận sắp diễn ra": only matches kicking off within the next day (vote opens 1 day before kickoff).
+    var matches = Model.ScheduleMatches
+        .Where(m => m.Status == "Scheduled"
+            && m.KickoffAt > nowUtc.AddHours(-2)
+            && m.KickoffAt <= nowUtc.AddDays(1))
+        .OrderBy(m => m.KickoffAt)
+        .Take(6)
+        .ToList();
+    var feed = Model.RecentFeed.Take(100).ToList();
+    var communityChat = Model.CommunityChat.TakeLast(100).ToList();
+    var telegramEnabled = ViewData["TelegramEnabled"] is true;
+    var telegramOidc = ViewData["TelegramOidc"] is true;
+    var telegramBot = ViewData["TelegramBot"] as string ?? string.Empty;
+    var cupOptions = new[] { 1, 3, 5 };
+    var currentUnitCode = KeoBiaUnitRules.GetCurrentUnitCode();
+    var currentUnitLabel = KeoBiaUnitRules.FullLabel(currentUnitCode);
+    var currentUnitShortLabel = KeoBiaUnitRules.ShortLabel(currentUnitCode);
+    var currentUnitIsPeanut = currentUnitCode == KeoBiaUnitCode.Peanut;
+    var totalLostBeerCups = Model.LossLeaderboard.Sum(x => x.LostBeerCups);
+    var totalLostPeanutPacks = Model.LossLeaderboard.Sum(x => x.LostPeanutPacks);
+    var totalPaidBeerCups = Model.LossLeaderboard.Sum(x => x.PaidLegacyBeerCups);
+    var totalPaidPeanutPacks = Model.LossLeaderboard.Sum(x => x.PaidPeanutPacks);
+    var chatEmojis = new[] { "🍻", "🔥", "⚽", "😂", "😍", "👏", "🥳", "🤝", "🇻🇳", "🏆", "❤️", "😮" };
+    var scheduleStages = Model.ScheduleMatches
+        .Select(x => x.Stage)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct(System.StringComparer.OrdinalIgnoreCase)
+        .OrderBy(x => x)
+        .ToList();
+
+    string asset(string file) => Url.Content($"~/_content/NewsCMS.Theme.KeoBia2026/{file}");
+    string image(string file) => asset($"images/{file}");
+    string avatar(string value) =>
+        value.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
+        value.StartsWith("/", StringComparison.OrdinalIgnoreCase) ||
+        value.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? value
+            : image(value);
+
+    var flagCodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Algeria"] = "dz", ["ALG"] = "dz",
+        ["Argentina"] = "ar", ["ARG"] = "ar",
+        ["Australia"] = "au", ["AUS"] = "au",
+        ["Austria"] = "at", ["AUT"] = "at",
+        ["Belgium"] = "be", ["BEL"] = "be",
+        ["Bosnia & Herzegovina"] = "ba", ["Bosnia and Herzegovina"] = "ba", ["BIH"] = "ba", ["BHH"] = "ba",
+        ["Brazil"] = "br", ["BRA"] = "br",
+        ["Canada"] = "ca", ["CAN"] = "ca",
+        ["Cape Verde"] = "cv", ["CPV"] = "cv",
+        ["Colombia"] = "co", ["COL"] = "co",
+        ["Croatia"] = "hr", ["CRO"] = "hr",
+        ["Curaçao"] = "cw", ["Curacao"] = "cw", ["CUW"] = "cw",
+        ["Czech Republic"] = "cz", ["Czechia"] = "cz", ["CZE"] = "cz",
+        ["DR Congo"] = "cd", ["Congo DR"] = "cd", ["COD"] = "cd",
+        ["Ecuador"] = "ec", ["ECU"] = "ec",
+        ["Egypt"] = "eg", ["EGY"] = "eg",
+        ["England"] = "gb-eng", ["ENG"] = "gb-eng",
+        ["France"] = "fr", ["FRA"] = "fr",
+        ["Germany"] = "de", ["GER"] = "de",
+        ["Ghana"] = "gh", ["GHA"] = "gh",
+        ["Haiti"] = "ht", ["HAI"] = "ht",
+        ["Iran"] = "ir", ["IRN"] = "ir",
+        ["Iraq"] = "iq", ["IRQ"] = "iq",
+        ["Ivory Coast"] = "ci", ["Côte d'Ivoire"] = "ci", ["Cote d'Ivoire"] = "ci", ["CIV"] = "ci",
+        ["Japan"] = "jp", ["JPN"] = "jp",
+        ["Jordan"] = "jo", ["JOR"] = "jo",
+        ["Mexico"] = "mx", ["MEX"] = "mx",
+        ["Morocco"] = "ma", ["MAR"] = "ma",
+        ["Netherlands"] = "nl", ["NED"] = "nl",
+        ["New Zealand"] = "nz", ["NZL"] = "nz",
+        ["Norway"] = "no", ["NOR"] = "no",
+        ["Panama"] = "pa", ["PAN"] = "pa",
+        ["Paraguay"] = "py", ["PAR"] = "py",
+        ["Portugal"] = "pt", ["POR"] = "pt",
+        ["Qatar"] = "qa", ["QAT"] = "qa",
+        ["Saudi Arabia"] = "sa", ["KSA"] = "sa",
+        ["Scotland"] = "gb-sct", ["SCO"] = "gb-sct",
+        ["Senegal"] = "sn", ["SEN"] = "sn",
+        ["South Africa"] = "za", ["RSA"] = "za",
+        ["South Korea"] = "kr", ["Korea Republic"] = "kr", ["KOR"] = "kr",
+        ["Spain"] = "es", ["ESP"] = "es",
+        ["Sweden"] = "se", ["SWE"] = "se",
+        ["Switzerland"] = "ch", ["SUI"] = "ch",
+        ["Tunisia"] = "tn", ["TUN"] = "tn",
+        ["Turkey"] = "tr", ["Türkiye"] = "tr", ["TUR"] = "tr",
+        ["Uruguay"] = "uy", ["URU"] = "uy",
+        ["USA"] = "us", ["United States"] = "us",
+        ["Uzbekistan"] = "uz", ["UZB"] = "uz"
+    };
+
+    var teamCodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Bosnia & Herzegovina"] = "BIH",
+        ["Cape Verde"] = "CPV",
+        ["Curaçao"] = "CUW",
+        ["Curacao"] = "CUW",
+        ["DR Congo"] = "COD",
+        ["Ivory Coast"] = "CIV",
+        ["Côte d'Ivoire"] = "CIV",
+        ["Cote d'Ivoire"] = "CIV",
+        ["South Africa"] = "RSA",
+        ["South Korea"] = "KOR",
+        ["Saudi Arabia"] = "KSA",
+        ["USA"] = "USA",
+        ["United States"] = "USA"
+    };
+
+    string? flagCode(string code, string name)
+    {
+        if (flagCodes.TryGetValue(name, out var byName)) return byName;
+        if (flagCodes.TryGetValue(code, out var byCode)) return byCode;
+        return null;
+    }
+
+    string teamCode(string code, string name)
+    {
+        if (teamCodes.TryGetValue(name, out var mapped)) return mapped;
+        return string.IsNullOrWhiteSpace(code) ? name : code;
+    }
+
+    string flagClass(string code, string name, string? extra = null) =>
+        flagCode(code, name) is null
+            ? $"flag flag--placeholder {extra}".Trim()
+            : $"flag flag--real {extra}".Trim();
+}
+
+<section class="canvas-shell" data-width="1920" data-height="1080"
+         data-client-reset="@(ViewData["ClientResetToken"] as string ?? string.Empty)"
+         data-current-unit="@currentUnitCode">
+    <div class="app">
+        <header class="appbar">
+            <div class="brand">
+                <div class="brand-tile">
+                    <span class="material-symbols-rounded">sports_bar</span>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-name">Cá kèo</span>
+                </div>
+            </div>
+
+            <nav class="appbar-actions" aria-label="Điều hướng chính">
+                <button type="button" class="btn-schedule" data-open-modal="schedule">
+                    <span class="material-symbols-rounded">calendar_month</span>
+                    <span>Lịch thi đấu</span>
+                </button>
+                <button type="button" class="btn-lossboard" data-open-modal="loss-leaderboard">
+                    <span class="material-symbols-rounded">leaderboard</span>
+                    <span>Bảng xếp hạng</span>
+                </button>
+                <a class="btn-lossboard" href="/policy">
+                    <span class="material-symbols-rounded">policy</span>
+                    <span>Chính sách</span>
+                </a>
+                <div class="btn-opta btn-total-cups btn-total-cups--split" title="Số cốc bia và gói lạc đã gom và đã rút">
+                    <span class="unit-total-group">
+                        <span class="unit-total-part unit-total-part--beer">
+                            <span class="material-symbols-rounded" aria-hidden="true">sports_bar</span>
+                            <strong data-lossboard-total-beer>@totalLostBeerCups</strong>
+                            <span>cốc bia</span>
+                        </span>
+                        <span class="unit-total-divider" aria-hidden="true"></span>
+                        <span class="unit-total-part unit-total-part--peanut">
+                            <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                            <strong data-lossboard-total-peanut>@totalLostPeanutPacks</strong>
+                            <span>gói lạc</span>
+                        </span>
+                        <em>đã gom</em>
+                    </span>
+                    <span class="unit-total-group unit-total-group--withdrawn">
+                        <span class="unit-total-part unit-total-part--beer">
+                            <span class="material-symbols-rounded" aria-hidden="true">local_bar</span>
+                            <strong data-navbar-paid-beer>@totalPaidBeerCups</strong>
+                            <span>cốc bia</span>
+                        </span>
+                        <span class="unit-total-divider" aria-hidden="true"></span>
+                        <span class="unit-total-part unit-total-part--peanut">
+                            <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                            <strong data-navbar-paid-peanut>@totalPaidPeanutPacks</strong>
+                            <span>gói lạc</span>
+                        </span>
+                        <em>đã rút</em>
+                    </span>
+                </div>
+            </nav>
+
+            <div class="header-player" aria-label="Hồ sơ người chơi">
+                <button type="button" class="hp-avatar" data-profile-open title="Đổi tên hiển thị và avatar" aria-label="Đổi avatar và hồ sơ">
+                    <img src="@image("mascot-cheers.svg")" alt="Avatar người chơi" data-player-avatar />
+                </button>
+                <button type="button" class="hp-id" data-profile-open title="Đổi tên hiển thị và avatar">
+                    <strong class="hp-name" data-player-name>MinhBia18</strong>
+                    <span class="hp-rank" data-player-rank>
+                        <span class="material-symbols-rounded">sports_bar</span>
+                        <span class="hp-rank-text" data-player-rank-text>Hạng Bia Thủ</span>
+                    </span>
+                </button>
+                <button type="button" class="hp-stats" data-player-history-open aria-label="Mở lịch sử dự đoán của bạn">
+                    <span class="hp-stat">
+                        <strong class="hp-num" data-player-stat="totalBets">0</strong>
+                        <span class="hp-lbl">Lượt tham gia</span>
+                    </span>
+                    <span class="hp-stat">
+                        <strong class="hp-num" data-player-stat="totalBeerCups">0</strong>
+                        <span class="hp-lbl">Cốc bia đã góp</span>
+                    </span>
+                    <span class="hp-stat">
+                        <strong class="hp-num" data-player-stat="totalPeanutPacks">0</strong>
+                        <span class="hp-lbl">Gói lạc đã góp</span>
+                    </span>
+                    <span class="hp-stat">
+                        <strong class="hp-num" data-player-stat="paidLegacyBeerCups">0</strong>
+                        <span class="hp-lbl">Cốc bia đã nộp</span>
+                    </span>
+                    <span class="hp-stat">
+                        <strong class="hp-num" data-player-stat="paidPeanutPacks">0</strong>
+                        <span class="hp-lbl">Gói lạc đã nộp</span>
+                    </span>
+                </button>
+            </div>
+        </header>
+
+        <section class="hero">
+            <img class="hero-banner-image"
+                 src="@image("hero-banner-10x1.png")"
+                 alt="Bia Vui 2026 - Đêm hội World Cup 2026. Góp Gạo Thổi Cơm Chung – Cùng Cháy Hết Mình Mùa World Cup!" />
+            <div class="sr-only">
+                <h1>Đêm hội World Cup 2026</h1>
+                <p>Góp Gạo Thổi Cơm Chung – Cùng Cháy Hết Mình Mùa World Cup!</p>
+            </div>
+        </section>
+
+        <div class="layout">
+            <div class="content-grid">
+                <main class="match-stage">
+            <div class="section-head">
+                <h2>
+                    <span class="material-symbols-rounded">stadium</span>
+                    Trận đấu sắp diễn ra
+                </h2>
+                <button type="button" class="text-btn" data-open-modal="schedule">
+                    Xem tất cả
+                    <span class="material-symbols-rounded">chevron_right</span>
+                </button>
+            </div>
+
+            <div class="matches">
+                @foreach (var match in matches)
+                {
+                    var gVoteState = match.Status != "Scheduled" ? "locked"
+                        : nowUtc < match.KickoffAt.AddDays(-1) ? "pending"
+                        : nowUtc >= match.KickoffAt.AddHours(-1) ? "locked"
+                        : "open";
+                    var gLockClass = gVoteState == "open" ? string.Empty : gVoteState == "pending" ? "mc-pending" : "mc-locked";
+                    var gLockText = gVoteState == "pending" ? "Chưa mở kèo" : "Đã khóa kèo";
+                    <article class="match-card @gLockClass @(match.IsFinished ? "mc-finished" : "") @(match.AllowsDraw ? string.Empty : "mc-no-draw")"
+                             data-match-id="@match.Id"
+                             data-status="@match.Status"
+                             data-finished="@(match.IsFinished ? "true" : "false")"
+                             data-kickoff="@match.KickoffIso"
+                             data-home-name="@match.HomeName"
+                             data-away-name="@match.AwayName"
+                             data-allows-draw="@(match.AllowsDraw ? "true" : "false")"
+                             data-home-weight="@match.CommunityHome"
+                             data-draw-weight="@match.CommunityDraw"
+                             data-away-weight="@match.CommunityAway"
+                              data-ai-home="@match.AiHome"
+                              data-ai-draw="@match.AiDraw"
+                              data-ai-away="@match.AiAway"
+                              data-correct-score-odds="@match.CorrectScoreOddsJson"
+                              data-default-cups="@match.DefaultCups"
+                              data-unit-code="@match.UnitCode">
+                        <div class="mc-date">
+                            <span class="material-symbols-rounded">schedule</span>
+                            <span>@match.KickoffDisplay</span>
+                        </div>
+                        <div class="mc-teams">
+                            <div class="mc-team">
+                                @{
+                                    var homeFlag = flagCode(match.HomeCode, match.HomeName);
+                                }
+                                <span class="@flagClass(match.HomeCode, match.HomeName)">
+                                    @if (homeFlag is not null)
+                                    {
+                                        <img src="https://flagcdn.com/@(homeFlag).svg" alt="Cờ @match.HomeName" loading="lazy" />
+                                    }
+                                    <span class="flag-code">@teamCode(match.HomeCode, match.HomeName)</span>
+                                </span>
+                                <strong class="mc-team-name">@match.HomeName</strong>
+                            </div>
+                            <span class="mc-vs">VS</span>
+                            <div class="mc-team">
+                                @{
+                                    var awayFlag = flagCode(match.AwayCode, match.AwayName);
+                                }
+                                <span class="@flagClass(match.AwayCode, match.AwayName)">
+                                    @if (awayFlag is not null)
+                                    {
+                                        <img src="https://flagcdn.com/@(awayFlag).svg" alt="Cờ @match.AwayName" loading="lazy" />
+                                    }
+                                    <span class="flag-code">@teamCode(match.AwayCode, match.AwayName)</span>
+                                </span>
+                                <strong class="mc-team-name">@match.AwayName</strong>
+                            </div>
+                        </div>
+
+                        @if (match.IsFinished)
+                        {
+                            <div class="mc-result" data-mc-result>
+                                <span class="mc-result-tag">@match.ResultTagLabel</span>
+                                <span class="mc-result-score @(match.ResultChoice == "home" ? "is-home" : match.ResultChoice == "away" ? "is-away" : "is-draw")">
+                                    @match.DisplayScoreLabel
+                                </span>
+                                <span class="mc-result-lines">
+                                    <span class="mc-result-winner">@match.ResultSummaryLabel</span>
+                                    @if (!string.IsNullOrWhiteSpace(match.FinalScoreLabel))
+                                    {
+                                        <span class="mc-result-winner">@match.FinalScoreLabel</span>
+                                    }
+                                </span>
+                                <span class="mc-result-wrong">
+                                    <span class="material-symbols-rounded">sentiment_dissatisfied</span>
+                                    @match.WrongBettors người chọn sai
+                                </span>
+                            </div>
+                        }
+
+                        <div class="mc-analysis-row">
+                            <button type="button" class="btn-analysis" data-analysis-button>
+                                <span class="material-symbols-rounded">psychology</span>
+                                Phân tích
+                            </button>
+                        </div>
+
+                        <p class="mc-community">AI dự đoán</p>
+                        <div class="mc-bar @(match.AllowsDraw ? string.Empty : "mc-bar--no-draw")">
+                            <span class="bar-seg bar-home" data-meter="home" style="width:@(match.AiHome)%"></span>
+                            @if (match.AllowsDraw)
+                            {
+                                <span class="bar-seg bar-draw" data-meter="draw" style="width:@(match.AiDraw)%"></span>
+                            }
+                            <span class="bar-seg bar-away" data-meter="away" style="width:@(match.AiAway)%"></span>
+                        </div>
+                        <div class="mc-bar-lbls @(match.AllowsDraw ? string.Empty : "mc-bar-lbls--no-draw")">
+                            <span class="lbl-home" data-pct="home">@match.AiHome%</span>
+                            @if (match.AllowsDraw)
+                            {
+                                <span class="lbl-draw" data-pct="draw">@match.AiDraw%</span>
+                            }
+                            <span class="lbl-away" data-pct="away">@match.AiAway%</span>
+                        </div>
+
+                        <ul class="mc-bettors" data-bettors-block>
+                            <li><strong data-bettors="home">@match.HomeBettors</strong> người đặt @match.HomeName thắng</li>
+                            @if (match.AllowsDraw)
+                            {
+                                <li><strong data-bettors="draw">@match.DrawBettors</strong> người đặt hoà</li>
+                            }
+                            <li><strong data-bettors="away">@match.AwayBettors</strong> người đặt @match.AwayName thắng</li>
+                        </ul>
+
+                        <div class="mc-preds @(match.AllowsDraw ? string.Empty : "mc-preds--no-draw")" role="radiogroup" aria-label="Lựa chọn dự đoán">
+                            <button type="button" class="pred-btn pred-home" data-choice-button data-choice="home">
+                                <span class="pred-main">@match.HomeCode</span>
+                                <span class="my-pick" data-my-pick hidden></span>
+                            </button>
+                            @if (match.AllowsDraw)
+                            {
+                                <button type="button" class="pred-btn pred-draw" data-choice-button data-choice="draw">
+                                    <span class="pred-main">Hòa</span>
+                                    <span class="my-pick" data-my-pick hidden></span>
+                                </button>
+                            }
+                            <button type="button" class="pred-btn pred-away" data-choice-button data-choice="away">
+                                <span class="pred-main">@match.AwayCode</span>
+                                <span class="my-pick" data-my-pick hidden></span>
+                            </button>
+                        </div>
+
+                        <div class="mc-actions">
+                            <div class="mc-lock" data-mc-lock>
+                                <span class="material-symbols-rounded">lock</span>
+                                <span data-mc-lock-text>@gLockText</span>
+                            </div>
+
+                            <div class="mc-items" data-match-items>
+                                <span class="mc-items-label">Vật phẩm đang có</span>
+                                <div class="mc-items-row">
+                                    <button type="button" class="mc-item" data-star-type="hope" data-star-count="0" disabled>
+                                        <span class="mc-item-icon">⭐</span>
+                                        <span class="mc-item-badge">0</span>
+                                    </button>
+                                    <button type="button" class="mc-item" data-star-type="devil" data-star-count="0" disabled>
+                                        <span class="mc-item-icon">😈</span>
+                                        <span class="mc-item-badge">0</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mc-action-buttons">
+                                <button type="button" class="btn-history" data-history-button>
+                                    <span class="material-symbols-rounded">receipt_long</span>
+                                    Lịch sử
+                                </button>
+                                <button type="button" class="btn-bet" data-submit-bet>
+                                    @if (match.UnitCode == KeoBiaUnitCode.Peanut)
+                                    {
+                                        <img class="unit-button-image" src="@image("lac.png")" alt="" />
+                                    }
+                                    else
+                                    {
+                                        <span class="material-symbols-rounded">local_bar</span>
+                                    }
+                                    Gửi dự đoán
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+
+                </main>
+
+                <aside class="side-rail">
+                <section class="bettors-card">
+                    <div class="bettors-head">
+                        <span class="material-symbols-rounded">notifications_active</span>
+                        Hoạt động gần đây
+                    </div>
+                    <div class="feed" data-feed-list>
+                        @foreach (var item in feed)
+                        {
+                            <article class="notif"
+                                     data-feed-id="@item.Id"
+                                     data-feed-seed="@item.Text"
+                                     data-feed-time="@item.TimeAgo"
+                                     data-feed-choice="@item.Choice"
+                                     data-feed-choice-label="@item.ChoiceLabel"
+                                     data-feed-badge="@item.Badge"
+                                     data-avatar="@avatar(item.AvatarAsset)">
+                                <span class="notif-ava">
+                                    <img src="@avatar(item.AvatarAsset)" alt="" />
+                                    <span class="material-symbols-rounded notif-badge">@item.Badge</span>
+                                </span>
+                                <span class="notif-main">
+                                    <span class="notif-line">@item.Text</span>
+                                    <span class="notif-sub">
+                                        <span class="choice @(item.Choice == "away" ? "choice-away" : item.Choice == "draw" ? "choice-draw" : "choice-home")">@item.ChoiceLabel</span>
+                                        <span class="notif-time" data-created-at="@item.CreatedAtIso">@item.TimeAgo</span>
+                                    </span>
+                                </span>
+                            </article>
+                        }
+                    </div>
+                </section>
+
+                <aside class="card warn-card warn-card--compact">
+                    <div class="warn-head">
+                        <span class="material-symbols-rounded">info</span>
+                        Lưu ý
+                    </div>
+                    <p class="warn-text">
+                        Luật: trước tứ kết mỗi lượt = 1 cốc bia; từ tứ kết ngày 10/07 mỗi lượt = 1 gói lạc. Đoán sai → mất toàn bộ số đã đặt; đoán đúng (kể cả chọn Hòa khi trận hòa) → không mất. Mở kèo trước giờ đấu 1 ngày, khóa trước giờ bóng lăn 20 phút.
+                    </p>
+                    <p class="warn-text">
+                        Cốc bia và gói lạc chỉ là cách tính vui của chương trình; không phải tiền cược. Lịch sử trước 10/07 vẫn giữ nguyên là bia.
+                    </p>
+                </aside>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" data-modal="schedule" aria-hidden="true">
+        <button type="button" class="modal-backdrop" data-close-modal aria-label="Đóng lịch thi đấu"></button>
+        <div class="modal-card modal-card--wide modal-card--schedule">
+            <div class="modal-head">
+                <div>
+                    <p>Lịch đầy đủ</p>
+                    <h3>Lịch thi đấu tất cả các trận</h3>
+                </div>
+                <button type="button" class="icon-btn" data-close-modal aria-label="Đóng">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+            <div class="schedule-filters" data-schedule-filters>
+                <label class="schedule-search">
+                    <span class="material-symbols-rounded">search</span>
+                    <input type="search" data-schedule-search placeholder="Tìm tên đội tuyển..." autocomplete="off" />
+                </label>
+                <label class="schedule-select">
+                    <span>Bảng</span>
+                    <select data-schedule-stage aria-label="Lọc theo bảng">
+                        <option value="">Tất cả bảng</option>
+                        @foreach (var stage in scheduleStages)
+                        {
+                            <option value="@stage">@stage</option>
+                        }
+                    </select>
+                </label>
+                <label class="schedule-select">
+                    <span>Trạng thái</span>
+                    <select data-schedule-status aria-label="Lọc theo trạng thái">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="upcoming">Chưa kết thúc</option>
+                        <option value="finished">Đã kết thúc</option>
+                    </select>
+                </label>
+                <label class="schedule-hot-toggle">
+                    <input type="checkbox" data-schedule-hot />
+                    <span>Trận cầu đinh</span>
+                </label>
+                <button type="button" class="schedule-reset" data-schedule-reset>Xóa lọc</button>
+            </div>
+            <div class="schedule-count" data-schedule-count>
+                Hiển thị @Model.ScheduleMatches.Count trận
+            </div>
+            <div class="schedule-list schedule-list--cards">
+                @foreach (var item in Model.ScheduleMatches)
+                {
+                    var sVoteState = item.Status != "Scheduled" ? "locked"
+                        : nowUtc < item.KickoffAt.AddDays(-1) ? "pending"
+                        : nowUtc >= item.KickoffAt.AddHours(-1) ? "locked"
+                        : "open";
+                    var sLockClass = sVoteState == "open" ? string.Empty : sVoteState == "pending" ? "mc-pending" : "mc-locked";
+                    var sLockText = sVoteState == "pending" ? "Chưa mở kèo" : "Đã khóa kèo";
+                    <article class="match-card schedule-row schedule-match-card @sLockClass @(item.IsFinished ? "mc-finished" : "") @(item.AllowsDraw ? string.Empty : "mc-no-draw")"
+                             data-schedule-row
+                             data-stage="@item.Stage"
+                             data-kickoff="@item.KickoffIso"
+                             data-home-name="@item.HomeName"
+                             data-away-name="@item.AwayName"
+                             data-hot="@(item.IsHot ? "true" : "false")"
+                             data-finished="@(item.IsFinished ? "true" : "false")"
+                             data-match-id="@item.Id"
+                             data-allows-draw="@(item.AllowsDraw ? "true" : "false")"
+                             data-home-weight="@item.CommunityHome"
+                             data-draw-weight="@item.CommunityDraw"
+                             data-away-weight="@item.CommunityAway"
+                              data-ai-home="@item.AiHome"
+                              data-ai-draw="@item.AiDraw"
+                              data-ai-away="@item.AiAway"
+                              data-correct-score-odds="@item.CorrectScoreOddsJson"
+                              data-default-cups="@item.DefaultCups"
+                              data-unit-code="@item.UnitCode">
+                        <div class="schedule-match-top">
+                            <div class="mc-date">
+                                <span class="material-symbols-rounded">schedule</span>
+                                <span>@item.KickoffDisplay</span>
+                            </div>
+                            <div class="mc-unit-badge @(item.UnitCode == KeoBiaUnitCode.Peanut ? "mc-unit-badge--peanut" : "")">
+                                @if (item.UnitCode == KeoBiaUnitCode.Peanut)
+                                {
+                                    <img src="@image("lac.png")" alt="Gói lạc" />
+                                }
+                                else
+                                {
+                                    <span class="material-symbols-rounded">sports_bar</span>
+                                }
+                                <span>1 @item.UnitLabel</span>
+                            </div>
+                            @if (item.IsHot)
+                            {
+                                <span class="schedule-hot">@(!string.IsNullOrWhiteSpace(item.HotLabel) ? item.HotLabel : "Cầu đinh")</span>
+                            }
+                        </div>
+
+                        <div class="mc-teams schedule-teams">
+                            @{
+                                var homeFlag = flagCode(item.HomeCode, item.HomeName);
+                                var awayFlag = flagCode(item.AwayCode, item.AwayName);
+                            }
+                            <div class="mc-team">
+                                <span class="@flagClass(item.HomeCode, item.HomeName)">
+                                    @if (homeFlag is not null)
+                                    {
+                                        <img src="https://flagcdn.com/@(homeFlag).svg" alt="Cờ @item.HomeName" loading="lazy" />
+                                    }
+                                    <span class="flag-code">@teamCode(item.HomeCode, item.HomeName)</span>
+                                </span>
+                                <strong class="mc-team-name">@item.HomeName</strong>
+                            </div>
+                            <span class="mc-vs">VS</span>
+                            <div class="mc-team">
+                                <span class="@flagClass(item.AwayCode, item.AwayName)">
+                                    @if (awayFlag is not null)
+                                    {
+                                        <img src="https://flagcdn.com/@(awayFlag).svg" alt="Cờ @item.AwayName" loading="lazy" />
+                                    }
+                                    <span class="flag-code">@teamCode(item.AwayCode, item.AwayName)</span>
+                                </span>
+                                <strong class="mc-team-name">@item.AwayName</strong>
+                            </div>
+                        </div>
+
+                        @if (item.IsFinished)
+                        {
+                            <div class="mc-result" data-mc-result>
+                                <span class="mc-result-tag">@item.ResultTagLabel</span>
+                                <span class="mc-result-score @(item.ResultChoice == "home" ? "is-home" : item.ResultChoice == "away" ? "is-away" : "is-draw")">
+                                    @item.DisplayScoreLabel
+                                </span>
+                                <span class="mc-result-lines">
+                                    <span class="mc-result-winner">@item.ResultSummaryLabel</span>
+                                    @if (!string.IsNullOrWhiteSpace(item.FinalScoreLabel))
+                                    {
+                                        <span class="mc-result-winner">@item.FinalScoreLabel</span>
+                                    }
+                                </span>
+                                <span class="mc-result-wrong">
+                                    <span class="material-symbols-rounded">sentiment_dissatisfied</span>
+                                    @item.WrongBettors người chọn sai
+                                </span>
+                            </div>
+                        }
+
+                        <div class="mc-analysis-row">
+                            <button type="button" class="btn-analysis" data-analysis-button>
+                                <span class="material-symbols-rounded">psychology</span>
+                                Phân tích
+                            </button>
+                        </div>
+
+                        <p class="mc-community">AI dự đoán</p>
+                        <div class="mc-bar @(item.AllowsDraw ? string.Empty : "mc-bar--no-draw")">
+                            <span class="bar-seg bar-home" data-meter="home" style="width:@(item.AiHome)%"></span>
+                            @if (item.AllowsDraw)
+                            {
+                                <span class="bar-seg bar-draw" data-meter="draw" style="width:@(item.AiDraw)%"></span>
+                            }
+                            <span class="bar-seg bar-away" data-meter="away" style="width:@(item.AiAway)%"></span>
+                        </div>
+                        <div class="mc-bar-lbls @(item.AllowsDraw ? string.Empty : "mc-bar-lbls--no-draw")">
+                            <span class="lbl-home" data-pct="home">@item.AiHome%</span>
+                            @if (item.AllowsDraw)
+                            {
+                                <span class="lbl-draw" data-pct="draw">@item.AiDraw%</span>
+                            }
+                            <span class="lbl-away" data-pct="away">@item.AiAway%</span>
+                        </div>
+
+                        <ul class="mc-bettors" data-bettors-block>
+                            <li><strong data-bettors="home">@item.HomeBettors</strong> người đặt @item.HomeName thắng</li>
+                            @if (item.AllowsDraw)
+                            {
+                                <li><strong data-bettors="draw">@item.DrawBettors</strong> người đặt hoà</li>
+                            }
+                            <li><strong data-bettors="away">@item.AwayBettors</strong> người đặt @item.AwayName thắng</li>
+                        </ul>
+
+                        <div class="mc-preds @(item.AllowsDraw ? string.Empty : "mc-preds--no-draw")" role="radiogroup" aria-label="Lựa chọn dự đoán">
+                            <button type="button" class="pred-btn pred-home" data-choice-button data-choice="home">
+                                <span class="pred-main">@item.HomeCode</span>
+                                <span class="my-pick" data-my-pick hidden></span>
+                            </button>
+                            @if (item.AllowsDraw)
+                            {
+                                <button type="button" class="pred-btn pred-draw" data-choice-button data-choice="draw">
+                                    <span class="pred-main">Hòa</span>
+                                    <span class="my-pick" data-my-pick hidden></span>
+                                </button>
+                            }
+                            <button type="button" class="pred-btn pred-away" data-choice-button data-choice="away">
+                                <span class="pred-main">@item.AwayCode</span>
+                                <span class="my-pick" data-my-pick hidden></span>
+                            </button>
+                        </div>
+
+                        <div class="mc-actions">
+                            <div class="mc-lock" data-mc-lock>
+                                <span class="material-symbols-rounded">lock</span>
+                                <span data-mc-lock-text>@sLockText</span>
+                            </div>
+
+                            <div class="mc-items" data-match-items>
+                                <span class="mc-items-label">Vật phẩm đang có</span>
+                                <div class="mc-items-row">
+                                    <button type="button" class="mc-item" data-star-type="hope" data-star-count="0" disabled>
+                                        <span class="mc-item-icon">⭐</span>
+                                        <span class="mc-item-badge">0</span>
+                                    </button>
+                                    <button type="button" class="mc-item" data-star-type="devil" data-star-count="0" disabled>
+                                        <span class="mc-item-icon">😈</span>
+                                        <span class="mc-item-badge">0</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mc-action-buttons">
+                                <button type="button" class="btn-history" data-history-button>
+                                    <span class="material-symbols-rounded">receipt_long</span>
+                                    Lịch sử
+                                </button>
+                                <button type="button" class="btn-bet" data-submit-bet>
+                                    @if (item.UnitCode == KeoBiaUnitCode.Peanut)
+                                    {
+                                        <img class="unit-button-image" src="@image("lac.png")" alt="" />
+                                    }
+                                    else
+                                    {
+                                        <span class="material-symbols-rounded">local_bar</span>
+                                    }
+                                    Gửi dự đoán
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="schedule-meta">
+                            <span>@item.Stage · @item.Venue</span>
+                        </div>
+                    </article>
+                }
+                <div class="schedule-empty" data-schedule-empty hidden>Không có trận phù hợp với bộ lọc.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" data-modal="loss-leaderboard" aria-hidden="true">
+        <button type="button" class="modal-backdrop" data-close-modal aria-label="Đóng bảng xếp hạng"></button>
+        <div class="modal-card modal-card--leaderboard">
+            <div class="modal-head">
+                <p>Bảng xếp hạng</p>
+                <button type="button" class="icon-btn" data-close-modal aria-label="Đóng">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+            <div class="lossboard-summary">
+                <div class="lossboard-summary-count">
+                    <span class="material-symbols-rounded" aria-hidden="true">groups</span>
+                    <strong data-lossboard-count>@Model.LossLeaderboard.Count</strong>
+                    <span>người chơi</span>
+                </div>
+                <div class="lossboard-summary-units" role="group" aria-label="Đã gom">
+                    <span class="lossboard-summary-unit">
+                        <span class="material-symbols-rounded" aria-hidden="true">sports_bar</span>
+                        <strong data-lossboard-total-beer>@totalLostBeerCups</strong>
+                        <span>cốc bia</span>
+                    </span>
+                    <span class="lossboard-summary-divider" aria-hidden="true"></span>
+                    <span class="lossboard-summary-unit">
+                        <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                        <strong data-lossboard-total-peanut>@totalLostPeanutPacks</strong>
+                        <span>gói lạc</span>
+                    </span>
+                    <em>đã gom</em>
+                </div>
+                <div class="lossboard-summary-units lossboard-summary-units--withdrawn" role="group" aria-label="Đã rút">
+                    <span class="lossboard-summary-unit">
+                        <span class="material-symbols-rounded" aria-hidden="true">local_bar</span>
+                        <strong data-lossboard-paid-beer>@totalPaidBeerCups</strong>
+                        <span>cốc bia</span>
+                    </span>
+                    <span class="lossboard-summary-divider" aria-hidden="true"></span>
+                    <span class="lossboard-summary-unit">
+                        <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                        <strong data-lossboard-paid-peanut>@totalPaidPeanutPacks</strong>
+                        <span>gói lạc</span>
+                    </span>
+                    <em>đã rút</em>
+                </div>
+            </div>
+            <div class="lossboard-list">
+                @if (Model.LossLeaderboard.Count == 0)
+                {
+                    <div class="history-empty">Chưa có người chơi Telegram nào trong bảng xếp hạng.</div>
+                }
+                else
+                {
+                    foreach (var player in Model.LossLeaderboard)
+                    {
+                        var topClass = player.Rank <= 3 ? $" lossboard-row--top lossboard-row--top-{player.Rank}" : string.Empty;
+                        var stoppedClass = player.StoppedPlayingAt.HasValue ? " lossboard-row--stopped" : string.Empty;
+                        <article class="lossboard-row@(topClass)@(stoppedClass)" data-lossboard-player="@player.PublicKey" data-lossboard-name="@player.Name"
+                                 data-lossboard-lost="@player.LostCups"
+                                 data-lossboard-lost-beer="@player.LostBeerCups"
+                                 data-lossboard-lost-peanut="@player.LostPeanutPacks"
+                                 style="cursor:pointer">
+                            <div class="lossboard-rank" aria-label="Hạng @player.Rank">
+                                @if (player.Rank <= 3)
+                                {
+                                    <svg class="lossboard-medal lossboard-medal--@player.Rank" viewBox="0 0 120 132" role="img" aria-label="Top @player.Rank">
+                                        <path class="medal-laurel medal-laurel--left" d="M34 76c-12 3-21 12-23 25 7-5 14-6 22-4-10 6-15 15-16 27 9-8 18-11 30-9" />
+                                        <path class="medal-laurel medal-laurel--right" d="M86 76c12 3 21 12 23 25-7-5-14-6-22-4 10 6 15 15 16 27-9-8-18-11-30-9" />
+                                        <circle class="medal-shadow" cx="60" cy="70" r="42" />
+                                        <circle class="medal-outer" cx="60" cy="62" r="43" />
+                                        <circle class="medal-inner" cx="60" cy="62" r="32" />
+                                        <path class="medal-highlight" d="M35 50c7-18 25-28 48-24-17 5-31 16-40 32z" />
+                                        <path class="medal-star" d="M60 18l4 9 10 1-7 7 2 10-9-5-9 5 2-10-7-7 10-1z" />
+                                        <text x="60" y="80" text-anchor="middle">@player.Rank</text>
+                                    </svg>
+                                }
+                                else
+                                {
+                                    <span>@player.Rank</span>
+                                }
+                            </div>
+                            <img class="lossboard-avatar" src="@avatar(player.AvatarAsset)" alt="Avatar @player.Name" />
+                            <div class="lossboard-player">
+                                <strong>@player.Name</strong>
+                                @if (player.StoppedPlayingAt.HasValue)
+                                {
+                                    <span class="lossboard-stopped" title="Đã dừng lúc @player.StoppedPlayingAt.Value.ToLocalTime().ToString("dd/MM HH:mm")">
+                                        <span class="material-symbols-rounded" aria-hidden="true">pause_circle</span>
+                                        ĐÃ DỪNG
+                                    </span>
+                                }
+                                <span>@(string.IsNullOrWhiteSpace(player.TelegramUsername) ? "Đã xác minh Telegram" : $"@{player.TelegramUsername}")</span>
+                            </div>
+                            <div class="lossboard-metric">
+                                <div class="lossboard-unit-lines">
+                                    <span class="lossboard-unit-line">
+                                        <span class="material-symbols-rounded" aria-hidden="true">sports_bar</span>
+                                        <strong data-lossboard-lost-beer>@player.LostBeerCups</strong>
+                                        <span>cốc bia</span>
+                                    </span>
+                                    <span class="lossboard-unit-line">
+                                        <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                                        <strong data-lossboard-lost-peanut>@player.LostPeanutPacks</strong>
+                                        <span>gói lạc</span>
+                                    </span>
+                                </div>
+                                <button type="button" class="share-beer-btn" data-share-beer="@player.PublicKey" data-share-beer-name="@player.Name" title="Tặng @currentUnitLabel cho @player.Name">@(currentUnitIsPeanut ? "🥜" : "🍻")</button>
+                            </div>
+                            <div class="lossboard-submetric">
+                                <span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">gps_fixed</span>
+                                    @player.WrongBets kèo sai
+                                </span>
+                                <span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">block</span>
+                                    @player.MissedMatches kèo miss
+                                </span>
+                                @if (player.ReceivedBeerCups > 0)
+                                {
+                                    <span>
+                                        <span class="material-symbols-rounded" aria-hidden="true">card_giftcard</span>
+                                        @player.ReceivedBeerCups cốc bia được tặng
+                                    </span>
+                                }
+                                @if (player.ReceivedPeanutPacks > 0)
+                                {
+                                    <span>
+                                        <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                                        @player.ReceivedPeanutPacks gói lạc được tặng
+                                    </span>
+                                }
+                                @if (player.QuizRewardBeerCups > 0)
+                                {
+                                    <span>
+                                        <span class="material-symbols-rounded" aria-hidden="true">quiz</span>
+                                        @player.QuizRewardBeerCups cốc bia thưởng quiz
+                                    </span>
+                                }
+                                @if (player.QuizRewardPeanutPacks > 0)
+                                {
+                                    <span>
+                                        <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                                        @player.QuizRewardPeanutPacks gói lạc thưởng quiz
+                                    </span>
+                                }
+                                @if (player.PaidLegacyBeerCups > 0)
+                                {
+                                    <span>
+                                        <span class="material-symbols-rounded" aria-hidden="true">local_bar</span>
+                                        @player.PaidLegacyBeerCups cốc bia đã rút
+                                    </span>
+                                }
+                                @if (player.PaidPeanutPacks > 0)
+                                {
+                                    <span>
+                                        <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                                        @player.PaidPeanutPacks gói lạc đã rút
+                                    </span>
+                                }
+                                @if (player.SharedBeerCups > 0)
+                                {
+                                    <span>
+                                        <span class="material-symbols-rounded" aria-hidden="true">volunteer_activism</span>
+                                        @player.SharedBeerCups cốc bia đã tặng
+                                    </span>
+                                }
+                                @if (player.SharedPeanutPacks > 0)
+                                {
+                                    <span>
+                                        <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                                        @player.SharedPeanutPacks gói lạc đã tặng
+                                    </span>
+                                }
+                                @if (player.StarBeerCupEffect != 0)
+                                {
+                                    <span>
+                                        <span class="material-symbols-rounded" aria-hidden="true">auto_awesome</span>
+                                        @(player.StarBeerCupEffect > 0 ? "+" : "")@player.StarBeerCupEffect cốc bia (item)
+                                    </span>
+                                }
+                                @if (player.StarPeanutPackEffect != 0)
+                                {
+                                    <span>
+                                        <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                                        @(player.StarPeanutPackEffect > 0 ? "+" : "")@player.StarPeanutPackEffect gói lạc (item)
+                                    </span>
+                                }
+                                @if (player.PromoBeerCups > 0)
+                                {
+                                    <span>
+                                        <span class="material-symbols-rounded" aria-hidden="true">loyalty</span>
+                                        @player.PromoBeerCups cốc bia khuyến mãi
+                                    </span>
+                                }
+                                @if (player.PromoPeanutPacks > 0)
+                                {
+                                    <span>
+                                        <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                                        @player.PromoPeanutPacks gói lạc khuyến mãi
+                                    </span>
+                                }
+                                @if (player.QuizPenaltyBeerCups > 0)
+                                {
+                                    <span>
+                                        <span class="material-symbols-rounded" aria-hidden="true">quiz</span>
+                                        @player.QuizPenaltyBeerCups cốc bia do quiz sai
+                                    </span>
+                                }
+                                @if (player.QuizPenaltyPeanutPacks > 0)
+                                {
+                                    <span>
+                                        <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                                        @player.QuizPenaltyPeanutPacks gói lạc do quiz sai
+                                    </span>
+                                }
+                                @if (player.CorrectScoreRewardBeerCups > 0)
+                                {
+                                    <span>
+                                        <span class="material-symbols-rounded" aria-hidden="true">scoreboard</span>
+                                        @player.CorrectScoreRewardBeerCups cốc bia thưởng tỉ số đúng
+                                    </span>
+                                }
+                                @if (player.CorrectScoreRewardPeanutPacks > 0)
+                                {
+                                    <span>
+                                        <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                                        @player.CorrectScoreRewardPeanutPacks gói lạc thưởng tỉ số đúng
+                                    </span>
+                                }
+                                @if (player.CorrectScorePenaltyBeerCups > 0)
+                                {
+                                    <span>
+                                        <span class="material-symbols-rounded" aria-hidden="true">scoreboard</span>
+                                        @player.CorrectScorePenaltyBeerCups cốc bia do tỉ số sai
+                                    </span>
+                                }
+                                @if (player.CorrectScorePenaltyPeanutPacks > 0)
+                                {
+                                    <span>
+                                        <img class="unit-inline-image" src="@image("lac.png")" alt="" />
+                                        @player.CorrectScorePenaltyPeanutPacks gói lạc do tỉ số sai
+                                    </span>
+                                }
+                                <span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">redeem</span>
+                                    @player.TotalBets lượt tham gia
+                                </span>
+                            </div>
+                        </article>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" data-modal="share-beer" aria-hidden="true">
+        <button type="button" class="modal-backdrop" data-close-modal aria-label="Đóng"></button>
+        <div class="share-beer-modal">
+            <button type="button" class="modal-close" data-close-modal aria-label="Đóng"><span class="material-symbols-rounded">close</span></button>
+            <div class="share-beer-header">
+                <div class="share-beer-icon">
+                    @if (currentUnitIsPeanut)
+                    {
+                        <img src="@image("lac.png")" alt="Gói lạc" />
+                    }
+                    else
+                    {
+                        <span>🍻</span>
+                    }
+                </div>
+                <h3>Tặng @currentUnitLabel</h3>
+                <p class="share-beer-sub">Gửi tặng <strong id="shareBeerTarget"></strong></p>
+            </div>
+            <div class="share-beer-body">
+                <label class="share-beer-label">Số @currentUnitShortLabel muốn tặng</label>
+                <div class="share-beer-stepper">
+                    <button type="button" class="share-beer-step" data-step="-1">−</button>
+                    <input type="number" id="shareBeerCups" min="1" max="99" value="1" class="share-beer-input" />
+                    <button type="button" class="share-beer-step" data-step="1">+</button>
+                </div>
+                <input type="hidden" id="shareBeerToKey" />
+                <div class="share-beer-presets">
+                    <button type="button" class="share-beer-preset" data-cups="1">1 @currentUnitShortLabel</button>
+                    <button type="button" class="share-beer-preset" data-cups="3">3 @currentUnitShortLabel</button>
+                    <button type="button" class="share-beer-preset" data-cups="5">5 @currentUnitShortLabel</button>
+                    <button type="button" class="share-beer-preset" data-cups="10">10 @currentUnitShortLabel</button>
+                </div>
+            </div>
+            <div class="share-beer-footer">
+                <button type="button" class="share-beer-cancel" data-close-modal>Huỷ</button>
+                <button type="button" id="shareBeerConfirm" class="share-beer-confirm">@(currentUnitIsPeanut ? "🥜" : "🍻") Tặng ngay</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal" data-modal="score-prediction" aria-hidden="true">
+        <button type="button" class="modal-backdrop" data-score-skip aria-label="Bỏ qua dự đoán tỉ số"></button>
+        <div class="modal-card score-prediction-modal">
+            <div class="modal-head">
+                <div>
+                    <p>Dự đoán chính xác tỉ số</p>
+                    <h3 data-score-match>90 phút chính thức</h3>
+                </div>
+                <button type="button" class="icon-btn" data-score-skip aria-label="Bỏ qua">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+            <div class="score-rule" data-score-rule>
+                Chỉ tính kết quả 90 phút. Đoán sai mất 1 @currentUnitLabel, đoán đúng được giảm 3 @currentUnitLabel.
+            </div>
+            <div class="score-odds" data-score-odds-list></div>
+            <div class="score-picks" data-score-picks-list></div>
+            <div class="score-boxes">
+                <label><span data-score-home-label>Đội nhà</span><input type="number" min="0" max="20" inputmode="numeric" data-score-home /></label>
+                <span class="score-dash">-</span>
+                <label><span data-score-away-label>Đội khách</span><input type="number" min="0" max="20" inputmode="numeric" data-score-away /></label>
+            </div>
+            <div class="score-actions">
+                <button type="button" class="btn-ghost" data-score-skip>Bỏ qua tỉ số</button>
+                <button type="button" class="btn-primary" data-score-confirm>Dự đoán tỉ số</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal" data-modal="prediction-history" aria-hidden="true">
+        <button type="button" class="modal-backdrop" data-close-modal aria-label="Đóng lịch sử dự đoán"></button>
+        <div class="modal-card modal-card--history">
+            <div class="modal-head">
+                <div>
+                    <p>Lịch sử dự đoán</p>
+                    <h3 data-history-title>Ai đã gửi dự đoán?</h3>
+                </div>
+                <button type="button" class="icon-btn" data-close-modal aria-label="Đóng">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+            <div class="history-summary">
+                <span>
+                    <strong data-history-total-entries>0</strong>
+                    lượt gửi
+                </span>
+                <span>
+                    <strong data-history-total-cups>0</strong>
+                    <span data-history-unit>@currentUnitShortLabel</span>
+                </span>
+            </div>
+            <div class="history-filters" data-history-filters>
+                <button type="button" class="is-active" data-history-filter="">Tất cả</button>
+                <button type="button" data-history-filter="home" data-history-filter-home>Đội nhà</button>
+                <button type="button" data-history-filter="draw">Hòa</button>
+                <button type="button" data-history-filter="away" data-history-filter-away>Đội khách</button>
+            </div>
+            <div class="history-list" data-history-list>
+                <div class="history-empty">Chưa có ai gửi dự đoán cho trận này.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" data-modal="player-history" aria-hidden="true">
+        <button type="button" class="modal-backdrop" data-close-modal aria-label="Đóng lịch sử cá nhân"></button>
+        <div class="modal-card modal-card--history modal-card--player-history">
+            <div class="modal-head">
+                <div>
+                    <p>Lịch sử cá nhân</p>
+                    <h3 data-player-history-title>Dự đoán và kết quả của bạn</h3>
+                </div>
+                <button type="button" class="icon-btn" data-close-modal aria-label="Đóng">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+            <div class="history-summary history-summary--player">
+                <span>
+                    <strong data-player-history-total-bets>0</strong>
+                    lượt tham gia
+                </span>
+                <span>
+                    <strong data-player-history-total-beer>0</strong>
+                    cốc bia đã dự đoán
+                </span>
+                <span>
+                    <strong data-player-history-total-peanut>0</strong>
+                    gói lạc đã dự đoán
+                </span>
+                <span>
+                    <strong data-player-history-wrong-cups>0</strong>
+                    lượt sai
+                </span>
+                <span>
+                    <strong data-player-history-pending-beer>0</strong>
+                    cốc bia chờ kết quả
+                </span>
+                <span>
+                    <strong data-player-history-pending-peanut>0</strong>
+                    gói lạc chờ kết quả
+                </span>
+                <span>
+                    <strong data-player-history-missed>0</strong>
+                    kèo miss
+                </span>
+                <span>
+                    <strong data-player-history-star-hope-beer>0</strong>
+                    cốc bia (Sao Hi Vọng)
+                </span>
+                <span>
+                    <strong data-player-history-star-hope-peanut>0</strong>
+                    gói lạc (Sao Hi Vọng)
+                </span>
+                <span>
+                    <strong data-player-history-star-devil-beer>0</strong>
+                    cốc bia (Sao Ma Quỷ)
+                </span>
+                <span>
+                    <strong data-player-history-star-devil-peanut>0</strong>
+                    gói lạc (Sao Ma Quỷ)
+                </span>
+                <span>
+                    <strong data-player-history-promo-beer>0</strong>
+                    cốc bia khuyến mãi
+                </span>
+                <span>
+                    <strong data-player-history-promo-peanut>0</strong>
+                    gói lạc khuyến mãi
+                </span>
+                <span>
+                    <strong data-player-history-quiz-reward-beer>0</strong>
+                    cốc bia thưởng quiz
+                </span>
+                <span>
+                    <strong data-player-history-quiz-reward-peanut>0</strong>
+                    gói lạc thưởng quiz
+                </span>
+                <span>
+                    <strong data-player-history-quiz-penalty-beer>0</strong>
+                    cốc bia do quiz sai
+                </span>
+                <span>
+                    <strong data-player-history-quiz-penalty-peanut>0</strong>
+                    gói lạc do quiz sai
+                </span>
+                <span>
+                    <strong data-player-history-correct-score-penalty-beer>0</strong>
+                    cốc bia do tỉ số sai
+                </span>
+                <span>
+                    <strong data-player-history-correct-score-penalty-peanut>0</strong>
+                    gói lạc do tỉ số sai
+                </span>
+                <span>
+                    <strong data-player-history-correct-score-reward-beer>0</strong>
+                    cốc bia thưởng tỉ số đúng
+                </span>
+                <span>
+                    <strong data-player-history-correct-score-reward-peanut>0</strong>
+                    gói lạc thưởng tỉ số đúng
+                </span>
+                <span>
+                    <strong data-player-history-outstanding-beer>0</strong>
+                    cốc bia cũ còn thiếu
+                </span>
+                <span>
+                    <strong data-player-history-outstanding-peanut>0</strong>
+                    gói lạc còn thiếu
+                </span>
+                <span>
+                    <strong data-player-history-paid-legacy-beer>0</strong>
+                    cốc bia đã rút
+                </span>
+                <span>
+                    <strong data-player-history-paid-peanut>0</strong>
+                    gói lạc đã rút
+                </span>
+            </div>
+            <div class="player-history-tabs">
+                <button type="button" class="player-history-tab is-active" data-history-tab="bets">Dự đoán</button>
+                <button type="button" class="player-history-tab" data-history-tab="cuplogs">Lịch sử cốc bia và gói lạc</button>
+            </div>
+            <div class="history-list player-history-list" data-player-history-list>
+                <div class="history-empty">Bạn chưa có lượt dự đoán nào.</div>
+            </div>
+            <div class="history-list cuplog-history-list" data-cuplog-history-list style="display:none">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" data-modal="opta" aria-hidden="true">
+        <button type="button" class="modal-backdrop" data-close-modal aria-label="Đóng thống kê Opta"></button>
+        <div class="modal-card modal-card--opta">
+            <div class="modal-head modal-head--opta">
+                <div>
+                    <p>Opta Analyst</p>
+                    <h3>Thống kê Opta</h3>
+                </div>
+                <div class="opta-actions">
+                    <a class="opta-source-link" href="https://theanalyst.com/competition/fifa-world-cup/predictions" target="_blank" rel="noopener">
+                        Mở Opta
+                    </a>
+                    <button type="button" class="icon-btn" data-close-modal aria-label="Đóng">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+            </div>
+            <div class="opta-frame-wrap">
+                <iframe
+                    src="https://theanalyst.com/competition/fifa-world-cup/predictions"
+                    title="Opta Analyst FIFA World Cup predictions"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox">
+                </iframe>
+            </div>
+            <p class="opta-note">
+                Dữ liệu được nhúng trực tiếp từ Opta Analyst. Nếu khung không tải, dùng nút “Mở Opta”.
+            </p>
+        </div>
+    </div>
+
+    <div class="modal" data-modal="unit-transition" aria-hidden="true">
+        <button type="button" class="modal-backdrop" data-unit-transition-continue aria-label="Bỏ qua và tiếp tục chơi"></button>
+        <div class="modal-card unit-transition-card" role="dialog" aria-modal="true" aria-labelledby="unit-transition-title">
+            <div class="unit-transition-visual">
+                <span class="unit-transition-beer">🍺</span>
+                <span class="material-symbols-rounded">arrow_forward</span>
+                <img src="@image("lac.png")" alt="Gói lạc" />
+            </div>
+            <div class="unit-transition-copy">
+                <p class="unit-transition-kicker">Thông báo từ ngày 10/07</p>
+                <h3 id="unit-transition-title">Từ vòng tứ kết, phần chơi mới dùng gói lạc</h3>
+                <p>Lịch sử cốc bia trước đó vẫn được giữ nguyên. Các kèo từ vòng tứ kết trở đi sẽ tính bằng gói lạc.</p>
+                <div class="unit-transition-stop-note">
+                    <span class="material-symbols-rounded">front_hand</span>
+                    <span>Bạn có thể dừng tại đây. Nếu dừng, tài khoản sẽ không tham gia kèo tiếp theo và không bị tính kèo miss mới.</span>
+                </div>
+            </div>
+            <div class="unit-transition-actions">
+                <button type="button" class="unit-transition-stop" data-unit-transition-stop>
+                    <span class="material-symbols-rounded">stop_circle</span>
+                    Dừng tại đây
+                </button>
+                <button type="button" class="unit-transition-continue" data-unit-transition-continue>
+                    <span class="material-symbols-rounded">sports_soccer</span>
+                    Bỏ qua, tiếp tục chơi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" data-modal="profile" aria-hidden="true">
+        <button type="button" class="modal-backdrop" data-close-modal aria-label="Đóng hồ sơ"></button>
+        <div class="modal-card modal-card--profile">
+            <div class="modal-head">
+                <div>
+                    <p>Chào mừng bạn</p>
+                    <h3>Chào mừng bạn vào bàn dự đoán</h3>
+                </div>
+                <button type="button" class="icon-btn" data-close-modal aria-label="Đóng">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+
+            <div class="profile-layout">
+                <div class="profile-preview">
+                    <img src="@image("mascot-cheers.svg")" alt="Avatar người chơi" data-profile-preview />
+                </div>
+                <div class="profile-form">
+                    <label class="field-label" for="player-name">Tên hiển thị</label>
+                    <input id="player-name" type="text" maxlength="24" class="field-input" value="MinhBia18" data-player-input />
+
+                    <div class="avatar-upload-panel">
+                        <label class="avatar-upload-button" for="avatar-upload">
+                            <span class="material-symbols-rounded">upload</span>
+                            <span>Tải ảnh đại diện</span>
+                        </label>
+                        <input id="avatar-upload" type="file" accept="image/*" data-avatar-upload hidden />
+                    </div>
+
+                    <div class="cropper-shell" data-cropper-shell hidden>
+                        <div class="cropper-frame" data-cropper-frame>
+                            <img alt="Ảnh đại diện cần crop" data-cropper-image />
+                        </div>
+                        <div class="cropper-actions">
+                            <button type="button" class="soft-btn" data-cropper-cancel>Đổi ảnh</button>
+                            <button type="button" class="primary-btn" data-cropper-apply>Dùng ảnh đã crop</button>
+                        </div>
+                    </div>
+
+                    <div class="avatar-picker">
+                        <button type="button" class="avatar-option" data-avatar-option data-avatar="@image("mascot-cheers.svg")">
+                            <img src="@image("mascot-cheers.svg")" alt="Avatar cốc bia cổ vũ" />
+                        </button>
+                        <button type="button" class="avatar-option" data-avatar-option data-avatar="@image("mascot-analyst.svg")">
+                            <img src="@image("mascot-analyst.svg")" alt="Avatar cốc bia phân tích" />
+                        </button>
+                        <button type="button" class="avatar-option" data-avatar-option data-avatar="@image("mascot-bench.svg")">
+                            <img src="@image("mascot-bench.svg")" alt="Avatar cốc bia dự bị" />
+                        </button>
+                    </div>
+
+                    <div class="tg-verify" data-tg-verify>
+                        <div class="tg-verify-head">
+                            <span class="material-symbols-rounded">verified_user</span>
+                            Xác thực Telegram <em>(bắt buộc để đặt kèo)</em>
+                        </div>
+                        <div class="tg-status" data-tg-status data-tg-state="none">
+                            <span class="material-symbols-rounded">cancel</span>
+                            <span data-tg-status-text>Chưa xác thực Telegram</span>
+                        </div>
+                        @if (telegramOidc)
+                        {
+                            <div class="tg-login" data-tg-login>
+                                <button type="button" class="tg-oidc-btn" data-tg-oidc-login>
+                                    <span class="material-symbols-rounded">send</span>
+                                    Đăng nhập với Telegram
+                                </button>
+                            </div>
+                        }
+                        else if (telegramEnabled)
+                        {
+                            <div class="tg-login" data-tg-login>
+                                <script async src="https://telegram.org/js/telegram-widget.js?22"
+                                        data-telegram-login="@telegramBot"
+                                        data-size="large"
+                                        data-radius="10"
+                                        data-onauth="onTelegramAuth(user)"
+                                        data-request-access="write"></script>
+                            </div>
+                            <p class="tg-note" data-tg-login>Mở Telegram, nhắn <strong>@@@telegramBot</strong> hoặc bấm nút trên để đăng nhập. Hệ thống chỉ lấy ID, tên và ảnh đại diện công khai.</p>
+                        }
+                        else
+                        {
+                            <p class="tg-note tg-note--warn">Tính năng Telegram chưa được cấu hình (thiếu bot). Liên hệ admin để bật.</p>
+                        }
+                    </div>
+
+                    <div class="profile-actions">
+                        <button type="button" class="primary-btn primary-btn--wide" data-save-profile>
+                            <span class="material-symbols-rounded">emoji_events</span>
+                            Vào bàn vui
+                        </button>
+                        <button type="button" class="profile-stop-btn" data-stop-playing hidden>
+                            <span class="material-symbols-rounded">stop_circle</span>
+                            Tôi muốn dừng lại
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <aside class="analysis-chat" data-analysis-chat hidden aria-live="polite">
+        <div class="analysis-head">
+            <span class="analysis-icon material-symbols-rounded">psychology</span>
+            <div>
+                <strong>Phân tích của chuyên gia</strong>
+                <span data-analysis-title>Chọn một trận để xem nhanh</span>
+            </div>
+            <button type="button" class="analysis-close" data-analysis-close aria-label="Đóng phân tích">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="analysis-body">
+            <div class="analysis-message" data-analysis-content></div>
+        </div>
+        <div class="analysis-foot" data-analysis-notice hidden></div>
+    </aside>
+
+    <aside id="community-chat-popup" class="community-chat-popup" data-community-chat hidden aria-live="polite">
+        <div class="community-chat-popup__head">
+            <div class="community-chat-popup__title">
+                <span class="community-chat-popup__head-icon material-symbols-rounded">forum</span>
+                <div>
+                    <strong>Chat cộng đồng</strong>
+                </div>
+            </div>
+            <button type="button" class="community-chat-popup__close" data-chat-close aria-label="Đóng chat cộng đồng">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+
+        <div class="community-chat-popup__messages" data-chat-list></div>
+
+        <div class="community-chat-popup__seed" hidden>
+            @foreach (var item in communityChat)
+            {
+                <article data-chat-seed-id="@item.Id"
+                         data-chat-seed-player-id="@item.PlayerId"
+                         data-chat-seed-public-key="@item.PublicKey"
+                         data-chat-seed-player-name="@item.PlayerName"
+                         data-chat-seed-avatar="@avatar(item.AvatarAsset)"
+                         data-chat-seed-message="@item.Message"
+                         data-chat-seed-image="@item.ImageUrl"
+                         data-chat-seed-time="@item.TimeLabel"
+                         data-chat-seed-created-at="@item.CreatedAtIso"></article>
+            }
+        </div>
+
+        <div class="community-chat-popup__preview" data-chat-image-preview hidden>
+            <img src="" alt="Ảnh chat đang chuẩn bị gửi" data-chat-preview-image />
+            <div class="community-chat-popup__preview-meta">
+                <strong data-chat-preview-name>Ảnh chat</strong>
+                <span data-chat-preview-size>Đang chờ gửi</span>
+            </div>
+            <button type="button" class="community-chat-popup__preview-remove" data-chat-image-remove aria-label="Bỏ ảnh chat">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+
+        <div class="community-chat-popup__emoji" data-chat-emoji-panel hidden>
+            @foreach (var emoji in chatEmojis)
+            {
+                <button type="button" class="community-chat-popup__emoji-btn" data-chat-emoji="@emoji">@emoji</button>
+            }
+        </div>
+
+        <div class="community-chat-popup__composer">
+            <div class="community-chat-popup__toolbar">
+                <button type="button" class="community-chat-popup__tool" data-chat-emoji-toggle aria-label="Mở emoji">
+                    <span class="material-symbols-rounded">sentiment_satisfied</span>
+                </button>
+                <label class="community-chat-popup__tool" aria-label="Tải ảnh chat">
+                    <span class="material-symbols-rounded">image</span>
+                    <input type="file" accept="image/*" data-chat-image-upload hidden />
+                </label>
+                <span class="community-chat-popup__hint">Tối đa 600 ký tự, kèm 1 ảnh</span>
+            </div>
+
+            <textarea class="community-chat-popup__input"
+                      rows="2"
+                      maxlength="600"
+                      placeholder="Nhắn gì đó cho cả bàn vui..."
+                      data-chat-input></textarea>
+
+            <div class="community-chat-popup__actions">
+                <span class="community-chat-popup__counter" data-chat-counter>0/600</span>
+                <button type="button" class="primary-btn" data-chat-send>
+                    <span class="material-symbols-rounded">send</span>
+                    Gửi
+                </button>
+            </div>
+        </div>
+    </aside>
+</section>
+<footer class="keobia-footer">
+    <span>Bia Vui 2026 · @Model.Version</span>
+    <span>· Không dùng tiền thật</span>
+</footer>

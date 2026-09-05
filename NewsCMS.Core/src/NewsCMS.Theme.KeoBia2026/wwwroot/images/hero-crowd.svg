@@ -1,0 +1,24 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" fill="#0F3B1D"/>
+  <rect y="430" width="1200" height="290" fill="url(#field)"/>
+  <path d="M0 430C118 344 230 302 346 304C501 306 562 430 716 430C882 430 944 318 1102 304C1136 301 1168 304 1200 312V0H0V430Z" fill="url(#crowd)"/>
+  <path d="M0 458C186 403 356 382 510 395C685 409 780 472 945 476C1045 478 1130 466 1200 444V720H0V458Z" fill="#124724" fill-opacity="0.7"/>
+  <circle cx="194" cy="162" r="82" fill="#FFD977" fill-opacity="0.12"/>
+  <circle cx="1012" cy="122" r="94" fill="#58B9FF" fill-opacity="0.1"/>
+  <path d="M614 256L652 228L690 256V318C690 356 659 387 620.5 387C582 387 551 356 551 318V256L589 228L614 256Z" fill="#F5A623"/>
+  <path d="M562 264H678V320C678 352.137 651.137 379 619 379V379C586.863 379 560 352.137 560 320V264H562Z" fill="#FFE6A8"/>
+  <path d="M570 248C575 232 587 224 602 224C609 224 615 226 620 230C626 220 636 214 648 214C666 214 681 229 681 247C681 258 676 268 669 276H580C573 268 568 258 568 247C568 247 568 247 568 246.999" fill="#FFF7E6"/>
+  <path d="M118 526H1082" stroke="#C6F5A7" stroke-width="4" stroke-linecap="round" stroke-dasharray="16 16"/>
+  <path d="M310 720V474" stroke="#86EFAC" stroke-opacity="0.26" stroke-width="4"/>
+  <path d="M888 720V474" stroke="#86EFAC" stroke-opacity="0.26" stroke-width="4"/>
+  <defs>
+    <linearGradient id="field" x1="600" y1="430" x2="600" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1A6E34"/>
+      <stop offset="1" stop-color="#0C3018"/>
+    </linearGradient>
+    <linearGradient id="crowd" x1="600" y1="0" x2="600" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A1B10"/>
+      <stop offset="1" stop-color="#154B23"/>
+    </linearGradient>
+  </defs>
+</svg>

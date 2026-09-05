@@ -1,0 +1,36 @@
+@*
+    Cầu nối TempData → toast. Được render trong _AdminLayout; toast.js phải đã được nạp.
+    Mỗi khoá TempData tương ứng một loại thông báo: Success / Error / Warning / Info.
+    Ngoài ra quét [data-toast-error] / [data-toast-warning] / [data-toast-success]
+    để trang nào cần hiện toast tại chỗ (vd. lỗi domain ở giữa trang) chỉ cần
+    đặt <div class="hidden" data-toast-error="@TempData[...]"></div>.
+*@
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var t = window.toast;
+        if (!t) return;
+        @if (TempData["Success"] is string toastSuccess && !string.IsNullOrWhiteSpace(toastSuccess))
+        {
+            <text>t.success(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(toastSuccess)));</text>
+        }
+        @if (TempData["Error"] is string toastError && !string.IsNullOrWhiteSpace(toastError))
+        {
+            <text>t.error(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(toastError)));</text>
+        }
+        @if (TempData["Warning"] is string toastWarning && !string.IsNullOrWhiteSpace(toastWarning))
+        {
+            <text>t.warning(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(toastWarning)));</text>
+        }
+        @if (TempData["Info"] is string toastInfo && !string.IsNullOrWhiteSpace(toastInfo))
+        {
+            <text>t.info(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(toastInfo)));</text>
+        }
+
+        document.querySelectorAll('[data-toast-error]').forEach(function (el) { t.error(el.getAttribute('data-toast-error')); });
+        document.querySelectorAll('[data-toast-warning]').forEach(function (el) { t.warning(el.getAttribute('data-toast-warning')); });
+        document.querySelectorAll('[data-toast-success]').forEach(function (el) { t.success(el.getAttribute('data-toast-success')); });
+        document.querySelectorAll('[data-toast-info]').forEach(function (el) { t.info(el.getAttribute('data-toast-info')); });
+    });
+</script>
+
+

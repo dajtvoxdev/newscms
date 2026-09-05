@@ -1,0 +1,200 @@
+@model HomeViewModel
+@{
+    ViewData["Title"] = "Thế Giới Xe Điện Phú Phúc — Đại Lý Ủy Quyền Yaka Bike Chính Hãng";
+    string img(string f) => Url.Content($"~/_content/NewsCMS.Theme.PhuPhucYaka/images/{f}");
+    var featured = Model.Featured.Take(5).ToList();
+}
+
+<section class="relative min-h-screen overflow-hidden bg-mesh pt-36 text-white grain">
+    <div class="absolute inset-0 opacity-55">
+        <img src="@img("codex-hero-generated.png")" alt="Chiến dịch xe điện Yaka Phú Phúc" class="h-full w-full object-cover mix-blend-luminosity" />
+        <div class="absolute inset-0 bg-gradient-to-br from-ink via-ink/84 to-primary/45"></div>
+    </div>
+    <div class="absolute -right-24 top-28 hidden h-[46rem] w-[46rem] rounded-full bg-primary/25 blur-3xl lg:block"></div>
+    <div class="relative mx-auto grid max-w-content grid-cols-1 items-center gap-12 px-5 pb-28 pt-10 lg:grid-cols-12 lg:px-10 lg:pb-36">
+        <div class="lg:col-span-7">
+            <h1 class="max-w-6xl font-display text-[clamp(3rem,6vw,5.75rem)] font-black leading-[0.92] tracking-[-0.055em]">
+                Xe điện Yaka <span class="inline-block h-12 w-28 rounded-full bg-cover bg-center align-middle shadow-glow ring-2 ring-white/40 sm:h-16 sm:w-40" style="background-image:url('@img("campaign-detail.png")')"></span> cho nhịp sống Hải Phòng
+            </h1>
+            <p class="mt-8 max-w-2xl text-xl leading-8 text-white/76 md:text-2xl md:leading-9">
+                Phú Phúc tuyển chọn xe máy điện Yaka chính hãng, tư vấn đúng nhu cầu, giao xe nhanh và bảo hành minh bạch ngay tại Kiến An.
+            </p>
+            <div class="mt-10 flex flex-wrap gap-4">
+                <a href="/san-pham" class="rounded-full bg-white px-8 py-4 text-base font-black text-ink shadow-soft transition hover:scale-[1.03] hover:bg-ivory">Xem xe đang có sẵn</a>
+                <a href="#lien-he" class="rounded-full border border-white/50 bg-white/10 px-8 py-4 text-base font-black text-white backdrop-blur transition hover:scale-[1.03] hover:bg-white hover:text-ink">Đặt lịch tư vấn</a>
+            </div>
+        </div>
+        <div class="relative lg:col-span-5">
+            <div class="hero-bike group relative overflow-hidden rounded-[2rem] border border-white/20 bg-white/10 p-3 shadow-soft backdrop-blur">
+                <div class="overflow-hidden rounded-[1.5rem] bg-white/10">
+                    <img src="@img("campaign-lineup.png")" alt="Bộ sưu tập xe điện Yaka" class="h-[34rem] w-full object-cover object-center transition duration-700 ease-out group-hover:scale-105" />
+                </div>
+            </div>
+            <div class="absolute -bottom-8 -left-6 rounded-3xl border border-white/20 bg-white/12 p-5 text-white shadow-soft backdrop-blur-xl">
+                <p class="text-sm font-bold uppercase tracking-[0.22em] text-white/55">Dịch vụ showroom</p>
+                <p class="mt-2 text-2xl font-black">Tư vấn, trả góp, bảo dưỡng</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="relative bg-ivory py-32 md:py-44">
+    <div class="mx-auto max-w-content px-5 lg:px-10">
+        <div class="grid gap-8 lg:grid-cols-12 lg:items-end">
+            <h2 class="lg:col-span-7 max-w-5xl font-display text-[clamp(2.6rem,5vw,5.4rem)] font-black leading-[0.95] tracking-[-0.05em] text-ink">
+                Một showroom được thiết kế để bạn chọn xe nhanh hơn và an tâm hơn.
+            </h2>
+            <p class="lg:col-span-5 text-xl leading-8 text-ink/60">
+                Từ tư vấn quãng đường, pin, kiểu dáng đến hồ sơ trả góp và bảo dưỡng định kỳ, toàn bộ quy trình được tối giản cho khách hàng lần đầu mua xe điện.
+            </p>
+        </div>
+
+        <div class="mt-16 grid grid-flow-dense auto-rows-[16rem] gap-5 md:grid-cols-6">
+            <article class="group relative col-span-6 row-span-1 overflow-hidden rounded-[2rem] bg-ink text-white shadow-soft md:col-span-3 md:row-span-2">
+                <img src="@img("campaign-showroom.png")" alt="Không gian showroom xe điện" class="absolute inset-0 h-full w-full object-cover opacity-70 grayscale contrast-125 transition duration-700 group-hover:scale-105" />
+                <div class="absolute inset-0 bg-gradient-to-t from-ink via-ink/45 to-transparent"></div>
+                <div class="absolute bottom-0 p-8">
+                    <h3 class="text-3xl font-black">Trưng bày theo nhu cầu di chuyển</h3>
+                    <p class="mt-3 max-w-md text-white/70">Xe đi học, đi làm, xe cho gia đình và dòng cao cấp được phân nhóm rõ ràng để so sánh nhanh.</p>
+                </div>
+            </article>
+            <article class="rounded-[2rem] bg-white p-8 shadow-soft md:col-span-3">
+                <h3 class="text-2xl font-black text-ink">Tài chính linh hoạt</h3>
+                <p class="mt-3 text-ink/62">Hỗ trợ trả góp, hồ sơ nhanh, giải thích rõ tổng chi phí trước khi nhận xe.</p>
+            </article>
+            <article class="rounded-[2rem] bg-primary p-8 text-white shadow-glow md:col-span-3">
+                <h3 class="text-2xl font-black">Bảo hành chính hãng</h3>
+                <p class="mt-3 text-white/76">Phụ tùng chuẩn Yaka, kỹ thuật viên kiểm tra định kỳ ngay tại Hải Phòng.</p>
+            </article>
+            <article class="group overflow-hidden rounded-[2rem] bg-white shadow-soft md:col-span-2">
+                <img src="@img("campaign-detail.png")" alt="Chi tiết xe điện" class="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+            </article>
+            <article class="rounded-[2rem] bg-ink p-8 text-white shadow-soft md:col-span-2">
+                <h3 class="text-2xl font-black">Giao xe nhanh</h3>
+                <p class="mt-3 text-white/65">Kiểm tra xe, hướng dẫn sạc pin, bàn giao giấy tờ trong ngày.</p>
+            </article>
+            <article class="group overflow-hidden rounded-[2rem] bg-white shadow-soft md:col-span-2">
+                <img src="@img("campaign-service.png")" alt="Bảo dưỡng xe điện" class="h-full w-full object-cover grayscale transition duration-700 group-hover:scale-105" />
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="bg-ink py-32 text-white md:py-44">
+    <div class="mx-auto max-w-content px-5 lg:px-10">
+        <div class="flex flex-col justify-between gap-8 md:flex-row md:items-end">
+            <h2 class="max-w-4xl font-display text-[clamp(2.6rem,5vw,5.2rem)] font-black leading-[0.96] tracking-[-0.045em]">Những mẫu Yaka đang được hỏi nhiều nhất.</h2>
+            <a href="/san-pham" class="w-fit rounded-full bg-white px-7 py-4 font-black text-ink transition hover:bg-primary hover:text-white">Xem toàn bộ</a>
+        </div>
+
+        @if (featured.Count == 0)
+        {
+            <div class="mt-14 rounded-[2rem] border border-white/12 p-10 text-white/62">Sản phẩm tiêu biểu sẽ sớm được cập nhật.</div>
+        }
+        else
+        {
+            <div class="mt-14 grid gap-5 md:grid-cols-3">
+                @foreach (var item in featured.Take(3))
+                {
+                    <a href="/san-pham/@item.Slug" class="product-card group overflow-hidden rounded-[2rem] border border-white/12 bg-white/[0.06] p-3 shadow-soft transition hover:-translate-y-2 hover:bg-white/[0.1]">
+                        <div class="overflow-hidden rounded-[1.5rem] bg-white">
+                            @if (!string.IsNullOrEmpty(item.ThumbnailUrl))
+                            {
+                                <img src="@item.ThumbnailUrl" alt="@item.Name" loading="lazy" class="h-72 w-full object-contain p-6 transition duration-700 ease-out group-hover:scale-105" />
+                            }
+                            else
+                            {
+                                <img src="https://picsum.photos/seed/@item.Slug/900/700" alt="@item.Name" loading="lazy" class="h-72 w-full object-cover transition duration-700 group-hover:scale-105" />
+                            }
+                        </div>
+                        <div class="p-5">
+                            <h3 class="text-2xl font-black text-white">@item.Name</h3>
+                            <p class="mt-2 text-white/55">@item.CategoryName</p>
+                            <div class="mt-5 text-2xl font-black text-white">
+                                @if (item.SalePrice.HasValue)
+                                {
+                                    <span>@item.SalePrice.Value.ToString("N0") đ</span>
+                                    <span class="ml-2 text-sm text-white/38 line-through">@item.Price.ToString("N0") đ</span>
+                                }
+                                else
+                                {
+                                    <span>@item.Price.ToString("N0") đ</span>
+                                }
+                            </div>
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<section id="dich-vu" class="relative bg-ivory py-32 md:py-44">
+    <div class="mx-auto grid max-w-content gap-12 px-5 lg:grid-cols-12 lg:px-10">
+        <div class="pin-title lg:col-span-5">
+            <h2 class="max-w-xl font-display text-[clamp(2.5rem,5vw,5rem)] font-black leading-[0.96] tracking-[-0.045em]">Dịch vụ sau bán hàng không để bạn tự xoay xở.</h2>
+            <p class="mt-6 max-w-md text-lg leading-8 text-ink/60">Đội ngũ Phú Phúc kiểm tra xe trước bàn giao, hướng dẫn vận hành pin và hẹn lịch bảo dưỡng rõ ràng.</p>
+        </div>
+        <div class="stack-cards lg:col-span-7">
+            @foreach (var item in new[] {
+                new { Title = "Kiểm tra xe trước bàn giao", Text = "Pin, phanh, đèn, lốp và khóa thông minh được kiểm tra theo checklist." },
+                new { Title = "Tư vấn đúng nhu cầu", Text = "Đi học, đi làm, giao hàng hay dùng cho gia đình đều có cấu hình phù hợp." },
+                new { Title = "Bảo dưỡng định kỳ", Text = "Lưu lịch chăm sóc xe và nhắc khách kiểm tra khi đến mốc vận hành." },
+                new { Title = "Hỗ trợ giấy tờ", Text = "Tư vấn đăng ký, bảo hành, hóa đơn và thủ tục trả góp minh bạch." }
+            })
+            {
+                <article class="stack-card mb-6 rounded-[2rem] border border-line bg-white p-8 shadow-soft">
+                    <h3 class="text-3xl font-black text-ink">@item.Title</h3>
+                    <p class="mt-4 text-lg leading-8 text-ink/60">@item.Text</p>
+                </article>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="overflow-hidden bg-white py-16">
+    <div class="marquee flex min-w-max gap-8 whitespace-nowrap text-5xl font-black uppercase tracking-[-0.05em] text-ink/12 md:text-7xl">
+        <span>Yaka Bike chính hãng</span><span>Trả góp linh hoạt</span><span>Bảo hành minh bạch</span><span>Showroom Hải Phòng</span><span>Yaka Bike chính hãng</span><span>Trả góp linh hoạt</span>
+    </div>
+</section>
+
+<section id="lien-he" class="relative overflow-hidden bg-primary py-28 text-white md:py-36 grain">
+    <img src="@img("campaign-cta.png")" alt="Showroom Phú Phúc sẵn sàng tư vấn" class="absolute inset-0 h-full w-full object-cover opacity-35 mix-blend-luminosity" />
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,.26),transparent_30%),linear-gradient(135deg,rgba(187,0,19,.92),rgba(17,19,24,.78))]"></div>
+    <div class="relative mx-auto max-w-5xl px-5 text-center">
+        <h2 class="font-display text-[clamp(2.8rem,6vw,6rem)] font-black leading-[0.92] tracking-[-0.055em]">Đến showroom, chọn xe trong một buổi.</h2>
+        <p class="mx-auto mt-7 max-w-2xl text-xl leading-8 text-white/80">Gọi trước để Phú Phúc chuẩn bị mẫu xe, hồ sơ trả góp và lịch trải nghiệm phù hợp.</p>
+        <div class="mt-10 flex flex-wrap justify-center gap-4">
+            <a href="tel:0917171869" class="rounded-full bg-white px-8 py-4 font-black text-primary shadow-soft transition hover:scale-[1.03] hover:bg-ivory">Gọi 0917.171.869</a>
+            <a href="https://zalo.me/0917171869" target="_blank" rel="noopener" class="rounded-full border border-white/55 bg-white/10 px-8 py-4 font-black text-white backdrop-blur transition hover:scale-[1.03] hover:bg-white hover:text-ink">Nhắn Zalo tư vấn</a>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        (function () {
+            if (!window.gsap) return;
+            gsap.registerPlugin(ScrollTrigger);
+
+            gsap.fromTo('.hero-bike', { y: 46, scale: 0.92, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 1.1, ease: 'power3.out' });
+            gsap.utils.toArray('.product-card').forEach(function (card) {
+                gsap.fromTo(card, { scale: 0.84, opacity: 0.35 }, {
+                    scale: 1,
+                    opacity: 1,
+                    ease: 'none',
+                    scrollTrigger: { trigger: card, start: 'top 85%', end: 'bottom 30%', scrub: true }
+                });
+            });
+            gsap.utils.toArray('.stack-card').forEach(function (card, index) {
+                gsap.fromTo(card, { y: 80 + index * 18, opacity: 0.25 }, {
+                    y: 0,
+                    opacity: 1,
+                    ease: 'none',
+                    scrollTrigger: { trigger: card, start: 'top 90%', end: 'top 45%', scrub: true }
+                });
+            });
+            gsap.to('.marquee', { xPercent: -35, duration: 18, ease: 'none', repeat: -1 });
+        })();
+    </script>
+}

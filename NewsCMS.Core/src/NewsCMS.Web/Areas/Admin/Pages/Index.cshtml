@@ -1,0 +1,156 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+    <section class="admin-card p-6">
+        <div class="flex items-center justify-between">
+            <div class="text-sm font-semibold text-slate-500">Đang online</div>
+            <span class="relative flex h-2.5 w-2.5">
+                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+            </span>
+        </div>
+        <div class="mt-3 text-4xl font-extrabold tracking-tight text-emerald-600" data-stat="online">@Model.Visitors.OnlineNow</div>
+    </section>
+    <section class="admin-card p-6">
+        <div class="text-sm font-semibold text-slate-500">Truy cập hôm nay</div>
+        <div class="mt-3 text-4xl font-extrabold tracking-tight text-slate-950" data-stat="today">@Model.Visitors.TodayUnique</div>
+    </section>
+    <section class="admin-card p-6">
+        <div class="text-sm font-semibold text-slate-500">7 ngày qua</div>
+        <div class="mt-3 text-4xl font-extrabold tracking-tight text-slate-950" data-stat="week">@Model.Visitors.Total7Days</div>
+    </section>
+    <section class="admin-card p-6">
+        <div class="text-sm font-semibold text-slate-500">Tổng truy cập</div>
+        <div class="mt-3 text-4xl font-extrabold tracking-tight text-slate-950" data-stat="total">@Model.Visitors.TotalAllTime</div>
+    </section>
+</div>
+
+<div class="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+    @if (Model.ShowNews)
+    {
+        <section class="admin-card p-6">
+            <div class="text-sm font-semibold text-slate-500">Tổng bài viết</div>
+            <div class="mt-3 text-4xl font-extrabold tracking-tight text-slate-950">@Model.TotalPosts</div>
+        </section>
+        <section class="admin-card p-6">
+            <div class="text-sm font-semibold text-slate-500">Chuyên mục</div>
+            <div class="mt-3 text-4xl font-extrabold tracking-tight text-slate-950">@Model.TotalCategories</div>
+        </section>
+    }
+    @if (Model.ShowProducts)
+    {
+        <section class="admin-card p-6">
+            <div class="text-sm font-semibold text-slate-500">Tổng sản phẩm</div>
+            <div class="mt-3 text-4xl font-extrabold tracking-tight text-slate-950">@Model.TotalProducts</div>
+        </section>
+        <section class="admin-card p-6">
+            <div class="text-sm font-semibold text-slate-500">Chuyên mục sản phẩm</div>
+            <div class="mt-3 text-4xl font-extrabold tracking-tight text-slate-950">@Model.TotalProductCategories</div>
+        </section>
+    }
+    <section class="admin-card p-6">
+        <div class="text-sm font-semibold text-slate-500">Người dùng site</div>
+        <div class="mt-3 text-4xl font-extrabold tracking-tight text-slate-950">@Model.TotalUsers</div>
+    </section>
+    @if (Model.ShowForms)
+    {
+        <section class="admin-card p-6">
+            <div class="text-sm font-semibold text-slate-500">Form submission</div>
+            <div class="mt-3 text-4xl font-extrabold tracking-tight text-slate-950">@Model.TotalSubmissions</div>
+        </section>
+    }
+</div>
+
+@if (Model.ShowCommitments)
+{
+    <section class="admin-card mt-6 p-6">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <div class="text-sm font-semibold text-slate-500">Chữ ký cam kết Hải Lưu Ngược</div>
+                <div class="mt-2 text-4xl font-extrabold tracking-tight text-sky-700">@Model.TotalCommitments</div>
+            </div>
+            <a class="admin-btn-secondary" asp-area="Admin" asp-page="/Commitments/Index">Quản lý</a>
+        </div>
+    </section>
+}
+
+@if (Model.ShowNews)
+{
+    <section class="admin-card mt-6 overflow-hidden">
+        <div class="border-b border-slate-100 px-6 py-5">
+            <h2 class="text-lg font-bold text-slate-950">Bài viết gần đây</h2>
+        </div>
+        <table class="w-full min-w-[760px] text-left text-sm">
+            <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+                <tr><th class="px-6 py-4">Tiêu đề</th><th class="px-6 py-4">Chuyên mục</th><th class="px-6 py-4">Trạng thái</th><th class="px-6 py-4">Ngày tạo</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @if (Model.RecentPosts.Count == 0)
+                {
+                    <tr><td colspan="4" class="px-6 py-10 text-center text-slate-500">Chưa có bài viết nào.</td></tr>
+                }
+                @foreach (var p in Model.RecentPosts)
+                {
+                    <tr><td class="px-6 py-4 font-semibold text-slate-900">@p.Title</td><td class="px-6 py-4 text-slate-600">@p.CategoryName</td><td class="px-6 py-4 text-slate-600">@p.Status</td><td class="px-6 py-4 text-slate-600">@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td></tr>
+                }
+            </tbody>
+        </table>
+    </section>
+}
+
+@if (Model.ShowProducts)
+{
+    <section class="admin-card mt-6 overflow-hidden">
+        <div class="border-b border-slate-100 px-6 py-5">
+            <h2 class="text-lg font-bold text-slate-950">Sản phẩm gần đây</h2>
+        </div>
+        <table class="w-full min-w-[760px] text-left text-sm">
+            <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+                <tr><th class="px-6 py-4">Tên sản phẩm</th><th class="px-6 py-4">Chuyên mục</th><th class="px-6 py-4">Trạng thái</th><th class="px-6 py-4">Ngày tạo</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @if (Model.RecentProducts.Count == 0)
+                {
+                    <tr><td colspan="4" class="px-6 py-10 text-center text-slate-500">Chưa có sản phẩm nào.</td></tr>
+                }
+                @foreach (var p in Model.RecentProducts)
+                {
+                    <tr><td class="px-6 py-4 font-semibold text-slate-900">@p.Name</td><td class="px-6 py-4 text-slate-600">@p.CategoryName</td><td class="px-6 py-4 text-slate-600">@p.Status</td><td class="px-6 py-4 text-slate-600">@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td></tr>
+                }
+            </tbody>
+        </table>
+    </section>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var endpoint = '@Url.Page("/Index", "VisitorStats", new { area = "Admin" })';
+            if (!endpoint) return;
+            var nodes = {
+                online: document.querySelector('[data-stat="online"]'),
+                today: document.querySelector('[data-stat="today"]'),
+                week: document.querySelector('[data-stat="week"]'),
+                total: document.querySelector('[data-stat="total"]')
+            };
+
+            async function refresh() {
+                try {
+                    var res = await fetch(endpoint, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+                    if (!res.ok) return;
+                    var data = await res.json();
+                    if (nodes.online) nodes.online.textContent = data.onlineNow;
+                    if (nodes.today) nodes.today.textContent = data.todayUnique;
+                    if (nodes.week) nodes.week.textContent = data.total7Days;
+                    if (nodes.total) nodes.total.textContent = data.totalAllTime;
+                } catch (e) { /* keep silent */ }
+            }
+
+            setInterval(refresh, 30000);
+        })();
+    </script>
+}

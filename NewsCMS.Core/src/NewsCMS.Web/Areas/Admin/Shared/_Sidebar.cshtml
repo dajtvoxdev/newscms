@@ -1,0 +1,243 @@
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@using NewsCMS.Shared.Constants
+@{
+    string Active(string startsWith) =>
+        (Context.Request.Path.Value ?? "").StartsWith(startsWith, StringComparison.OrdinalIgnoreCase)
+            ? "bg-white/10 text-white shadow-sm"
+            : "text-slate-300 hover:bg-white/5 hover:text-white";
+
+    var isSuperAdmin = User.IsInRole("SuperAdmin");
+
+    // SuperAdmin sees everything; everyone else is gated by their permission claims.
+    bool Can(string permission) => isSuperAdmin || User.HasClaim(Permissions.Prefix, permission);
+
+    // Visibility per module (mirrors the [Authorize(...)] on each page model).
+    var canPosts = Can(Permissions.Content.ViewPost);
+    var canCategories = Can(Permissions.Content.ManageCategory);
+    var canTags = Can(Permissions.Content.ManageTag);
+    var canMedia = Can(Permissions.Media.View);
+    var showContent = canPosts || canCategories || canTags || canMedia;
+
+    var canProducts = Can(Permissions.Catalog.ViewProduct);
+    var canProductCategories = Can(Permissions.Catalog.ManageCategory);
+    var showCatalog = canProducts || canProductCategories;
+
+    var canCommitments = Can(Permissions.Engagement.ViewCommitments);
+    var canAr = Can(Permissions.Ar.ViewAr);
+    var canSurvey = Can(Permissions.Survey.EditSetting);
+    var showEngagement = canCommitments || canAr || canSurvey;
+
+    var canMenus = Can(Permissions.Site.ManageMenu);
+    var canBanners = Can(Permissions.Site.ManageBanner);
+    // Trang tĩnh đã gỡ — quản lý trang chuyển hẳn về Builder.
+    var canBuilder = Can(Permissions.Builder.PageView);
+    var showInterface = canMenus || canBanners || canBuilder;
+
+    var canAiConnection = Can(Permissions.Ai.ManageConnection);
+    var canAiSkill = Can(Permissions.Ai.ManageSkill);
+    var showAi = canAiConnection || canAiSkill;
+
+    var canKeoBiaPlayers = Can(Permissions.KeoBia.ViewPlayers);
+    var canKeoBiaMatches = Can(Permissions.KeoBia.ManageMatches);
+    var canKeoBiaImport = Can(Permissions.KeoBia.ImportSchedule);
+    var canKeoBiaTelegram = Can(Permissions.KeoBia.SendTelegram);
+    var canKeoBiaQuiz = Can(Permissions.KeoBia.ManageQuiz);
+    var canKeoBiaPayments = Can(Permissions.KeoBia.ManagePayments);
+    var showKeoBia = canKeoBiaPlayers || canKeoBiaMatches || canKeoBiaImport || canKeoBiaTelegram || canKeoBiaQuiz || canKeoBiaPayments;
+}
+<nav class="space-y-6">
+    <div class="space-y-1">
+        <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin")" href="/Admin">
+            <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+            Dashboard
+        </a>
+    </div>
+
+    @if (isSuperAdmin)
+    {
+        <div>
+            <div class="px-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Nền tảng</div>
+            <div class="mt-2 space-y-1">
+                <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Sites")" href="/Admin/Sites">
+                    <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+                    Sites
+                </a>
+            </div>
+        </div>
+    }
+
+    @if (showContent)
+    {
+        <div>
+            <div class="px-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Nội dung</div>
+            <div class="mt-2 space-y-1">
+                @if (canPosts)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Posts")" href="/Admin/Posts">
+                        <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+                        Bài viết
+                    </a>
+                }
+                @if (canCategories)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Categories")" href="/Admin/Categories"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Chuyên mục</a>
+                }
+                @if (canTags)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Tags")" href="/Admin/Tags"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Tag</a>
+                }
+                @if (canMedia)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Media")" href="/Admin/Media"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Media</a>
+                }
+            </div>
+        </div>
+    }
+
+    @if (showCatalog)
+    {
+        <div>
+            <div class="px-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Sản phẩm</div>
+            <div class="mt-2 space-y-1">
+                @if (canProducts)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Products")" href="/Admin/Products">
+                        <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+                        Sản phẩm
+                    </a>
+                }
+                @if (canProductCategories)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/ProductCategories")" href="/Admin/ProductCategories"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Chuyên mục sản phẩm</a>
+                }
+            </div>
+        </div>
+    }
+
+    @if (showEngagement)
+    {
+        <div>
+            <div class="px-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Tương tác</div>
+            <div class="mt-2 space-y-1">
+                @if (canCommitments)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Commitments")" href="/Admin/Commitments">
+                        <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+                        Cam kết Hải Lưu Ngược
+                    </a>
+                }
+                @if (canAr)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/ArExperiences")" href="/Admin/ArExperiences">
+                        <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+                        Trải nghiệm AR
+                    </a>
+                }
+                @if (canSurvey)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Survey")" href="/Admin/Survey">
+                        <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+                        Khảo sát nhận thức
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
+    @if (showAi)
+    {
+        <div>
+            <div class="px-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">AI</div>
+            <div class="mt-2 space-y-1">
+                @if (canAiConnection)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/AiConnections")" href="/Admin/AiConnections"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Kết nối AI</a>
+                }
+                @if (canAiSkill)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/AiSkills")" href="/Admin/AiSkills"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Kỹ năng AI</a>
+                }
+            </div>
+        </div>
+    }
+
+    @if (showKeoBia)
+    {
+        <div>
+            <div class="px-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Kèo Bia 2026</div>
+            <div class="mt-2 space-y-1">
+                @if (canKeoBiaPlayers)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/KeoBia/Players")" href="/Admin/KeoBia/Players"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Người chơi</a>
+                }
+                @if (canKeoBiaMatches)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/KeoBia/Matches")" href="/Admin/KeoBia/Matches"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Lịch & kết quả</a>
+                }
+                @if (canKeoBiaImport)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/KeoBia/Import")" href="/Admin/KeoBia/Import"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Đồng bộ lịch</a>
+                }
+                @if (canKeoBiaTelegram)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/KeoBia/Chat")" href="/Admin/KeoBia/Chat"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Gửi Telegram</a>
+                }
+                @if (canKeoBiaQuiz)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/KeoBia/Quiz")" href="/Admin/KeoBia/Quiz"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Hỏi đáp nhanh</a>
+                }
+                @if (canKeoBiaPayments)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/KeoBia/Payments")" href="/Admin/KeoBia/Payments"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Nộp cốc bia và gói lạc</a>
+                }
+            </div>
+        </div>
+    }
+
+    @if (showInterface)
+    {
+        <div>
+            <div class="px-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Giao diện</div>
+            <div class="mt-2 space-y-1">
+                @if (canMenus)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Menus")" href="/Admin/Menus"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Menu</a>
+                }
+                @if (canBanners)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Banners")" href="/Admin/Banners"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Banner</a>
+                }
+                @if (canBuilder)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Builder")" href="/Admin/Builder"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>@AdminIcon.Svg("palette") Builder</a>
+                }
+                @if (Can(Permissions.Builder.LayoutManage))
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Builder/Layouts")" href="/Admin/Builder/Layouts"><span class="h-2 w-2 rounded-full bg-indigo-500"></span>@AdminIcon.Svg("layout-template") Layout &amp; Code</a>
+                }
+                @if (Can(Permissions.Seo.EditMeta))
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Seo/Health")" href="/Admin/Seo/Health"><span class="h-2 w-2 rounded-full bg-orange-500"></span>@AdminIcon.Svg("search") SEO Health</a>
+                }
+                @if (Can(Permissions.Agent.ApiKeyManage))
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Builder/ApiKeys")" href="/Admin/Builder/ApiKeys"><span class="h-2 w-2 rounded-full bg-violet-500"></span>@AdminIcon.Svg("key-round") API key (agent)</a>
+                }
+            </div>
+        </div>
+    }
+
+    @if (isSuperAdmin)
+    {
+        <div>
+            <div class="px-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Hệ thống</div>
+            <div class="mt-2 space-y-1">
+                <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Sites/CreateFromTemplate")" href="/Admin/Sites/CreateFromTemplate"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>@AdminIcon.Svg("rocket") Tạo site từ mẫu</a>
+                <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Users")" href="/Admin/Users"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Người dùng</a>
+                <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Roles")" href="/Admin/Roles"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Vai trò</a>
+                <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Settings")" href="/Admin/Settings"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Cấu hình</a>
+                <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/AuditLogs")" href="/Admin/AuditLogs"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Audit log</a>
+            </div>
+        </div>
+    }
+</nav>

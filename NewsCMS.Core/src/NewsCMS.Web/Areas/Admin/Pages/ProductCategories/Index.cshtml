@@ -1,0 +1,66 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Chuyên mục sản phẩm";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Catalog</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Chuyên mục sản phẩm</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/ProductCategories/Create" class="admin-btn-primary">Thêm chuyên mục</a>
+</div>
+
+@if (TempData["Success"] is string msg)
+{
+    <div class="hidden">@msg</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="hidden">@err</div>
+}
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full min-w-[700px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Tên</th>
+                <th class="px-5 py-4">Slug</th>
+                <th class="px-5 py-4">Cha</th>
+                <th class="px-5 py-4">Sản phẩm</th>
+                <th class="px-5 py-4">Thứ tự</th>
+                <th class="px-5 py-4">Trạng thái</th>
+                <th class="px-5 py-4"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Items.Count == 0)
+            {
+                <tr><td colspan="7" class="px-5 py-10 text-center text-slate-500">Chưa có chuyên mục nào.</td></tr>
+            }
+            @foreach (var item in Model.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4">
+                        <a asp-area="Admin" asp-page="/ProductCategories/Edit" asp-route-id="@item.Id"
+                           class="font-bold text-slate-950 hover:text-indigo-600">@item.Name</a>
+                    </td>
+                    <td class="px-5 py-4 font-mono text-xs text-slate-500">@item.Slug</td>
+                    <td class="px-5 py-4 text-slate-600">@(item.ParentName ?? "—")</td>
+                    <td class="px-5 py-4 text-slate-600">@item.ProductCount</td>
+                    <td class="px-5 py-4 text-slate-600">@item.Order</td>
+                    <td class="px-5 py-4">
+                        <span class="admin-badge @(item.IsActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")">
+                            @(item.IsActive ? "Hoạt động" : "Ẩn")
+                        </span>
+                    </td>
+                    <td class="px-5 py-4 text-right">
+                        <a asp-area="Admin" asp-page="/ProductCategories/Edit" asp-route-id="@item.Id"
+                           class="admin-btn-secondary">Sửa</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

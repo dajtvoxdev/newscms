@@ -1,0 +1,123 @@
+@page "{id:guid}"
+@model NewsCMS.Web.Areas.Admin.Pages.Sites.EditModel
+@{
+    ViewData["Title"] = "Sửa site";
+}
+
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <p class="text-sm font-semibold text-indigo-600">Sites</p>
+            <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Sửa site</h2>
+        </div>
+    </div>
+
+    <form method="post" class="space-y-6">
+        @Html.AntiForgeryToken()
+        <input asp-for="Input.Id" type="hidden" />
+
+        <div asp-validation-summary="ModelOnly" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+        <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+            <section class="admin-card p-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-slate-950">Thông tin site</h3>
+                    <button type="submit" class="admin-btn-primary">Lưu thay đổi</button>
+                </div>
+                <div class="mt-5 grid gap-5 md:grid-cols-2">
+                    <label class="space-y-2 md:col-span-2">
+                        <span class="admin-label">Tên site</span>
+                        <input asp-for="Input.Name" class="admin-input" />
+                        <span asp-validation-for="Input.Name" class="text-sm text-red-600"></span>
+                    </label>
+                    <label class="space-y-2">
+                        <span class="admin-label">Slug</span>
+                        <input asp-for="Input.Slug" class="admin-input" />
+                        <span asp-validation-for="Input.Slug" class="text-sm text-red-600"></span>
+                    </label>
+                    <label class="space-y-2">
+                        <span class="admin-label">Theme mặc định</span>
+                        <input asp-for="Input.DefaultTheme" class="admin-input" />
+                        <span asp-validation-for="Input.DefaultTheme" class="text-sm text-red-600"></span>
+                    </label>
+                    <label class="flex items-center gap-3 pt-8">
+                        <input asp-for="Input.IsActive" class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                        <span class="admin-label">Kích hoạt site</span>
+                    </label>
+                </div>
+            </section>
+
+            <aside class="admin-card p-6">
+                <h3 class="text-lg font-bold text-slate-950">Modules</h3>
+                <div class="mt-5 space-y-3">
+                    @foreach (var module in Model.Modules)
+                    {
+                        <label class="flex gap-3 rounded-2xl border border-slate-200 p-4">
+                            <input type="checkbox" name="Input.EnabledModuleCodes" value="@module.Code" checked="@Model.Input.EnabledModuleCodes.Contains(module.Code)" class="mt-1 h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                            <span>
+                                <span class="block font-bold text-slate-900">@module.Name</span>
+                                <span class="block text-sm text-slate-500">@module.Description</span>
+                            </span>
+                        </label>
+                    }
+                </div>
+            </aside>
+        </div>
+    </form>
+
+    <section class="admin-card p-6">
+        <h3 class="text-lg font-bold text-slate-950">Domain</h3>
+        <p class="mt-1 text-sm text-slate-500">Mỗi host trỏ về site này. Resolver tra bảng domain trước, fallback theo cấu hình.</p>
+
+        @if (TempData["DomainError"] is string domainError)
+        {
+            <div class="hidden" data-toast-error="@domainError"></div>
+        }
+
+        <div class="mt-5 divide-y divide-slate-100 rounded-2xl border border-slate-200">
+            @if (Model.Domains.Count == 0)
+            {
+                <p class="px-4 py-4 text-sm text-slate-500">Chưa có domain nào. Thêm host bên dưới.</p>
+            }
+            @foreach (var domain in Model.Domains)
+            {
+                <div class="flex items-center justify-between gap-4 px-4 py-3">
+                    <div class="flex items-center gap-3">
+                        <span class="font-semibold text-slate-900">@domain.Host</span>
+                        @if (domain.IsPrimary)
+                        {
+                            <span class="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-700">Primary</span>
+                        }
+                    </div>
+                    <div class="flex items-center gap-2">
+                        @if (!domain.IsPrimary)
+                        {
+                            <form method="post" asp-page-handler="SetPrimary" asp-route-id="@Model.Input.Id" asp-route-domainId="@domain.Id">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">Đặt primary</button>
+                            </form>
+                        }
+                        <form method="post" asp-page-handler="RemoveDomain" asp-route-id="@Model.Input.Id" asp-route-domainId="@domain.Id"
+                              data-confirm="Xóa domain @domain.Host?" data-confirm-danger="true">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">Xóa</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <form method="post" asp-page-handler="AddDomain" asp-route-id="@Model.Input.Id" class="mt-5 flex flex-wrap items-end gap-4">
+            @Html.AntiForgeryToken()
+            <label class="space-y-2">
+                <span class="admin-label">Host mới</span>
+                <input asp-for="NewDomain.Host" class="admin-input" placeholder="vidu.io.vn" />
+            </label>
+            <label class="flex items-center gap-3 pb-2.5">
+                <input asp-for="NewDomain.IsPrimary" class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                <span class="admin-label">Đặt làm primary</span>
+            </label>
+            <button type="submit" class="admin-btn-primary">Thêm domain</button>
+        </form>
+    </section>
+</div>

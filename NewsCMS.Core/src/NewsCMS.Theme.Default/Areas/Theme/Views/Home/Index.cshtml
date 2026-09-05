@@ -1,0 +1,24 @@
+@{
+    ViewData["Title"] = "Trang chủ - Tin tức NewsCMS";
+}
+<section class="hero bg-primary text-white p-5 rounded mb-4">
+    <h1 class="display-5">Chào mừng tới NewsCMS</h1>
+    <p class="lead mb-0">Theme mặc định Bootstrap 5 — Bạn có thể clone repo này để tạo theme riêng.</p>
+</section>
+
+<h2 class="h4 mb-3">Bài viết nổi bật</h2>
+<div class="row g-3">
+    @for (int i = 1; i <= 6; i++)
+    {
+        <div class="col-md-4">
+            <article class="card h-100 shadow-sm">
+                <img src="https://picsum.photos/seed/news@(i)/600/300" class="card-img-top" alt="" />
+                <div class="card-body">
+                    <h5 class="card-title">Tiêu đề bài viết mẫu @i</h5>
+                    <p class="card-text text-muted small">Đoạn mô tả ngắn bài viết. Nội dung thực tế lấy từ IPostService khi bạn implement service.</p>
+                    <a href="#" class="stretched-link"></a>
+                </div>
+            </article>
+        </div>
+    }
+</div>

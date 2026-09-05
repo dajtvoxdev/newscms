@@ -1,0 +1,130 @@
+@model PagedList<ProductListItemDto>
+@{
+    ViewData["Title"] = "Bộ Sưu Tập Xe Yaka Bike — Thế Giới Xe Điện Phú Phúc";
+    var categories = ViewBag.Categories as IReadOnlyList<ProductCategoryDto> ?? new List<ProductCategoryDto>();
+    var selectedSlug = ViewBag.SelectedCategorySlug as string;
+    string pageUrl(int p) => $"/san-pham?{(string.IsNullOrEmpty(selectedSlug) ? "" : $"cat={selectedSlug}&")}p={p}";
+}
+
+<section class="max-w-content mx-auto px-5 lg:px-10 py-12">
+    <header class="mb-10">
+        <h1 class="font-display font-extrabold text-3xl sm:text-4xl text-on-surface">Bộ Sưu Tập Xe Yaka Bike</h1>
+        <p class="text-secondary mt-3 max-w-2xl">Khám phá các dòng xe điện Yaka Bike thiết kế hiện đại, hiệu suất vượt trội và công nghệ dẫn đầu xu hướng.</p>
+    </header>
+
+    <div class="grid lg:grid-cols-[260px_1fr] gap-8">
+        <!-- FILTER SIDEBAR -->
+        <aside class="lg:sticky lg:top-24 self-start bg-surface-lowest rounded-xl border border-surface-dim shadow-card p-6 h-fit">
+            <h2 class="font-display font-bold text-lg text-on-surface flex items-center gap-2 mb-5">
+                <span class="material-symbols-outlined text-primary">tune</span> Bộ Lọc
+            </h2>
+
+            <div class="mb-6">
+                <p class="text-xs font-bold uppercase tracking-wide text-secondary mb-3">Dòng xe</p>
+                <ul class="space-y-1">
+                    <li>
+                        <a href="/san-pham" class="block px-3 py-2 rounded-lg text-sm font-semibold transition-colors @(string.IsNullOrEmpty(selectedSlug) ? "bg-primary text-on-primary" : "text-secondary hover:bg-surface-container hover:text-primary")">
+                            Tất cả
+                        </a>
+                    </li>
+                    @foreach (var c in categories.Where(x => x.IsActive))
+                    {
+                        <li>
+                            <a href="/san-pham?cat=@c.Slug" class="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-colors @(c.Slug == selectedSlug ? "bg-primary text-on-primary" : "text-secondary hover:bg-surface-container hover:text-primary")">
+                                <span>@c.Name</span>
+                                <span class="text-xs opacity-70">@c.ProductCount</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wide text-secondary mb-3">Mức giá tham khảo</p>
+                <ul class="space-y-2 text-sm text-secondary">
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-primary">sell</span> Dưới 15 triệu</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-primary">sell</span> 15 – 20 triệu</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-primary">sell</span> Trên 20 triệu</li>
+                </ul>
+                <a href="tel:0917171869" class="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary/10 text-primary font-bold text-sm px-3 py-2.5 hover:bg-primary hover:text-on-primary transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">call</span> Tư vấn chọn xe
+                </a>
+            </div>
+        </aside>
+
+        <!-- PRODUCT GRID -->
+        <div>
+            <div class="flex items-center justify-between mb-5">
+                <p class="text-sm text-secondary">Hiển thị <strong class="text-on-surface">@Model.Items.Count</strong> trong @Model.TotalItems sản phẩm</p>
+            </div>
+
+            @if (Model.Items.Count == 0)
+            {
+                <div class="bg-surface-lowest border border-dashed border-surface-dim rounded-xl py-20 text-center">
+                    <span class="material-symbols-outlined text-5xl text-secondary/40">two_wheeler</span>
+                    <p class="text-secondary mt-3">Chưa có sản phẩm trong danh mục này.</p>
+                </div>
+            }
+            else
+            {
+                <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                    @foreach (var item in Model.Items)
+                    {
+                        <div class="group bg-surface-lowest rounded-xl border border-surface-dim shadow-card hover:shadow-card-hover hover:border-primary/40 transition-all overflow-hidden flex flex-col">
+                            <a href="/san-pham/@item.Slug" class="block relative aspect-[4/3] bg-surface-container overflow-hidden">
+                                @if (item.IsFeatured)
+                                {
+                                    <span class="absolute top-3 left-3 z-10 bg-primary text-on-primary text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">Hot</span>
+                                }
+                                @if (!string.IsNullOrEmpty(item.ThumbnailUrl))
+                                {
+                                    <img src="@item.ThumbnailUrl" alt="@item.Name" loading="lazy" class="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105" />
+                                }
+                                else
+                                {
+                                    <span class="absolute inset-0 flex items-center justify-center"><span class="material-symbols-outlined text-5xl text-secondary/50">two_wheeler</span></span>
+                                }
+                            </a>
+                            <div class="p-5 flex flex-col flex-1">
+                                <a href="/san-pham/@item.Slug"><h3 class="font-display font-bold text-lg text-on-surface group-hover:text-primary transition-colors">@item.Name</h3></a>
+                                <div class="mt-2 mb-4">
+                                    @if (item.SalePrice.HasValue)
+                                    {
+                                        <span class="font-display font-extrabold text-xl text-primary">@item.SalePrice.Value.ToString("N0") đ</span>
+                                        <span class="text-sm text-secondary line-through ml-2">@item.Price.ToString("N0") đ</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="font-display font-extrabold text-xl text-primary">@item.Price.ToString("N0") đ</span>
+                                    }
+                                </div>
+                                <div class="mt-auto flex gap-2">
+                                    <a href="/san-pham/@item.Slug" class="flex-1 inline-flex items-center justify-center rounded-lg bg-primary text-on-primary text-sm font-bold px-3 py-2.5 hover:bg-primary-dark transition-colors">Chi Tiết</a>
+                                    <a href="tel:0917171869" class="inline-flex items-center justify-center rounded-lg border-2 border-primary text-primary text-sm font-bold px-3 py-2.5 hover:bg-primary hover:text-on-primary transition-colors">Tư Vấn</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <nav class="flex justify-center items-center gap-2 mt-12" aria-label="Phân trang">
+                        @if (Model.Page > 1)
+                        {
+                            <a href="@pageUrl(Model.Page - 1)" class="w-10 h-10 inline-flex items-center justify-center rounded-lg border border-surface-dim text-secondary hover:border-primary hover:text-primary"><span class="material-symbols-outlined text-[20px]">chevron_left</span></a>
+                        }
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <a href="@pageUrl(i)" class="w-10 h-10 inline-flex items-center justify-center rounded-lg text-sm font-bold transition-colors @(i == Model.Page ? "bg-primary text-on-primary" : "border border-surface-dim text-secondary hover:border-primary hover:text-primary")">@i</a>
+                        }
+                        @if (Model.Page < Model.TotalPages)
+                        {
+                            <a href="@pageUrl(Model.Page + 1)" class="w-10 h-10 inline-flex items-center justify-center rounded-lg border border-surface-dim text-secondary hover:border-primary hover:text-primary"><span class="material-symbols-outlined text-[20px]">chevron_right</span></a>
+                        }
+                    </nav>
+                }
+            }
+        </div>
+    </div>
+</section>

@@ -1,0 +1,51 @@
+@page
+@model PostIndexModel
+@{
+    ViewData["Title"] = "Bài viết";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Nội dung</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Bài viết</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/Posts/Create" class="admin-btn-primary">Thêm bài</a>
+</div>
+
+<form method="get" class="admin-card mb-6 grid gap-3 p-4 md:grid-cols-[1fr_260px_140px]">
+    <input class="admin-input" name="q" value="@Model.Keyword" placeholder="Tìm theo tiêu đề..." />
+    <select class="admin-select" name="cat">
+        <option value="">-- Chuyên mục --</option>
+        @foreach (var c in Model.Categories)
+        {
+            <option value="@c.Id" selected="@(Model.CategoryId == c.Id)">@c.Name</option>
+        }
+    </select>
+    <button class="admin-btn-secondary" type="submit">Lọc</button>
+</form>
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full min-w-[860px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr><th class="px-5 py-4">Tiêu đề</th><th class="px-5 py-4">Chuyên mục</th><th class="px-5 py-4">Trạng thái</th><th class="px-5 py-4">Ngày đăng</th><th class="px-5 py-4"></th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Items.Count == 0)
+            {
+                <tr><td colspan="5" class="px-5 py-10 text-center text-slate-500">Không có bài viết.</td></tr>
+            }
+            @foreach (var p in Model.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4"><a asp-area="Admin" asp-page="/Posts/Edit" asp-route-id="@p.Id" class="font-bold text-slate-950 hover:text-indigo-600">@p.Title</a></td>
+                    <td class="px-5 py-4 text-slate-600">@p.CategoryName</td>
+                    <td class="px-5 py-4"><span class="admin-badge bg-slate-100 text-slate-700">@p.Status</span></td>
+                    <td class="px-5 py-4 text-slate-600">@(p.PublishedAt?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                    <td class="px-5 py-4 text-right">
+                        <a asp-area="Admin" asp-page="/Posts/Edit" asp-route-id="@p.Id" class="admin-btn-secondary">Sửa</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

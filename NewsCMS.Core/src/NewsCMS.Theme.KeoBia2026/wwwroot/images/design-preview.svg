@@ -1,0 +1,23 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="675" rx="36" fill="#0B2915"/>
+  <rect x="42" y="42" width="1116" height="88" rx="44" fill="#12331A" stroke="#FFFFFF" stroke-opacity="0.12"/>
+  <rect x="74" y="60" width="72" height="52" rx="18" fill="#F5A623"/>
+  <rect x="172" y="62" width="208" height="18" rx="9" fill="#FFF7E6"/>
+  <rect x="172" y="88" width="164" height="14" rx="7" fill="#FFF7E6" fill-opacity="0.55"/>
+  <rect x="42" y="156" width="298" height="477" rx="28" fill="#12331A"/>
+  <rect x="366" y="156" width="514" height="477" rx="28" fill="#12331A"/>
+  <rect x="906" y="156" width="252" height="477" rx="28" fill="#12331A"/>
+  <rect x="66" y="180" width="252" height="72" rx="22" fill="#FFFFFF" fill-opacity="0.06"/>
+  <rect x="66" y="266" width="252" height="72" rx="22" fill="#FFFFFF" fill-opacity="0.06"/>
+  <rect x="66" y="352" width="252" height="72" rx="22" fill="#FFFFFF" fill-opacity="0.06"/>
+  <rect x="390" y="180" width="466" height="168" rx="26" fill="#FFFFFF" fill-opacity="0.06" stroke="#F5A623" stroke-opacity="0.5"/>
+  <rect x="390" y="370" width="225" height="112" rx="24" fill="#FFFFFF" fill-opacity="0.05"/>
+  <rect x="631" y="370" width="225" height="112" rx="24" fill="#FFFFFF" fill-opacity="0.05"/>
+  <rect x="390" y="498" width="225" height="112" rx="24" fill="#FFFFFF" fill-opacity="0.05"/>
+  <rect x="631" y="498" width="225" height="112" rx="24" fill="#FFFFFF" fill-opacity="0.05"/>
+  <rect x="930" y="180" width="204" height="136" rx="24" fill="#FFFFFF" fill-opacity="0.05"/>
+  <rect x="930" y="334" width="204" height="144" rx="24" fill="#FFFFFF" fill-opacity="0.05"/>
+  <rect x="930" y="496" width="204" height="114" rx="24" fill="#FFFFFF" fill-opacity="0.05"/>
+  <text x="78" y="590" fill="#FFF7E6" font-family="Be Vietnam Pro, sans-serif" font-size="18" font-weight="700">Keo Bia 2026</text>
+  <text x="78" y="618" fill="#FFF7E6" fill-opacity="0.65" font-family="Be Vietnam Pro, sans-serif" font-size="14">Preview cho theme World Cup mini-game</text>
+</svg>

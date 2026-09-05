@@ -1,0 +1,35 @@
+@page
+@model CreateModel
+@{ ViewData["Title"] = "Thêm menu"; }
+
+<div class="mb-6">
+    <p class="text-sm font-semibold text-indigo-600">Menu</p>
+    <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Thêm menu mới</h2>
+</div>
+
+<form method="post" class="space-y-6">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+    <div class="admin-card grid gap-5 p-6 md:grid-cols-2">
+        <div>
+            <label class="admin-label">Tên menu <span class="text-red-500">*</span></label>
+            <input asp-for="Input.Name" class="admin-input" placeholder="VD: Menu chính" />
+            <span asp-validation-for="Input.Name" class="text-xs text-red-500"></span>
+        </div>
+        <div>
+            <label class="admin-label">Vị trí <span class="text-red-500">*</span></label>
+            <select asp-for="Input.Location" class="admin-select">
+                <option value="header">header — Điều hướng chính</option>
+                <option value="footer">footer — Chân trang</option>
+                <option value="sidebar">sidebar — Thanh bên</option>
+            </select>
+            <span asp-validation-for="Input.Location" class="text-xs text-red-500"></span>
+        </div>
+    </div>
+
+    <div class="flex gap-3">
+        <button type="submit" class="admin-btn-primary">Tạo menu</button>
+        <a asp-page="/Menus/Index" class="admin-btn-secondary">Huỷ</a>
+    </div>
+</form>

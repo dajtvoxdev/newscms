@@ -1,0 +1,1 @@
+namespace NewsCMS.Application.Site;

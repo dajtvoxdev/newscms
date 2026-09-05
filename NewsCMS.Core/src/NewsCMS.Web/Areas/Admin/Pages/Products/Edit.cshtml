@@ -1,0 +1,41 @@
+@page "{id:guid}"
+@using NewsCMS.Web.Areas.Admin.Shared
+@model EditModel
+@{
+    ViewData["Title"] = "Sửa sản phẩm";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Catalog</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">@Model.Input.Name</h2>
+        <p class="mt-1 text-sm text-slate-500">SKU @Model.Input.Sku</p>
+    </div>
+    <div class="flex gap-2">
+        <a asp-area="Admin" asp-page="/Products/Index" class="admin-btn-secondary">Quay lại</a>
+        <form method="post" asp-page-handler="Delete" data-confirm="Xoá sản phẩm này?" data-confirm-danger="true">
+            <button type="submit" class="admin-btn-secondary text-red-600 hover:border-red-200 hover:bg-red-50">Xoá</button>
+        </form>
+    </div>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="hidden">@ok</div>
+}
+
+<partial name="_ProductForm"
+         model='new NewsCMS.Web.Areas.Admin.Pages.Products.ProductFormViewModel
+         {
+             Input = Model.Input,
+             Categories = Model.Categories,
+             SubmitLabel = "Lưu thay đổi",
+             ImagesJson = Model.ImagesJson,
+             VariantsJson = Model.VariantsJson
+         }' />
+
+@section Scripts {
+    <partial name="~/Areas/Admin/Shared/_TinyMce.cshtml" model='new TinyMceOptions { Selector = "#product-description", Height = 420 }' />
+    <script src="~/js/admin/product-form.js" asp-append-version="true"></script>
+    <script src="~/js/admin/ai-assist.js" asp-append-version="true"></script>
+}

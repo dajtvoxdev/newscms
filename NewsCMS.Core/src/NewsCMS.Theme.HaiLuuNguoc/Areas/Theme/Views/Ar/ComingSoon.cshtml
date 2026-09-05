@@ -1,0 +1,187 @@
+﻿@{
+    Layout = "~/Areas/Theme/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Cháº¡m vÃ o Ä‘áº¡i dÆ°Æ¡ng â€” sáº¯p ra máº¯t";
+}
+
+<section class="ar-coming-soon" aria-labelledby="ar-cs-title">
+    <div class="ar-cs-atmos" aria-hidden="true">
+        <span class="ar-cs-beam"></span>
+        <span class="ar-cs-mote ar-cs-mote-1"></span>
+        <span class="ar-cs-mote ar-cs-mote-2"></span>
+        <span class="ar-cs-mote ar-cs-mote-3"></span>
+        <span class="ar-cs-mote ar-cs-mote-4"></span>
+        <span class="ar-cs-mote ar-cs-mote-5"></span>
+        <span class="ar-cs-mote ar-cs-mote-6"></span>
+        <span class="ar-cs-mote ar-cs-mote-7"></span>
+        <span class="ar-cs-mote ar-cs-mote-8"></span>
+    </div>
+
+    <div class="ar-cs-inner" data-aos="fade-up">
+        <div class="ar-cs-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                <circle cx="12" cy="13" r="3"/>
+            </svg>
+        </div>
+        <p class="ar-cs-kicker">Thá»±c táº¿ tÄƒng cÆ°á»ng</p>
+        <h1 id="ar-cs-title">Cháº¡m vÃ o<br>Ä‘áº¡i dÆ°Æ¡ng</h1>
+        <p class="ar-cs-lead">Tráº£i nghiá»‡m thá»±c táº¿ tÄƒng cÆ°á»ng (AR) Ä‘ang Ä‘Æ°á»£c hoÃ n thiá»‡n. HÃ£y quay láº¡i sá»›m Ä‘á»ƒ trá» camera vÃ o áº£nh in vÃ  xem Ä‘áº¡i dÆ°Æ¡ng sá»‘ng dáº­y.</p>
+        <a class="ar-cs-back" asp-area="Theme" asp-controller="Home" asp-action="Index">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="M19 12H5" /><path d="m12 19-7-7 7-7" />
+            </svg>
+            <span>Vá» trang chá»§</span>
+        </a>
+    </div>
+</section>
+
+@section Head {
+    <style>
+        .ar-coming-soon {
+            position: relative;
+            display: grid;
+            place-items: center;
+            min-height: 86vh;
+            padding: 96px 24px;
+            text-align: center;
+            overflow: hidden;
+            /* Deep-navy ocean floor â€” matches brand, replaces bright SaaS gradient */
+            background:
+                radial-gradient(120% 90% at 50% -10%, rgba(71, 182, 255, .16), transparent 60%),
+                radial-gradient(80% 60% at 50% 120%, rgba(11, 27, 85, .6), transparent 70%),
+                linear-gradient(180deg, #01236b 0%, #011a50 46%, #010d2b 100%);
+        }
+
+        /* Slanted volumetric light shaft */
+        .ar-cs-atmos { position: absolute; inset: 0; pointer-events: none; }
+        .ar-cs-beam {
+            position: absolute;
+            top: -20%;
+            left: 8%;
+            width: 42%;
+            height: 150%;
+            background: linear-gradient(180deg, rgba(174, 243, 255, .16), rgba(174, 243, 255, 0) 70%);
+            transform: rotate(18deg);
+            filter: blur(26px);
+            mix-blend-mode: screen;
+            animation: arCsBeam 9s ease-in-out infinite alternate;
+        }
+        @@keyframes arCsBeam {
+            0%   { opacity: .5;  transform: rotate(16deg) translateX(-10px); }
+            100% { opacity: .95; transform: rotate(20deg) translateX(20px); }
+        }
+
+        /* Drifting plankton / bubble motes */
+        .ar-cs-mote {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, rgba(195, 238, 250, .8), rgba(0, 168, 218, .12) 55%, transparent 72%);
+            opacity: .5;
+            animation: arCsRise linear infinite;
+        }
+        .ar-cs-mote-1 { left: 14%; bottom: -20px; width: 8px;  height: 8px;  animation-duration: 15s; animation-delay: -2s; }
+        .ar-cs-mote-2 { left: 28%; bottom: -20px; width: 5px;  height: 5px;  animation-duration: 11s; animation-delay: -6s; opacity: .62; }
+        .ar-cs-mote-3 { left: 42%; bottom: -20px; width: 14px; height: 14px; animation-duration: 21s; animation-delay: -9s; opacity: .34; }
+        .ar-cs-mote-4 { left: 56%; bottom: -20px; width: 6px;  height: 6px;  animation-duration: 13s; animation-delay: -3s; }
+        .ar-cs-mote-5 { left: 67%; bottom: -20px; width: 10px; height: 10px; animation-duration: 18s; animation-delay: -11s; opacity: .45; }
+        .ar-cs-mote-6 { left: 78%; bottom: -20px; width: 4px;  height: 4px;  animation-duration: 10s; animation-delay: -7s; opacity: .6; }
+        .ar-cs-mote-7 { left: 88%; bottom: -20px; width: 17px; height: 17px; animation-duration: 24s; animation-delay: -14s; opacity: .3; }
+        .ar-cs-mote-8 { left: 6%;  bottom: -20px; width: 6px;  height: 6px;  animation-duration: 12s; animation-delay: -5s; }
+        @@keyframes arCsRise {
+            0%   { transform: translateY(0) translateX(0);     opacity: 0; }
+            8%   { opacity: .55; }
+            55%  { transform: translateY(-52vh) translateX(14px); opacity: .4; }
+            100% { transform: translateY(-100vh) translateX(-8px); opacity: 0; }
+        }
+
+        .ar-cs-inner { position: relative; z-index: 1; max-width: 560px; }
+
+        /* Glass icon with light sweep + halo */
+        .ar-cs-icon {
+            position: relative;
+            width: 96px;
+            height: 96px;
+            margin: 0 auto 30px;
+            display: grid;
+            place-items: center;
+            border-radius: 28px;
+            color: #c6f3f9;
+            background: rgba(255, 255, 255, .08);
+            border: 1px solid rgba(174, 243, 255, .35);
+            backdrop-filter: blur(12px) saturate(1.4);
+            -webkit-backdrop-filter: blur(12px) saturate(1.4);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, .05) inset, 0 24px 60px rgba(3, 9, 35, .5), 0 0 40px rgba(198, 243, 249, .22);
+            overflow: hidden;
+        }
+        .ar-cs-icon svg { width: 44px; height: 44px; filter: drop-shadow(0 0 8px rgba(198, 243, 249, .55)); }
+        .ar-cs-icon::after {
+            content: "";
+            position: absolute;
+            top: -120%;
+            left: -60%;
+            width: 60%;
+            height: 320%;
+            background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .35), transparent);
+            transform: rotate(18deg);
+            animation: arCsSweep 4.5s ease-in-out infinite;
+        }
+        @@keyframes arCsSweep {
+            0%, 60% { left: -60%; }
+            100%    { left: 130%; }
+        }
+        /* Sonar halo */
+        .ar-cs-icon::before {
+            content: "";
+            position: absolute;
+            inset: -8px;
+            border-radius: 32px;
+            border: 1.5px solid rgba(198, 243, 249, .5);
+            animation: arCsHalo 3s ease-out infinite;
+        }
+        @@keyframes arCsHalo {
+            0%   { transform: scale(1);    opacity: .6; }
+            70%  { transform: scale(1.25); opacity: 0;  }
+            100% { transform: scale(1.25); opacity: 0;  }
+        }
+
+        .ar-cs-kicker {
+            margin: 0 0 10px;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: .32em;
+            text-transform: uppercase;
+            color: #c6f3f9;
+        }
+
+        /* Typography fix: generous line-height + letter-spacing so the
+           diacritic on "áº " never collides with the next line. */
+        .ar-coming-soon h1 {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(2.4rem, 1rem + 6vw, 4.5rem);
+            line-height: 1.22;
+            letter-spacing: .015em;
+            margin: 0 0 22px;
+            text-wrap: balance;
+        }
+        .ar-cs-lead { font-size: 1.06rem; line-height: 1.75; color: var(--muted); margin: 0 auto 36px; max-width: 46ch; }
+
+        /* Plain underlined text-link, no competing button chrome */
+        .ar-cs-back {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            color: var(--foam);
+            font-weight: 600;
+            text-decoration: underline;
+            text-underline-offset: 5px;
+            text-decoration-color: rgba(233, 251, 255, .4);
+            transition: color .2s, text-decoration-color .2s;
+        }
+        .ar-cs-back svg { width: 1.05em; height: 1.05em; flex: none; }
+        .ar-cs-back:hover { color: #c6f3f9; text-decoration-color: #c6f3f9; }
+
+        @@media (prefers-reduced-motion: reduce) {
+            .ar-cs-beam, .ar-cs-mote, .ar-cs-icon::after, .ar-cs-icon::before { animation: none; }
+        }
+    </style>
+}

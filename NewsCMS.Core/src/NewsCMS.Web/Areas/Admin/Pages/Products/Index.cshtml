@@ -1,0 +1,131 @@
+@page
+@using NewsCMS.Domain.Enums
+@model IndexModel
+@{
+    ViewData["Title"] = "Sản phẩm";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Catalog</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Sản phẩm</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/Products/Create" class="admin-btn-primary">Thêm sản phẩm</a>
+</div>
+
+@if (TempData["Success"] is string msg)
+{
+    <div class="hidden">@msg</div>
+}
+
+<form method="get" class="admin-card mb-4 grid gap-3 p-4 md:grid-cols-[1fr_220px_auto_auto]">
+    <input class="admin-input" name="q" value="@Model.Keyword" placeholder="Tìm theo tên hoặc SKU..." />
+    <select class="admin-select" name="cat" asp-items="Model.Categories">
+        <option value="">— Tất cả chuyên mục —</option>
+    </select>
+    <button class="admin-btn-primary" type="submit">Lọc</button>
+    @if (!string.IsNullOrWhiteSpace(Model.Keyword) || Model.CategoryId.HasValue)
+    {
+        <a asp-area="Admin" asp-page="/Products/Index" class="admin-btn-secondary">Xoá lọc</a>
+    }
+</form>
+
+<p class="mb-3 text-sm text-slate-500">
+    @Model.Items.TotalItems sản phẩm@(Model.Items.TotalPages > 1 ? $" · trang {Model.CurrentPage}/{Model.Items.TotalPages}" : "")
+</p>
+
+<div class="admin-card overflow-x-auto">
+    <table class="w-full min-w-[1000px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-4">Sản phẩm</th>
+                <th class="px-5 py-4">SKU</th>
+                <th class="px-5 py-4">Chuyên mục</th>
+                <th class="px-5 py-4">Giá</th>
+                <th class="px-5 py-4">Tồn kho</th>
+                <th class="px-5 py-4">Trạng thái</th>
+                <th class="px-5 py-4 text-center" title="Số nhỏ đứng trước trên trang khách">Thứ tự</th>
+                <th class="px-5 py-4"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Items.Items.Count == 0)
+            {
+                <tr>
+                    <td colspan="8" class="px-5 py-12 text-center">
+                        <p class="font-semibold text-slate-600">Không có sản phẩm nào khớp.</p>
+                        <p class="mt-1 text-sm text-slate-400">Thử đổi từ khoá/chuyên mục, hoặc thêm sản phẩm mới.</p>
+                    </td>
+                </tr>
+            }
+            @foreach (var item in Model.Items.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-4">
+                        <div class="flex items-center gap-3">
+                            @if (!string.IsNullOrEmpty(item.ThumbnailUrl))
+                            {
+                                <img src="@item.ThumbnailUrl" alt="" class="h-12 w-12 rounded-lg object-cover" />
+                            }
+                            else
+                            {
+                                <div class="h-12 w-12 rounded-lg bg-slate-100"></div>
+                            }
+                            <div class="min-w-0">
+                                <a asp-area="Admin" asp-page="/Products/Edit" asp-route-id="@item.Id"
+                                   class="font-bold text-slate-950 hover:text-indigo-600">@item.Name</a>
+                                @if (item.IsFeatured)
+                                {
+                                    <span class="admin-badge ml-2 bg-amber-100 text-amber-700">Nổi bật</span>
+                                }
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-5 py-4 font-mono text-xs text-slate-500">@item.Sku</td>
+                    <td class="px-5 py-4 text-slate-600">@item.CategoryName</td>
+                    <td class="px-5 py-4 text-slate-900 font-semibold">
+                        @if (item.SalePrice.HasValue)
+                        {
+                            <div class="text-rose-600">@item.SalePrice.Value.ToString("N0") đ</div>
+                            <div class="text-xs text-slate-400 line-through">@item.Price.ToString("N0") đ</div>
+                        }
+                        else
+                        {
+                            <text>@item.Price.ToString("N0") đ</text>
+                        }
+                    </td>
+                    <td class="px-5 py-4 text-slate-600">
+                        @(item.IsTrackingStock ? item.StockQuantity.ToString() : "—")
+                    </td>
+                    <td class="px-5 py-4">
+                        <form method="post" asp-page-handler="TogglePublish" asp-route-id="@item.Id"
+                              asp-route-q="@Model.Keyword" asp-route-cat="@Model.CategoryId" asp-route-p="@Model.CurrentPage">
+                            @Html.AntiForgeryToken()
+                            <button type="submit"
+                                    class="admin-badge @(item.Status == ProductStatus.Published ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")"
+                                    data-confirm-button="@(item.Status == ProductStatus.Published ? $"Chuyển \"{item.Name}\" về bản nháp?" : $"Đăng bán sản phẩm \"{item.Name}\"?")">
+                                @(item.Status == ProductStatus.Published ? "Đang bán" : "Nháp")
+                            </button>
+                        </form>
+                    </td>
+                    <td class="px-5 py-4 text-center font-mono text-xs text-slate-500">@item.SortOrder</td>
+                    <td class="px-5 py-4 text-right">
+                        <a asp-area="Admin" asp-page="/Products/Edit" asp-route-id="@item.Id"
+                           class="admin-btn-secondary">Sửa</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Items.TotalPages > 1)
+{
+    <div class="mt-4 flex gap-2">
+        @for (int i = 1; i <= Model.Items.TotalPages; i++)
+        {
+            <a asp-page="/Products/Index" asp-route-q="@Model.Keyword" asp-route-cat="@Model.CategoryId" asp-route-p="@i"
+               class="admin-btn-secondary @(i == Model.CurrentPage ? "font-bold" : "")">@i</a>
+        }
+    </div>
+}
