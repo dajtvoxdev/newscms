@@ -1,0 +1,7 @@
+{
+  "//": "Pin SDK 8: máy có cả SDK 10.0.400 nhưng toàn bộ project target net8.0. Build bằng Roslyn của .NET 10 làm `Guid[].Contains(x)` trong LINQ bind sang overload span (ReadOnlySpan<Guid>) mà EF Core không dịch được -> 51 unit test KeoBia fail. CI cũng dùng 8.0.x nên pin ở đây để local giống CI.",
+  "sdk": {
+    "version": "8.0.100",
+    "rollForward": "latestFeature"
+  }
+}
