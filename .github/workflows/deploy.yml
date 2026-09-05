@@ -17,8 +17,21 @@ name: Deploy
 #
 # Cách deploy: mỗi lần tạo releases/<sha> mới rồi đổi symlink `current`.
 # Rollback chỉ là trỏ symlink về release trước + restart.
+#
+# KHI NÀO CHẠY:
+#   - Tự động: sau khi workflow "CI" chạy XONG và PASS trên master/main
+#     (push code -> CI build+test -> CI xanh -> Deploy). CI đỏ thì không deploy.
+#   - Thủ công: workflow_dispatch (có checkbox bỏ qua migration).
+#   - Tag v*: deploy ngay, KHÔNG qua CI.
 
 on:
+  # workflow_run yêu cầu file workflow này nằm trên default branch (master).
+  # branches ở đây lọc theo head_branch của run CI, nên CI của pull request
+  # (head_branch = branch nguồn) không kích hoạt deploy.
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [master, main]
   workflow_dispatch:
     inputs:
       run_migrations:
@@ -47,9 +60,20 @@ jobs:
     name: Deploy to production (Ubuntu VPS)
     runs-on: ubuntu-latest
     environment: production
+    # CI fail/cancel -> không deploy. Với dispatch và tag push thì không có
+    # workflow_run nên điều kiện đầu đã đúng.
+    if: >
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
 
     steps:
+      # workflow_run mặc định checkout HEAD của default branch, KHÔNG phải commit
+      # mà CI vừa test. Nếu có commit mới hơn đã push thì sẽ deploy sai code, nên
+      # phải ghim đúng head_sha của run CI.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -63,10 +87,14 @@ jobs:
             echo "::error::Chưa set variable VPS_HOST (Settings -> Environments -> production -> Variables)."
             exit 1
           fi
+          # Cùng lý do như bước checkout: github.sha của workflow_run là HEAD
+          # default branch, không phải commit đã được CI test.
+          sha="${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}"
           echo "VPS_HOST=$host"                                        >> "$GITHUB_ENV"
           echo "VPS_USER=${{ vars.VPS_USER || 'root' }}"               >> "$GITHUB_ENV"
           echo "DEPLOY_ROOT=${{ vars.DEPLOY_ROOT || '/var/www/newscms' }}" >> "$GITHUB_ENV"
-          echo "RELEASE=${GITHUB_SHA}"                                 >> "$GITHUB_ENV"
+          echo "RELEASE=$sha"                                          >> "$GITHUB_ENV"
+          echo "Sẽ deploy commit $sha (trigger: ${{ github.event_name }})"
 
       # Restore/build ở mức PROJECT kèm RID, không phải mức solution. Hai cách
       # kia đều fail:
@@ -206,7 +234,7 @@ jobs:
 
       # Migration chạy TRƯỚC khi đổi symlink: nếu schema fail thì app cũ vẫn
       # đang chạy nguyên vẹn.
-      # Tag push: luôn migrate (inputs rỗng). Dispatch: theo checkbox.
+      # workflow_run và tag push: luôn migrate (inputs rỗng). Dispatch: theo checkbox.
       # Không dùng `inputs.run_migrations != false` - GitHub coerce null và
       # false về cùng 0 nên tag push sẽ bị skip migration.
       - name: Apply EF migrations
