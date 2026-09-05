@@ -189,10 +189,18 @@ jobs:
             rm -rf  "\$rel/logs"
             ln -sfn "\$root/shared/logs" "\$rel/logs"
 
+            # App_Data chứa DataProtection key ring + state Telegram bot. Nếu để
+            # nó trong release thì mỗi lần deploy sẽ logout sạch session và bot
+            # gửi lại thông báo cũ. ContentRootPath = WorkingDirectory =
+            # current/ -> current/App_Data chính là \$rel/App_Data.
+            rm -rf  "\$rel/App_Data"
+            ln -sfn "\$root/shared/App_Data" "\$rel/App_Data"
+
             ln -sfn "\$root/shared/appsettings.Production.json" \
                     "\$rel/appsettings.Production.json"
 
-            chown -R newscms:newscms "\$rel"
+            # -h: đổi chủ chính symlink, không đi theo link để chown cả shared/.
+            chown -Rh newscms:newscms "\$rel"
             echo "Đã link shared data"
           REMOTE
 
@@ -266,7 +274,16 @@ jobs:
           ssh deploy-target bash -euo pipefail <<REMOTE
             cd '$DEPLOY_ROOT/releases' || exit 0
             keep=\$(readlink -f '$DEPLOY_ROOT/current' | xargs -r basename)
-            ls -1dt */ 2>/dev/null | tail -n +6 | tr -d '/' | while read -r d; do
+            # Chỉ xét thư mục tên đúng 40 ký tự hex (git SHA). Glob */ cũ cũng
+            # khớp releases/App_Data -> sau 5 lần deploy sẽ xoá mất symlink chứa
+            # DataProtection key ring.
+            for d in *; do
+              [ -d "\$d" ] || continue
+              [ -L "\$d" ] && continue
+              [ \${#d} -eq 40 ] || continue
+              case "\$d" in *[!0-9a-f]*) continue ;; esac
+              printf '%s\t%s\n' "\$(stat -c %Y "\$d")" "\$d"
+            done | sort -rn | tail -n +6 | cut -f2 | while read -r d; do
               [ "\$d" = "\$keep" ] && continue
               rm -rf -- "\$d" && echo "Đã xoá release cũ \$d"
             done

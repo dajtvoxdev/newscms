@@ -72,6 +72,50 @@ log "4/7 Dựng cây thư mục ${DEPLOY_ROOT}"
 mkdir -p "${DEPLOY_ROOT}/releases"
 mkdir -p "${DEPLOY_ROOT}/shared/uploads"
 mkdir -p "${DEPLOY_ROOT}/shared/logs"
+mkdir -p "${DEPLOY_ROOT}/shared/App_Data"
+
+# App_Data phải nằm ở shared/, KHÔNG nằm trong release: nó chứa DataProtection
+# key ring (mất là logout sạch mọi session) và state của Telegram bot (mất là
+# bot gửi lại toàn bộ thông báo cũ). Code tạo ra 2 đường dẫn khác nhau:
+#
+#   ContentRootPath/App_Data                -> current/App_Data (theo release)
+#   AppContext.BaseDirectory/../App_Data    -> tuỳ .NET có phân giải symlink
+#                                              `current` hay không, ra
+#                                              ${DEPLOY_ROOT}/App_Data hoặc
+#                                              ${DEPLOY_ROOT}/releases/App_Data
+#
+# Không đoán: trỏ cả 2 vị trí ổn định về shared/App_Data. Vị trí theo release
+# do bước "Link shared data" trong deploy.yml lo.
+#
+# Không dùng `ln -sfn` trực tiếp: nếu đích đã là thư mục THẬT thì ln tạo link
+# BÊN TRONG nó (cờ -n chỉ có tác dụng với symlink-trỏ-tới-thư-mục), khiến key
+# ring nằm sai chỗ mà không báo lỗi gì.
+link_to_shared_appdata() {
+  local link="$1"
+  local shared="${DEPLOY_ROOT}/shared/App_Data"
+
+  if [[ -L "$link" ]]; then
+    ln -sfn "$shared" "$link"
+    return
+  fi
+  if [[ -d "$link" ]]; then
+    if [[ -n "$(ls -A "$link" 2>/dev/null)" ]]; then
+      # -n: file đã có ở shared là bản đúng, không để bản cũ ghi đè.
+      echo "  -> Dồn nội dung sẵn có của $link vào $shared"
+      cp -a -n "$link/." "$shared/" 2>/dev/null || true
+    fi
+    rm -rf "$link"
+  fi
+  ln -sfn "$shared" "$link"
+}
+
+link_to_shared_appdata "${DEPLOY_ROOT}/App_Data"
+link_to_shared_appdata "${DEPLOY_ROOT}/releases/App_Data"
+
+# App_Data chứa DataProtection key ring: ai đọc được key là forge được auth
+# cookie. Không cho user khác trên máy đọc (o=), bất kể mode mà bước cp -a
+# phía trên mang sang.
+chmod -R u=rwX,g=rX,o= "${DEPLOY_ROOT}/shared/App_Data"
 
 # appsettings.Production.json: KHÔNG commit vào git, chỉ tồn tại ở đây.
 # Tạo file rỗng làm chỗ giữ nếu chưa có; điền giá trị thật sau khi provision.
