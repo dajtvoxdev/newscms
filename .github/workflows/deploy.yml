@@ -10,10 +10,15 @@ name: Deploy
 #      /var/www/newscms/shared/appsettings.Production.json trên VPS.
 #      Secret KHÔNG nằm trong GitHub - migration đọc thẳng từ file này.
 #   3. Settings -> Environments -> tạo "production", bật Required reviewers.
-#      Secret:    VPS_SSH_KEY  (private key, khớp key đã thêm vào authorized_keys)
-#      Variables: VPS_HOST, DEPLOY_ROOT (mặc định /var/www/newscms)
-#                 VPS_USER phải là root - deploy cần systemctl + ghi /var/www.
-#                 Bản thân app không chạy bằng root (systemd User=newscms).
+#      Tất cả đều là Secrets (không dùng Variables):
+#        VPS_SSH_KEY  private key, khớp key đã thêm vào authorized_keys
+#        VPS_HOST     IP/hostname của VPS
+#        VPS_USER     tuỳ chọn, mặc định root - deploy cần systemctl + ghi
+#                     /var/www. Bản thân app không chạy bằng root
+#                     (systemd User=newscms).
+#        DEPLOY_ROOT  tuỳ chọn, mặc định /var/www/newscms
+#      Lưu ý: secret bị mask trong log, nên các dòng log có chứa host/đường dẫn
+#      sẽ hiện *** thay vì giá trị thật.
 #
 # Cách deploy: mỗi lần tạo releases/<sha> mới rồi đổi symlink `current`.
 # Rollback chỉ là trỏ symlink về release trước + restart.
@@ -82,18 +87,18 @@ jobs:
 
       - name: Resolve deploy target
         run: |
-          host="${{ vars.VPS_HOST }}"
+          host="${{ secrets.VPS_HOST }}"
           if [ -z "$host" ]; then
-            echo "::error::Chưa set variable VPS_HOST (Settings -> Environments -> production -> Variables)."
+            echo "::error::Chưa set secret VPS_HOST (Settings -> Environments -> production -> Secrets)."
             exit 1
           fi
           # Cùng lý do như bước checkout: github.sha của workflow_run là HEAD
           # default branch, không phải commit đã được CI test.
           sha="${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}"
-          echo "VPS_HOST=$host"                                        >> "$GITHUB_ENV"
-          echo "VPS_USER=${{ vars.VPS_USER || 'root' }}"               >> "$GITHUB_ENV"
-          echo "DEPLOY_ROOT=${{ vars.DEPLOY_ROOT || '/var/www/newscms' }}" >> "$GITHUB_ENV"
-          echo "RELEASE=$sha"                                          >> "$GITHUB_ENV"
+          echo "VPS_HOST=$host"                                           >> "$GITHUB_ENV"
+          echo "VPS_USER=${{ secrets.VPS_USER || 'root' }}"               >> "$GITHUB_ENV"
+          echo "DEPLOY_ROOT=${{ secrets.DEPLOY_ROOT || '/var/www/newscms' }}" >> "$GITHUB_ENV"
+          echo "RELEASE=$sha"                                             >> "$GITHUB_ENV"
           echo "Sẽ deploy commit $sha (trigger: ${{ github.event_name }})"
 
       # Restore/build ở mức PROJECT kèm RID, không phải mức solution. Hai cách
