@@ -122,15 +122,14 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('NewsCMS.Core/**/*.csproj', 'NewsCMS.Core/Directory.Build.props') }}
           restore-keys: ${{ runner.os }}-nuget-
 
-      # Framework-dependent win-x64: server đích cần có ASP.NET Core 8 Runtime.
-      # Đổi -r sang linux-x64 nếu deploy lên Linux, hoặc bỏ -r nếu chạy portable.
+      # Framework-dependent linux-x64: VPS đích (Ubuntu 22.04) đã cài
+      # aspnetcore-runtime-8.0 qua deploy/provision-vps.sh.
       - name: Publish
         run: >
           dotnet publish ${{ env.WEB_PROJECT }}
           --configuration Release
-          -r win-x64
+          -r linux-x64
           --self-contained false
-          -p:UseAppHost=true
           -o ${{ github.workspace }}/publish
 
       - name: Upload publish output

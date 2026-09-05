@@ -1,22 +1,28 @@
 name: Deploy
 
-# Triển khai lên server Windows self-hosted (cùng máy đang chạy scheduled task
-# "NewsCMS Restart App", app listen port 5000 — xem restart-app.bat).
+# Triển khai lên VPS Ubuntu 22.04 qua SSH, chạy từ runner của GitHub
+# (không cần self-hosted runner trên VPS).
 #
 # YÊU CẦU TRƯỚC KHI DÙNG:
-#   1. Cài GitHub Actions self-hosted runner trên server đó, label: self-hosted, windows, newscms
-#   2. Tạo Environment "production" trong Settings → Environments, bật Required reviewers
-#      để mỗi lần deploy phải có người bấm approve.
-#   3. Thêm secret CONNECTION_STRING (production) + variable DEPLOY_PATH.
+#   1. Chạy deploy/provision-vps.sh trên VPS một lần (cài runtime, systemd,
+#      nginx, tạo /var/www/newscms).
+#   2. Điền connection string thật vào
+#      /var/www/newscms/shared/appsettings.Production.json trên VPS.
+#      Secret KHÔNG nằm trong GitHub - migration đọc thẳng từ file này.
+#   3. Settings -> Environments -> tạo "production", bật Required reviewers.
+#      Secret:    VPS_SSH_KEY  (private key, khớp key đã thêm vào authorized_keys)
+#      Variables: VPS_HOST, DEPLOY_ROOT (mặc định /var/www/newscms)
+#                 VPS_USER phải là root - deploy cần systemctl + ghi /var/www.
+#                 Bản thân app không chạy bằng root (systemd User=newscms).
 #
-# Nếu deploy lên Azure App Service / Linux qua SSH / Docker thì file này cần viết lại:
-# xem ghi chú ở cuối file.
+# Cách deploy: mỗi lần tạo releases/<sha> mới rồi đổi symlink `current`.
+# Rollback chỉ là trỏ symlink về release trước + restart.
 
 on:
   workflow_dispatch:
     inputs:
       run_migrations:
-        description: 'Chạy dotnet ef database update trước khi swap'
+        description: 'Chạy EF migration trước khi đổi symlink'
         type: boolean
         default: true
   push:
@@ -24,11 +30,10 @@ on:
 
 env:
   DOTNET_VERSION: '8.0.x'
-  WEB_PROJECT: NewsCMS.Core/src/NewsCMS.Web/NewsCMS.Web.csproj
-  INFRA_PROJECT: NewsCMS.Core/src/NewsCMS.Infrastructure/NewsCMS.Infrastructure.csproj
   SOLUTION: NewsCMS.Core/NewsCMS.Core.sln
+  WEB_PROJECT: NewsCMS.Core/src/NewsCMS.Web/NewsCMS.Web.csproj
   APP_PORT: '5000'
-  TASK_NAME: NewsCMS Restart App
+  SERVICE: newscms
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
@@ -39,12 +44,9 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy to production
-    runs-on: [self-hosted, windows, newscms]
+    name: Deploy to production (Ubuntu VPS)
+    runs-on: ubuntu-latest
     environment: production
-    defaults:
-      run:
-        shell: pwsh
 
     steps:
       - uses: actions/checkout@v4
@@ -54,14 +56,17 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Resolve deploy path
+      - name: Resolve deploy target
         run: |
-          $target = "${{ vars.DEPLOY_PATH }}"
-          if ([string]::IsNullOrWhiteSpace($target)) {
-            throw "Chua set variable DEPLOY_PATH (vi du: D:\apps\newscms). Settings -> Environments -> production -> Variables."
-          }
-          "DEPLOY_PATH=$target"  | Out-File $env:GITHUB_ENV -Append
-          "STAGE_PATH=$env:RUNNER_TEMP\newscms-stage" | Out-File $env:GITHUB_ENV -Append
+          host="${{ vars.VPS_HOST }}"
+          if [ -z "$host" ]; then
+            echo "::error::Chưa set variable VPS_HOST (Settings -> Environments -> production -> Variables)."
+            exit 1
+          fi
+          echo "VPS_HOST=$host"                                        >> "$GITHUB_ENV"
+          echo "VPS_USER=${{ vars.VPS_USER || 'root' }}"               >> "$GITHUB_ENV"
+          echo "DEPLOY_ROOT=${{ vars.DEPLOY_ROOT || '/var/www/newscms' }}" >> "$GITHUB_ENV"
+          echo "RELEASE=${GITHUB_SHA}"                                 >> "$GITHUB_ENV"
 
       - name: Restore
         run: dotnet restore ${{ env.SOLUTION }}
@@ -69,123 +74,191 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.SOLUTION }} --configuration Release --no-restore
 
-      # Publish ra thư mục staging trước, chưa chạm vào app đang chạy.
-      - name: Publish to staging
-        run: |
-          if (Test-Path "$env:STAGE_PATH") { Remove-Item "$env:STAGE_PATH" -Recurse -Force }
-          dotnet publish ${{ env.WEB_PROJECT }} `
-            --configuration Release `
-            --no-build `
-            -o "$env:STAGE_PATH"
+      # linux-x64 framework-dependent: VPS đã có aspnetcore-runtime-8.0.
+      - name: Publish
+        run: >
+          dotnet publish ${{ env.WEB_PROJECT }}
+          --configuration Release
+          --no-build
+          -r linux-x64
+          --self-contained false
+          -o publish
 
-      # dotnet-ef là local tool (.config/dotnet-tools.json) nên phải restore mới gọi được.
-      # Tag push: luôn migrate (inputs rỗng). Dispatch: theo checkbox.
-      # Không dùng `inputs.run_migrations != false` — GitHub coerce null và false
-      # về cùng 0 nên tag push sẽ bị skip migration.
+      # dotnet-ef là local tool (NewsCMS.Core/.config/dotnet-tools.json).
       - name: Restore local tools
-        if: github.event_name != 'workflow_dispatch' || inputs.run_migrations
         working-directory: NewsCMS.Core
         run: dotnet tool restore
 
-      # Chạy migration TRƯỚC khi swap: nếu schema fail thì app cũ vẫn đang chạy nguyên vẹn.
+      # Migration bundle = 1 file thực thi tự chứa migration, chỉ cần runtime.
+      # Nhờ vậy VPS không phải cài .NET SDK.
+      - name: Build EF migration bundle
+        working-directory: NewsCMS.Core
+        run: >
+          dotnet ef migrations bundle
+          --project src/NewsCMS.Infrastructure
+          --startup-project src/NewsCMS.Web
+          --configuration Release
+          --no-build
+          --target-runtime linux-x64
+          --output ${{ github.workspace }}/publish/efbundle
+          --force
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Ghim host key để tránh MITM thay vì dùng StrictHostKeyChecking=no.
+          ssh-keyscan -T 15 -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          cat >> ~/.ssh/config <<CFG
+          Host deploy-target
+            HostName $VPS_HOST
+            User $VPS_USER
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            ServerAliveInterval 30
+          CFG
+          chmod 600 ~/.ssh/config
+          ssh -o ConnectTimeout=15 deploy-target 'echo SSH OK; . /etc/os-release; echo "$PRETTY_NAME"'
+
+      - name: Preflight checks on server
+        run: |
+          ssh deploy-target bash -euo pipefail <<REMOTE
+            root='$DEPLOY_ROOT'
+            for d in "\$root/releases" "\$root/shared"; do
+              [ -d "\$d" ] || { echo "::error::Thiếu \$d - chưa chạy provision-vps.sh?"; exit 1; }
+            done
+            cfg="\$root/shared/appsettings.Production.json"
+            [ -f "\$cfg" ] || { echo "::error::Thiếu \$cfg"; exit 1; }
+            if grep -q REPLACE_ME "\$cfg"; then
+              echo "::error::\$cfg vẫn còn REPLACE_ME - chưa điền connection string thật."
+              exit 1
+            fi
+            command -v dotnet >/dev/null || { echo "::error::VPS chưa có dotnet runtime"; exit 1; }
+            command -v jq     >/dev/null || { echo "::error::VPS chưa có jq"; exit 1; }
+            # Deploy cần systemctl + chown + ghi vào /var/www -> yêu cầu root.
+            # App KHÔNG chạy bằng root: systemd unit dùng User=newscms.
+            if [ "\$(id -u)" -ne 0 ]; then
+              echo "::error::VPS_USER phải là root (đang là \$(id -un))."
+              exit 1
+            fi
+            echo "Preflight OK (deploy root=\$root)"
+          REMOTE
+
+      # Ghi lại release đang chạy để rollback được nếu bước sau fail.
+      - name: Record current release
+        run: |
+          prev=$(ssh deploy-target "readlink -f '$DEPLOY_ROOT/current' 2>/dev/null || true")
+          echo "PREV_RELEASE=$prev" >> "$GITHUB_ENV"
+          echo "Release đang chạy: ${prev:-<chưa có>}"
+
+      - name: Upload release
+        run: |
+          target="$DEPLOY_ROOT/releases/$RELEASE"
+          ssh deploy-target "mkdir -p '$target'"
+          rsync -az --delete \
+            -e "ssh -o ConnectTimeout=15" \
+            publish/ "deploy-target:$target/"
+          echo "Đã đẩy $(du -sh publish | cut -f1) lên $target"
+
+      # uploads/logs/appsettings.Production.json nằm ở shared/ nên deploy không
+      # ghi đè dữ liệu production.
+      - name: Link shared data
+        run: |
+          ssh deploy-target bash -euo pipefail <<REMOTE
+            root='$DEPLOY_ROOT'
+            rel="\$root/releases/$RELEASE"
+
+            mkdir -p "\$rel/wwwroot"
+            rm -rf   "\$rel/wwwroot/uploads"
+            ln -sfn  "\$root/shared/uploads" "\$rel/wwwroot/uploads"
+
+            rm -rf  "\$rel/logs"
+            ln -sfn "\$root/shared/logs" "\$rel/logs"
+
+            ln -sfn "\$root/shared/appsettings.Production.json" \
+                    "\$rel/appsettings.Production.json"
+
+            chown -R newscms:newscms "\$rel"
+            echo "Đã link shared data"
+          REMOTE
+
+      # Migration chạy TRƯỚC khi đổi symlink: nếu schema fail thì app cũ vẫn
+      # đang chạy nguyên vẹn.
+      # Tag push: luôn migrate (inputs rỗng). Dispatch: theo checkbox.
+      # Không dùng `inputs.run_migrations != false` - GitHub coerce null và
+      # false về cùng 0 nên tag push sẽ bị skip migration.
       - name: Apply EF migrations
         if: github.event_name != 'workflow_dispatch' || inputs.run_migrations
-        working-directory: NewsCMS.Core
-        env:
-          ConnectionStrings__DefaultConnection: ${{ secrets.CONNECTION_STRING }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:ConnectionStrings__DefaultConnection)) {
-            throw "Chua set secret CONNECTION_STRING cho environment production."
-          }
-          dotnet ef database update `
-            --project src/NewsCMS.Infrastructure `
-            --startup-project src/NewsCMS.Web `
-            --configuration Release `
-            --no-build
+          ssh deploy-target bash -euo pipefail <<REMOTE
+            root='$DEPLOY_ROOT'
+            rel="\$root/releases/$RELEASE"
+            conn=\$(jq -re '.ConnectionStrings.Default' \
+                     "\$root/shared/appsettings.Production.json")
 
-      - name: Backup current release
-        run: |
-          if (Test-Path "$env:DEPLOY_PATH") {
-            $stamp  = Get-Date -Format 'yyyyMMdd-HHmmss'
-            $backup = "$env:DEPLOY_PATH-backup-$stamp"
-            Copy-Item "$env:DEPLOY_PATH" $backup -Recurse -Force
-            "ROLLBACK_PATH=$backup" | Out-File $env:GITHUB_ENV -Append
-            Write-Host "Backup: $backup"
-            # Giữ lại 5 bản backup gần nhất, xoá bản cũ hơn.
-            Get-ChildItem (Split-Path $env:DEPLOY_PATH -Parent) -Directory `
-              -Filter "$(Split-Path $env:DEPLOY_PATH -Leaf)-backup-*" |
-              Sort-Object CreationTime -Descending | Select-Object -Skip 5 |
-              Remove-Item -Recurse -Force
-          } else {
-            New-Item "$env:DEPLOY_PATH" -ItemType Directory -Force | Out-Null
-          }
+            chmod +x "\$rel/efbundle"
+            cd "\$rel"
+            # --connection tường minh: không phụ thuộc thứ tự nạp config.
+            ./efbundle --connection "\$conn"
+            echo "Migration xong"
+          REMOTE
 
-      - name: Stop app
+      - name: Switch symlink and restart
         run: |
-          schtasks /end /tn "${{ env.TASK_NAME }}" 2>$null
-          # Scheduled task chỉ spawn dotnet rồi thoát, nên phải kill theo port như restart-app.bat.
-          Get-NetTCPConnection -LocalPort ${{ env.APP_PORT }} -State Listen -ErrorAction SilentlyContinue |
-            Select-Object -ExpandProperty OwningProcess -Unique |
-            ForEach-Object { Write-Host "Kill PID $_"; Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
-          Start-Sleep -Seconds 3
-
-      # /XD uploads + logs: đây là dữ liệu production, KHÔNG được xoá theo build
-      # (.gitignore đã loại wwwroot/uploads khỏi repo nên staging không có nó).
-      # appsettings.Production.json giữ nguyên trên server, không commit vào repo.
-      - name: Swap files
-        run: |
-          robocopy "$env:STAGE_PATH" "$env:DEPLOY_PATH" /MIR /NFL /NDL /NJH /NP /R:3 /W:5 `
-            /XD "$env:DEPLOY_PATH\wwwroot\uploads" "$env:DEPLOY_PATH\logs" `
-            /XF appsettings.Production.json
-          # Robocopy: exit code < 8 là thành công (0-7 = copy/skip bình thường).
-          if ($LASTEXITCODE -ge 8) { throw "Robocopy that bai, exit code $LASTEXITCODE" }
-          $global:LASTEXITCODE = 0
-
-      - name: Start app
-        run: |
-          schtasks /run /tn "${{ env.TASK_NAME }}"
-          Start-Sleep -Seconds 10
+          ssh deploy-target bash -euo pipefail <<REMOTE
+            root='$DEPLOY_ROOT'
+            ln -sfn "\$root/releases/$RELEASE" "\$root/current"
+            systemctl restart ${{ env.SERVICE }}
+            sleep 3
+            systemctl is-active --quiet ${{ env.SERVICE }} \
+              || { journalctl -u ${{ env.SERVICE }} -n 40 --no-pager; exit 1; }
+            echo "Service đang chạy"
+          REMOTE
 
       - name: Health check
-        id: health
         run: |
-          $url = "http://localhost:${{ env.APP_PORT }}/"
-          $ok = $false
-          foreach ($i in 1..12) {
-            try {
-              $r = Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 10
-              if ($r.StatusCode -lt 500) { $ok = $true; Write-Host "OK ($($r.StatusCode)) sau $i lan thu"; break }
-            } catch {
-              Write-Host "Lan $i chua len: $($_.Exception.Message)"
-            }
-            Start-Sleep -Seconds 5
-          }
-          if (-not $ok) { throw "App khong phan hoi tren $url sau 60s" }
+          ssh deploy-target bash -euo pipefail <<'REMOTE'
+            for i in $(seq 1 12); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
+                     "http://127.0.0.1:${{ env.APP_PORT }}/" || echo 000)
+              if [ "$code" != "000" ] && [ "$code" -lt 500 ]; then
+                echo "OK (HTTP $code) sau $i lần thử"; exit 0
+              fi
+              echo "Lần $i chưa lên (HTTP $code)"; sleep 5
+            done
+            echo "::error::App không phản hồi sau 60s"
+            journalctl -u ${{ env.SERVICE }} -n 60 --no-pager
+            exit 1
+          REMOTE
 
-      # Chỉ rollback file. Migration đã apply thì KHÔNG tự revert:
+      # Chỉ rollback symlink. Migration đã apply thì KHÔNG tự revert:
       # EF down-migration có thể mất dữ liệu nên phải xử lý tay.
       - name: Rollback on failure
-        if: failure() && env.ROLLBACK_PATH != ''
+        if: failure() && env.PREV_RELEASE != ''
         run: |
-          Write-Warning "Deploy that bai — dang rollback ve $env:ROLLBACK_PATH"
-          Get-NetTCPConnection -LocalPort ${{ env.APP_PORT }} -State Listen -ErrorAction SilentlyContinue |
-            Select-Object -ExpandProperty OwningProcess -Unique |
-            ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
-          Start-Sleep -Seconds 3
-          robocopy "$env:ROLLBACK_PATH" "$env:DEPLOY_PATH" /MIR /NFL /NDL /NJH /NP /R:3 /W:5
-          if ($LASTEXITCODE -ge 8) { throw "Rollback that bai, exit code $LASTEXITCODE" }
-          $global:LASTEXITCODE = 0
-          schtasks /run /tn "${{ env.TASK_NAME }}"
-          Write-Warning "Da rollback file. Neu buoc migration da chay thi phai kiem tra schema bang tay."
+          echo "::warning::Deploy fail - rollback về $PREV_RELEASE"
+          ssh deploy-target bash -euo pipefail <<REMOTE
+            ln -sfn '$PREV_RELEASE' '$DEPLOY_ROOT/current'
+            systemctl restart ${{ env.SERVICE }}
+            sleep 3
+            systemctl is-active --quiet ${{ env.SERVICE }} && echo "Đã rollback"
+          REMOTE
+          echo "::warning::Đã rollback file. Nếu migration đã chạy thì phải kiểm tra schema bằng tay."
 
-      - name: Cleanup staging
+      # Giữ 5 release gần nhất để rollback, xoá cũ hơn.
+      - name: Prune old releases
         if: always()
-        run: Remove-Item "$env:STAGE_PATH" -Recurse -Force -ErrorAction SilentlyContinue
+        run: |
+          ssh deploy-target bash -euo pipefail <<REMOTE
+            cd '$DEPLOY_ROOT/releases' || exit 0
+            keep=\$(readlink -f '$DEPLOY_ROOT/current' | xargs -r basename)
+            ls -1dt */ 2>/dev/null | tail -n +6 | tr -d '/' | while read -r d; do
+              [ "\$d" = "\$keep" ] && continue
+              rm -rf -- "\$d" && echo "Đã xoá release cũ \$d"
+            done
+          REMOTE
 
-# ---------------------------------------------------------------------------
-# Deploy nơi khác thì thay job trên:
-#   - Azure App Service : azure/webapps-deploy@v3 + secret AZURE_WEBAPP_PUBLISH_PROFILE,
-#                         runs-on: ubuntu-latest, publish không cần -r win-x64.
-#   - Linux qua SSH     : appleboy/scp-action rồi systemctl restart newscms.service.
-#   - Docker            : docker/build-push-action đẩy image lên ghcr.io.
-# ---------------------------------------------------------------------------
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
