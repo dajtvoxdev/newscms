@@ -1,0 +1,27 @@
+<Project>
+
+  <!--
+    theme.json ở gốc mỗi Razor Class Library là metadata mô tả theme (name,
+    displayName, screenshot, supports). Không có code nào đọc file này lúc
+    runtime - theme được discover qua IThemeModule/DI, không qua manifest.
+
+    SDK Razor tự gom *.json vào Content, mà Content của RCL thì chảy sang
+    publish output của project tham chiếu nó. NewsCMS.Web tham chiếu 4 theme
+    nên cả 4 theme.json cùng publish ra relative path "theme.json":
+
+      error NETSDK1152: Found multiple publish output files with the same
+      relative path: .../NewsCMS.Theme.HaiLuuNguoc/theme.json, ...
+
+    Lỗi chỉ xuất hiện khi `dotnet publish` (build thường không copy Content
+    nên không thấy), tức là chỉ vỡ trên CI/CD.
+
+    Đặt ở Directory.Build.targets (import SAU khi SDK đã glob default items)
+    thay vì sửa từng csproj: theme thêm về sau tự động không tái phát lỗi.
+    Vẫn khai báo None để file còn hiện trong Solution Explorer.
+  -->
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\theme.json')">
+    <Content Remove="theme.json" />
+    <None Include="theme.json" />
+  </ItemGroup>
+
+</Project>

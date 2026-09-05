@@ -30,8 +30,8 @@ on:
 
 env:
   DOTNET_VERSION: '8.0.x'
-  SOLUTION: NewsCMS.Core/NewsCMS.Core.sln
   WEB_PROJECT: NewsCMS.Core/src/NewsCMS.Web/NewsCMS.Web.csproj
+  RID: linux-x64
   APP_PORT: '5000'
   SERVICE: newscms
   DOTNET_NOLOGO: true
@@ -68,11 +68,24 @@ jobs:
           echo "DEPLOY_ROOT=${{ vars.DEPLOY_ROOT || '/var/www/newscms' }}" >> "$GITHUB_ENV"
           echo "RELEASE=${GITHUB_SHA}"                                 >> "$GITHUB_ENV"
 
+      # Restore/build ở mức PROJECT kèm RID, không phải mức solution. Hai cách
+      # kia đều fail:
+      #   - `dotnet build <sln> -r linux-x64`        -> NETSDK1134 (sln không nhận RID)
+      #   - restore/build không RID rồi publish --no-build -r linux-x64
+      #                                              -> NETSDK1047 (assets thiếu
+      #                                                 target net8.0/linux-x64)
+      # Build riêng NewsCMS.Web vẫn kéo theo toàn bộ ProjectReference (5 theme,
+      # Infrastructure, Application, Domain, Shared). Test không build ở đây -
+      # đó là việc của ci.yml.
       - name: Restore
-        run: dotnet restore ${{ env.SOLUTION }}
+        run: dotnet restore ${{ env.WEB_PROJECT }} -r ${{ env.RID }}
 
       - name: Build
-        run: dotnet build ${{ env.SOLUTION }} --configuration Release --no-restore
+        run: >
+          dotnet build ${{ env.WEB_PROJECT }}
+          --configuration Release
+          -r ${{ env.RID }}
+          --no-restore
 
       # linux-x64 framework-dependent: VPS đã có aspnetcore-runtime-8.0.
       - name: Publish
@@ -80,7 +93,7 @@ jobs:
           dotnet publish ${{ env.WEB_PROJECT }}
           --configuration Release
           --no-build
-          -r linux-x64
+          -r ${{ env.RID }}
           --self-contained false
           -o publish
 
@@ -99,7 +112,7 @@ jobs:
           --startup-project src/NewsCMS.Web
           --configuration Release
           --no-build
-          --target-runtime linux-x64
+          --target-runtime ${{ env.RID }}
           --output ${{ github.workspace }}/publish/efbundle
           --force
 
