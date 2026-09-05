@@ -101,32 +101,33 @@ jobs:
           echo "RELEASE=$sha"                                             >> "$GITHUB_ENV"
           echo "Sẽ deploy commit $sha (trigger: ${{ github.event_name }})"
 
-      # Restore/build ở mức PROJECT kèm RID, không phải mức solution. Hai cách
-      # kia đều fail:
-      #   - `dotnet build <sln> -r linux-x64`        -> NETSDK1134 (sln không nhận RID)
-      #   - restore/build không RID rồi publish --no-build -r linux-x64
-      #                                              -> NETSDK1047 (assets thiếu
-      #                                                 target net8.0/linux-x64)
-      # Build riêng NewsCMS.Web vẫn kéo theo toàn bộ ProjectReference (5 theme,
-      # Infrastructure, Application, Domain, Shared). Test không build ở đây -
-      # đó là việc của ci.yml.
+      # Publish PORTABLE, cố ý KHÔNG truyền -r linux-x64.
+      #
+      # Systemd chạy app bằng `/usr/bin/dotnet .../NewsCMS.Web.dll` (xem
+      # provision-vps.sh) nên apphost native của RID build không được dùng tới.
+      # Ngược lại, build kèm RID đẩy output sang bin/Release/net8.0/linux-x64/
+      # trong khi `dotnet ef migrations bundle --no-build` lại tìm deps.json ở
+      # bin/Release/net8.0/ -> "The specified deps.json does not exist", exit 129.
+      # Bỏ RID thì mọi bước dùng chung một output, chỉ build một lần.
+      #
+      # Ở mức PROJECT chứ không phải solution: build riêng NewsCMS.Web vẫn kéo
+      # theo toàn bộ ProjectReference (5 theme, Infrastructure, Application,
+      # Domain, Shared). Test không build ở đây - đó là việc của ci.yml.
       - name: Restore
-        run: dotnet restore ${{ env.WEB_PROJECT }} -r ${{ env.RID }}
+        run: dotnet restore ${{ env.WEB_PROJECT }}
 
       - name: Build
         run: >
           dotnet build ${{ env.WEB_PROJECT }}
           --configuration Release
-          -r ${{ env.RID }}
           --no-restore
 
-      # linux-x64 framework-dependent: VPS đã có aspnetcore-runtime-8.0.
+      # Framework-dependent: VPS đã có aspnetcore-runtime-8.0.
       - name: Publish
         run: >
           dotnet publish ${{ env.WEB_PROJECT }}
           --configuration Release
           --no-build
-          -r ${{ env.RID }}
           --self-contained false
           -o publish
 
