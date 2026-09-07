@@ -118,6 +118,8 @@
     <script src="~/lib/codemirror/addon/edit/closebrackets.min.js" asp-append-version="true"></script>
     <script src="~/js/admin/nc-realm-bridge.js" asp-append-version="true"></script>
     <script src="~/js/admin/nc-css-inspector.js" asp-append-version="true"></script>
+    <!-- Beautify khi mở / minify khi lưu cho mọi editor code (csso/terser/js-beautify nạp lười). -->
+    <script src="~/js/admin/nc-code-format.js" asp-append-version="true"></script>
     <script src="~/js/admin/nc-builder-extensions.js" asp-append-version="true"></script>
     <!-- Hạ tầng canvas dùng chung với màn sửa trang: hydrate preview, font Google, Asset Manager. -->
     <script src="~/js/admin/nc-builder-canvas.js" asp-append-version="true"></script>
@@ -240,10 +242,21 @@
 
             // ── Lưu ──────────────────────────────────────────────────────────
             var dirty = false;
+            // Mốc dirty count của GrapesJS tại lần nạp/lần lưu gần nhất: chỉ thay đổi VƯỢT mốc
+            // này mới tính là chỉnh sửa thật (GrapesJS tự phát vài tick sau load lẫn sau lưu).
+            var dirtyBaseline = 0;
             function markDirty() {
                 dirty = true;
                 setStatus('saving', 'Có thay đổi chưa lưu');
             }
+
+            // Hỏi lại trước khi rời trang CHỈ khi thật sự còn thay đổi chưa lưu (dirty về false
+            // ngay khi saveShell thành công). Thay cho noticeOnUnload của GrapesJS — xem trên.
+            window.addEventListener('beforeunload', function (e) {
+                if (!dirty) return;
+                e.preventDefault();
+                e.returnValue = '';
+            });
 
             /** Số phần tử data-nc-body trong HTML sắp lưu. 1 là đúng; 0 làm hỏng mọi trang. */
             function markerCount(html) {
@@ -302,6 +315,7 @@
                         return false;
                     }
                     dirty = false;
+                    dirtyBaseline = editor.getDirtyCount();
                     setStatus('saved', 'Đã lưu — áp ngay cho các trang dùng shell này');
                     return true;
                 } catch (e) {
@@ -317,7 +331,10 @@
                 width: 'auto',
                 fromElement: false,
                 showOffsets: true,
-                noticeOnUnload: true,
+                // Tắt notice mặc định của GrapesJS: nó báo rời trang dựa trên dirty count nội bộ,
+                // mà count này KHÔNG về 0 khi ta lưu qua API riêng → lưu xong vẫn bị hỏi lại.
+                // Cảnh báo rời trang do ta tự gắn bên dưới, chỉ khi còn thay đổi chưa lưu.
+                noticeOnUnload: false,
                 storageManager: { type: 'local', autosave: false, autoload: false },
 
                 assetManager: {
@@ -470,9 +487,9 @@
                     // gán type, thêm block vùng nội dung…) nên phải chờ hết microtask VÀ lấy mốc
                     // dirty count hiện tại — thiếu bước này trang vừa mở đã báo "chưa lưu".
                     setTimeout(function () {
-                        var baseline = editor.getDirtyCount();
+                        dirtyBaseline = editor.getDirtyCount();
                         editor.on('change:changesCount', function () {
-                            if (!dirty && editor.getDirtyCount() > baseline) markDirty();
+                            if (!dirty && editor.getDirtyCount() > dirtyBaseline) markDirty();
                         });
                     }, 0);
                 });

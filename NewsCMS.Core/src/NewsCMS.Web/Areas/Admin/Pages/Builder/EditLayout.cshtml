@@ -65,7 +65,22 @@
     </div>
 </form>
 
+@section Head {
+    <link rel="stylesheet" href="~/lib/codemirror/codemirror.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/codemirror/theme/material-darker.min.css" asp-append-version="true" />
+}
+
 @section Scripts {
+<script src="~/lib/codemirror/codemirror.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/mode/css/css.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/mode/xml/xml.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/mode/javascript/javascript.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/mode/htmlmixed/htmlmixed.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/addon/edit/matchbrackets.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/addon/edit/closebrackets.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/addon/display/autorefresh.min.js" asp-append-version="true"></script>
+<script src="~/js/admin/nc-code-format.js" asp-append-version="true"></script>
+<script src="~/js/admin/nc-code-editor.js" asp-append-version="true"></script>
 <script>
 (function() {
     var TOKEN = document.querySelector('input[name="__RequestVerificationToken"]').value;
@@ -86,6 +101,8 @@
     // HTML lúc nạp — so sánh để biết người dùng có sửa tay hay không. Không sửa thì gửi null
     // (service hiểu là "giữ nguyên") để không đụng tới thành quả của trình thiết kế trực quan.
     var loadedHtml = '';
+    var loadedOk = false;
+    var edHtml = null, edCss = null, edJs = null;
 
     async function load() {
         var res = await fetch('/admin/api/builder/layouts/' + ID, { headers: headers(false), credentials: 'include' });
@@ -96,21 +113,39 @@
         document.getElementById('l-name').value = l.name || '';
         document.getElementById('l-kind').value = l.kind || 'Shell';
         document.getElementById('l-default').checked = !!l.isDefault;
-        loadedHtml = l.compiledHtml || '';
-        document.getElementById('l-html').value = loadedHtml;
         // CustomCss, KHÔNG phải CompiledCss: CompiledCss là output Tailwind của trình thiết kế,
         // hiện ra đây thì người dùng sẽ sửa vào một file sinh tự động rồi mất khi compile lại.
-        document.getElementById('l-css').value = l.customCss || '';
+        var taHtml = document.getElementById('l-html');
+        var taCss = document.getElementById('l-css');
+        var taJs = document.getElementById('l-js');
+        taHtml.value = l.compiledHtml || '';
+        taCss.value = l.customCss || '';
         if (CAN_JS) {
             document.getElementById('js-wrap').classList.remove('hidden');
-            document.getElementById('l-js').value = l.customJs || '';
+            taJs.value = l.customJs || '';
         }
+        // Code editor + beautify khi mở. Gắn ở đây (sau khi textarea đã có giá trị) thay vì
+        // lúc tải trang để đường thoái hoá (CodeMirror chưa nạp) vẫn hiển thị đúng.
+        if (!edHtml) edHtml = ncCodeEditor.attach(taHtml, 'html');
+        // loadedHtml lấy bản ĐANG HIỂN THỊ (đã beautify): so "người dùng có sửa không" phải so
+        // với những gì họ thấy, không so bản raw trong DB — kẻo mở ra xem không cũng bị tính là sửa.
+        loadedHtml = await ncCodeEditor.fillBeautified(edHtml, taHtml.value, 'html');
+        if (!edCss) edCss = ncCodeEditor.attach(taCss, 'css');
+        ncCodeEditor.fillBeautified(edCss, taCss.value, 'css');
+        if (CAN_JS) {
+            if (!edJs) edJs = ncCodeEditor.attach(taJs, 'js');
+            ncCodeEditor.fillBeautified(edJs, taJs.value, 'js');
+        }
+        loadedOk = true;
     }
 
     document.getElementById('btn-save-layout').addEventListener('click', async function() {
         showError('');
+        // Load thất bại mà vẫn cho lưu thì payload rỗng sẽ xoá trắng customCss của layout.
+        if (!loadedOk) { showError('Chưa tải được layout — không lưu để tránh ghi đè dữ liệu hiện có.'); return; }
         var kind = document.getElementById('l-kind').value;
-        var html = document.getElementById('l-html').value;
+        // Minify khi lưu (nếu người dùng đang bật); HTML không nén — xem nc-code-format.js.
+        var html = ncCodeEditor.syncForSave(edHtml, 'html', 'HTML', document.getElementById('l-html'));
         var htmlChanged = html !== loadedHtml;
 
         if (kind === 'Shell' && htmlChanged && html.indexOf('data-nc-body') < 0) {
@@ -127,8 +162,8 @@
             builderJson: htmlChanged ? '' : null,
             compiledHtml: htmlChanged ? html : null,
             compiledCss: null,  // sản phẩm compile của trình thiết kế — không đụng tới từ đây
-            customCss: document.getElementById('l-css').value,
-            customJs: CAN_JS ? document.getElementById('l-js').value : null,
+            customCss: ncCodeEditor.syncForSave(edCss, 'css', 'CSS', document.getElementById('l-css')),
+            customJs: CAN_JS ? ncCodeEditor.syncForSave(edJs, 'js', 'JavaScript', document.getElementById('l-js')) : null,
             isDefault: document.getElementById('l-default').checked
         };
         var res = await fetch('/admin/api/builder/layouts/' + ID, {
@@ -137,7 +172,11 @@
         });
         if (res.ok) {
             var saved = await res.json().catch(function(){return null});
-            if (saved) { loadedHtml = saved.compiledHtml || ''; document.getElementById('l-html').value = loadedHtml; }
+            if (saved) {
+                var ta = document.getElementById('l-html');
+                ta.value = saved.compiledHtml || '';
+                loadedHtml = await ncCodeEditor.fillBeautified(edHtml, ta.value, 'html');
+            }
             window.toast?.success('Đã lưu layout!');
         }
         else { var err = await res.json().catch(function(){return {error:'Lỗi'}}); showError(err.error || 'Lưu thất bại'); }

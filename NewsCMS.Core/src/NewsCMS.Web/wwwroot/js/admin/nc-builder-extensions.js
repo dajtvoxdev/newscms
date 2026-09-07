@@ -60,6 +60,19 @@
     if (OPTS.onChange) OPTS.onChange();
   }
 
+  // ── Beautify/minify (nc-code-format.js) ────────────────────────────────────
+  // Beautify bản đồng bộ: lib chưa nạp thì trả nguyên văn — editor và css-inspector
+  // gọi CÙNG hàm này nên số dòng jump-to-line không bao giờ lệch nhau.
+  function fmtBeautify(text, lang) {
+    var src = text == null ? '' : String(text);
+    return global.ncCodeFormat ? global.ncCodeFormat.beautify(src, lang) : src;
+  }
+  /** Minify khi lưu nếu người dùng đang bật; không bao giờ throw (lỗi parse giữ nguyên văn). */
+  function fmtForSave(text, lang, label) {
+    var src = text == null ? '' : String(text);
+    return global.ncCodeFormat ? global.ncCodeFormat.forSave(src, lang, label) : src;
+  }
+
   /**
    * Gọi API preview để lấy HTML thật của block theo props hiện tại.
    * Trả { html, matchedCount } — matchedCount là số bản ghi KHỚP bộ lọc (bỏ qua giới hạn hiển thị),
@@ -1330,8 +1343,28 @@
     }
 
     var attrs = comp.getAttributes() || {};
-    blockCode.editors.bcss.setValue(attrs[BCSS_ATTR] || '');
-    if (blockCode.editors.bjs) blockCode.editors.bjs.setValue(attrs[BJS_ATTR] || '');
+    // Beautify khi mở. Bản đồng bộ trả nguyên văn nếu lib chưa nạp xong — inspector
+    // (collectCssSources) dùng đúng hàm đó nên số dòng không lệch giữa hai bên.
+    var rawCss = attrs[BCSS_ATTR] || '';
+    var rawJs = attrs[BJS_ATTR] || '';
+    var shownCss = fmtBeautify(rawCss, 'blockcss');
+    var shownJs = fmtBeautify(rawJs, 'js');
+    blockCode.editors.bcss.setValue(shownCss);
+    if (blockCode.editors.bjs) blockCode.editors.bjs.setValue(shownJs);
+    // Lib chưa nạp kịp thì format lại khi xong — chỉ khi người dùng chưa gõ đè lên.
+    if (global.ncCodeFormat) {
+      global.ncCodeFormat.ensure(['blockcss', 'js']).then(function () {
+        var f = global.ncCodeFormat;
+        var bCss = f.beautify(rawCss, 'blockcss');
+        var bJs = f.beautify(rawJs, 'js');
+        if (blockCode.editors.bcss && blockCode.editors.bcss.getValue() === shownCss) {
+          blockCode.editors.bcss.setValue(bCss);
+        }
+        if (blockCode.editors.bjs && blockCode.editors.bjs.getValue() === shownJs) {
+          blockCode.editors.bjs.setValue(bJs);
+        }
+      });
+    }
 
     var name = comp.getName ? comp.getName() : (comp.get('name') || comp.get('tagName'));
     modal.querySelector('#nc-bc-name').textContent = '— ' + (name || 'khối');
@@ -1356,10 +1389,11 @@
     if (!comp) { closeBlockCodeModal(); return; }
 
     var attrs = Object.assign({}, comp.getAttributes() || {});
-    var css = (blockCode.editors.bcss ? blockCode.editors.bcss.getValue() : '').trim();
+    var css = fmtForSave((blockCode.editors.bcss ? blockCode.editors.bcss.getValue() : '').trim(),
+                         'blockcss', 'CSS khối');
     // Không có quyền sửa JS thì giữ nguyên JS cũ, đừng xoá của người khác.
     var js = blockCode.editors.bjs
-      ? blockCode.editors.bjs.getValue().trim()
+      ? fmtForSave(blockCode.editors.bjs.getValue().trim(), 'js', 'JS khối')
       : (attrs[BJS_ATTR] || '');
 
     if (css) attrs[BCSS_ATTR] = css; else delete attrs[BCSS_ATTR];
@@ -1471,7 +1505,9 @@
           label: 'CSS của khối ' + blockShortName(c),
           editable: true,
           order: ORDER.block + i,
-          text: css,
+          // Bản beautify giống hệt editor khối đang hiển thị — nếu không, số dòng của
+          // css-inspector tính trên bản minify trong DB còn con trỏ nhảy vào bản đã format.
+          text: fmtBeautify(css, 'blockcss'),
           meta: { comp: c, sid: sid },
           // Văn bản nguồn viết `.title`, trong canvas là `[data-nc-sid="x"] .title` — phải scope
           // trước khi thử khớp, nhưng vẫn hiện selector gốc cho người dùng.
@@ -1800,7 +1836,7 @@
   // Trước đây muốn sửa CSS site phải rời builder sang trang Layouts → tab Custom Code, tự dò
   // selector, rồi quay lại xem kết quả. Có css-inspector chỉ đúng dòng rồi thì nút "Sửa" phải mở
   // được editor ngay tại chỗ, nếu không thì vẫn là đi mò.
-  var siteCssState = { loaded: false, loading: null, saved: '', dto: null };
+  var siteCssState = { loaded: false, loading: null, saved: '', shown: '', dto: null };
 
   /** Nạp CSS site một lần cho mỗi phiên builder. Trả promise để nút "Sửa" đợi trước khi nhảy dòng. */
   function loadSiteCss() {
@@ -1817,7 +1853,20 @@
       siteCssState.dto = dto || {};
       siteCssState.saved = siteCssState.dto.customCss || '';
       siteCssState.loaded = true;
-      cmSet('sitecss', siteCssState.saved);
+      // Editor + inspector thấy bản beautify; saved giữ bản server để so dirty khi lưu.
+      siteCssState.shown = fmtBeautify(siteCssState.saved, 'css');
+      cmSet('sitecss', siteCssState.shown);
+      OPTS.siteCss = siteCssState.shown;
+      if (global.ncCodeFormat) {
+        global.ncCodeFormat.ensure(['css']).then(function () {
+          var ed = codeState.editors.sitecss;
+          if (ed && ed.getValue() === siteCssState.shown) {
+            siteCssState.shown = global.ncCodeFormat.beautify(siteCssState.saved, 'css');
+            cmSet('sitecss', siteCssState.shown);
+            OPTS.siteCss = siteCssState.shown;
+          }
+        });
+      }
       return siteCssState.saved;
     }).catch(function () {
       // Không nạp được thì để editor trống nhưng KHÔNG đánh dấu loaded — nếu người dùng bấm Áp
@@ -1835,22 +1884,24 @@
   function saveSiteCssIfDirty(editor) {
     if (!siteCssState.loaded || !codeState.editors.sitecss) return;
     var next = codeState.editors.sitecss.getValue();
-    if (next === siteCssState.saved) return;
+    if (next === siteCssState.shown) return;
 
     var dto = siteCssState.dto || {};
+    var out = fmtForSave(next, 'css', 'CSS site');
     fetch('/admin/api/builder/site-code', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': OPTS.token },
       credentials: 'include',
       body: JSON.stringify({
-        customCss: next,
+        customCss: out,
         customJs: dto.customJs || '',
         headHtml: dto.headHtml || '',
         bodyEndHtml: dto.bodyEndHtml || ''
       })
     }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      siteCssState.saved = next;
+      siteCssState.saved = out;
+      siteCssState.shown = next;
       OPTS.siteCss = next;
       applySiteCssPreview(editor, next);
     }).catch(function () {
@@ -1904,8 +1955,25 @@
         matchBrackets: true, autoCloseBrackets: true, lineWrapping: true
       });
     }
-    cmSet('css', codeState.css);
-    if (opts.hasCodeScope) cmSet('js', codeState.js);
+    // Beautify khi mở: DB có thể đang giữ bản minify một dòng. cmSet ghi cùng giá trị vào
+    // codeState để số dòng của css-inspector khớp đúng bản editor hiển thị.
+    var shownCss = fmtBeautify(codeState.css, 'css');
+    var shownJs = fmtBeautify(codeState.js, 'js');
+    cmSet('css', shownCss);
+    if (opts.hasCodeScope) cmSet('js', shownJs);
+    // Beautify đồng bộ trả nguyên văn nếu lib chưa nạp xong — format lại khi xong,
+    // chỉ khi người dùng chưa gõ đè lên nội dung vừa hiện.
+    if (global.ncCodeFormat) {
+      global.ncCodeFormat.ensure(['css', 'js']).then(function () {
+        var f = global.ncCodeFormat;
+        if (codeState.editors.css && codeState.editors.css.getValue() === shownCss) {
+          cmSet('css', f.beautify(shownCss, 'css'));
+        }
+        if (opts.hasCodeScope && codeState.editors.js && codeState.editors.js.getValue() === shownJs) {
+          cmSet('js', f.beautify(shownJs, 'js'));
+        }
+      });
+    }
     setTimeout(function () {
       ['css', 'js', 'sitecss'].forEach(function (k) { codeState.editors[k] && codeState.editors[k].refresh(); });
     }, 40);
@@ -2090,6 +2158,10 @@
   function register(editor, opts) {
     OPTS = Object.assign(OPTS, opts || {});
     OPTS.hasCodeScope = !!OPTS.hasCodeScope;
+    // Nạp lib beautify/minify sớm để lần mở modal đầu tiên đã beautify đồng bộ được.
+    if (global.ncCodeFormat) global.ncCodeFormat.ensure(['css', 'js', 'blockcss']);
+    // OPTS.siteCss nuôi số dòng của css-inspector — phải là bản beautify giống editor thấy.
+    OPTS.siteCss = fmtBeautify(OPTS.siteCss, 'css');
 
     // Trait types trước component types: buildPropTraits tham chiếu tên type, TraitManager phải
     // biết chúng trước khi một khối được chọn lần đầu.
@@ -2141,8 +2213,15 @@
 
   global.ncBuilder = {
     register: register,
-    /** Được Edit.cshtml gọi trước khi PUT: trả { customCss, customJs } hiện hành. */
-    getCode: function () { return { customCss: codeState.css || '', customJs: codeState.js || '' }; },
+    /** Được Edit.cshtml gọi trước khi PUT: trả { customCss, customJs } hiện hành.
+        Minify tại đây (= lúc lưu); codeState vẫn giữ bản beautify khớp editor để
+        css-inspector báo dòng đúng. */
+    getCode: function () {
+      return {
+        customCss: fmtForSave(codeState.css || '', 'css', 'CSS trang'),
+        customJs: fmtForSave(codeState.js || '', 'js', 'JS trang')
+      };
+    },
     /** Edit.cshtml gọi sau khi load project: khởi tạo trạng thái code từ DB. */
     setCode: function (customCss, customJs) {
       codeState.css = customCss || '';

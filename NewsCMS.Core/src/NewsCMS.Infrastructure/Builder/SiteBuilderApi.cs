@@ -9,6 +9,7 @@ using NewsCMS.Domain.Entities.Site;
 using NewsCMS.Domain.Enums;
 using NewsCMS.Infrastructure.Content;
 using NewsCMS.Infrastructure.Persistence;
+using NewsCMS.Infrastructure.Site;
 
 namespace NewsCMS.Infrastructure.Builder;
 
@@ -35,6 +36,7 @@ public sealed partial class SiteBuilderApi : ISiteBuilderApi
     private readonly ISeoMetaService _seoMeta;
     private readonly IPageRenderer _renderer;
     private readonly IDynamicBlockRegistry _blockRegistry;
+    private readonly SiteCacheSignal _signal;
 
     public SiteBuilderApi(
         AppDbContext db,
@@ -47,7 +49,8 @@ public sealed partial class SiteBuilderApi : ISiteBuilderApi
         ISiteCustomCodeService customCode,
         ISeoMetaService seoMeta,
         IPageRenderer renderer,
-        IDynamicBlockRegistry blockRegistry)
+        IDynamicBlockRegistry blockRegistry,
+        SiteCacheSignal signal)
     {
         _db = db;
         _currentSite = currentSite;
@@ -60,6 +63,7 @@ public sealed partial class SiteBuilderApi : ISiteBuilderApi
         _seoMeta = seoMeta;
         _renderer = renderer;
         _blockRegistry = blockRegistry;
+        _signal = signal;
     }
 
     // ── Schema + summary ────────────────────────────────────────────────────────
@@ -877,6 +881,26 @@ public sealed partial class SiteBuilderApi : ISiteBuilderApi
 
         await ApplyDesignTokensAsync(_currentSite.SiteId, tokens, ct);
         await _db.SaveChangesAsync(ct);
+        // CSS token được DesignTokenCssBuilder cache theo SiteCacheSignal — không invalidate thì
+        // màu vừa lưu vẫn không đổi trên trang public tới khi cache bị drop vì lý do khác.
+        _signal.Invalidate();
+        return Result.Success();
+    }
+
+    public async Task<Result> DeleteDesignTokenAsync(string group, string key, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return Result.Failure("Thiếu key token cần xoá.");
+
+        var g = ParseEnum(group, DesignTokenGroup.Color);
+        // SiteDesignTokens ít bản ghi nên nạp cả rồi khớp OrdinalIgnoreCase giống
+        // ApplyDesignTokensAsync, không phụ thuộc collation của DB.
+        var token = (await _db.SiteDesignTokens.ToListAsync(ct))
+            .FirstOrDefault(t => t.Group == g && t.Key.Equals(key.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (token is null) return Result.Failure($"Không tìm thấy token {group}/{key}.");
+
+        _db.SiteDesignTokens.Remove(token);
+        await _db.SaveChangesAsync(ct);
+        _signal.Invalidate();
         return Result.Success();
     }
 

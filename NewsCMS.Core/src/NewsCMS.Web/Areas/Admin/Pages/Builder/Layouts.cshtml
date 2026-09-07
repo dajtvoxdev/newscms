@@ -24,6 +24,7 @@
 <div class="mb-6 flex gap-1 rounded-xl bg-slate-100 p-1" id="tabs">
     <button class="tab-btn active flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all" data-tab="layouts">@AdminIcon.Svg("layout-template") Layouts</button>
     <button class="tab-btn flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all" data-tab="site-code">@AdminIcon.Svg("code") Custom Code (Site)</button>
+    <button class="tab-btn flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all" data-tab="design-tokens">@AdminIcon.Svg("palette") Design Tokens</button>
 </div>
 
 <!-- Tab: Layouts -->
@@ -102,7 +103,41 @@
     </form>
 </div>
 
+<!-- Tab: Design Tokens -->
+<div id="tab-design-tokens" class="tab-content hidden">
+    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p class="text-sm font-semibold text-slate-900">Design tokens của site</p>
+        <p class="mt-1 text-xs text-slate-500">
+            Mỗi token sinh ra một CSS variable và một biến trong khối <code class="font-mono">@@theme</code> của
+            Tailwind — đổi ở đây là đổi toàn site, cả <code class="font-mono">var(--color-brand-500)</code> lẫn
+            utility <code class="font-mono">bg-brand-500</code>. Lưu là áp dụng ngay cho mọi trang, không cần xuất bản.
+        </p>
+        <div id="dt-groups" class="mt-5 space-y-6">
+            <p class="text-sm text-slate-400">Đang tải…</p>
+        </div>
+        <div class="mt-5 flex items-center gap-3">
+            <button type="button" id="dt-save" class="admin-btn-primary inline-flex items-center gap-1.5">@AdminIcon.Svg("save") Lưu Design Tokens</button>
+            <span class="text-xs text-slate-500">Token gỡ khỏi bảng sẽ bị xoá thật khi bấm Lưu.</span>
+        </div>
+    </div>
+</div>
+
+@section Head {
+    <link rel="stylesheet" href="~/lib/codemirror/codemirror.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/codemirror/theme/material-darker.min.css" asp-append-version="true" />
+}
+
 @section Scripts {
+<script src="~/lib/codemirror/codemirror.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/mode/css/css.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/mode/xml/xml.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/mode/javascript/javascript.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/mode/htmlmixed/htmlmixed.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/addon/edit/matchbrackets.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/addon/edit/closebrackets.min.js" asp-append-version="true"></script>
+<script src="~/lib/codemirror/addon/display/autorefresh.min.js" asp-append-version="true"></script>
+<script src="~/js/admin/nc-code-format.js" asp-append-version="true"></script>
+<script src="~/js/admin/nc-code-editor.js" asp-append-version="true"></script>
 <script>
 (function() {
     var TOKEN = document.querySelector('input[name="__RequestVerificationToken"]').value;
@@ -122,6 +157,7 @@
             document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.add('hidden'); });
             document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
             if (btn.dataset.tab === 'site-code') loadSiteCode();
+            if (btn.dataset.tab === 'design-tokens') loadTokens();
         });
     });
 
@@ -189,26 +225,45 @@
 
     // ── Load site custom code ─────────────────────────────────────────────
     var siteCodeLoaded = false;
+    // Editor gắn lười tại đây thay vì lúc tải trang: tab này bắt đầu ẩn (display:none),
+    // CodeMirror khởi tạo khi ẩn đo sai kích thước; autoRefresh lo phần còn lại khi tab hiện.
+    var scEd = { css: null, js: null, head: null, bodyend: null };
     async function loadSiteCode() {
         if (siteCodeLoaded) return;
         var res = await fetch('/admin/api/builder/site-code', { headers: headers(false), credentials: 'include' });
         if (!res.ok) return;
         var d = await res.json();
-        document.getElementById('sc-css').value = d.customCss || '';
-        document.getElementById('sc-js').value = d.customJs || '';
-        document.getElementById('sc-head').value = d.headHtml || '';
-        document.getElementById('sc-bodyend').value = d.bodyEndHtml || '';
+        var taCss = document.getElementById('sc-css');
+        var taJs = document.getElementById('sc-js');
+        var taHead = document.getElementById('sc-head');
+        var taBody = document.getElementById('sc-bodyend');
+        taCss.value = d.customCss || '';
+        taJs.value = d.customJs || '';
+        taHead.value = d.headHtml || '';
+        taBody.value = d.bodyEndHtml || '';
+        // Beautify khi mở — DB đang giữ bản minify một dòng, mở ra phải đọc được ngay.
+        if (!scEd.css) scEd.css = ncCodeEditor.attach(taCss, 'css');
+        ncCodeEditor.fillBeautified(scEd.css, taCss.value, 'css');
+        if (!scEd.js) scEd.js = ncCodeEditor.attach(taJs, 'js');
+        ncCodeEditor.fillBeautified(scEd.js, taJs.value, 'js');
+        if (!scEd.head) scEd.head = ncCodeEditor.attach(taHead, 'html');
+        ncCodeEditor.fillBeautified(scEd.head, taHead.value, 'html');
+        if (!scEd.bodyend) scEd.bodyend = ncCodeEditor.attach(taBody, 'html');
+        ncCodeEditor.fillBeautified(scEd.bodyend, taBody.value, 'html');
         siteCodeLoaded = true;
     }
 
     // ── Save site custom code ─────────────────────────────────────────────
     document.getElementById('site-code-form').addEventListener('submit', async function(e) {
         e.preventDefault();
+        // Load thất bại mà vẫn PUT thì 4 chuỗi rỗng sẽ xoá sạch code đang chạy của site.
+        if (!siteCodeLoaded) { window.toast?.error('Chưa tải được custom code — không lưu để tránh xoá trắng.'); return; }
+        // Minify khi lưu (nếu đang bật); HTML giữ nguyên — xem nc-code-format.js.
         var payload = {
-            customCss: document.getElementById('sc-css').value,
-            customJs: document.getElementById('sc-js').value,
-            headHtml: document.getElementById('sc-head').value,
-            bodyEndHtml: document.getElementById('sc-bodyend').value
+            customCss: ncCodeEditor.syncForSave(scEd.css, 'css', 'CSS', document.getElementById('sc-css')),
+            customJs: ncCodeEditor.syncForSave(scEd.js, 'js', 'JavaScript', document.getElementById('sc-js')),
+            headHtml: ncCodeEditor.syncForSave(scEd.head, 'html', 'Head HTML', document.getElementById('sc-head')),
+            bodyEndHtml: ncCodeEditor.syncForSave(scEd.bodyend, 'html', 'Body End HTML', document.getElementById('sc-bodyend'))
         };
         var res = await fetch('/admin/api/builder/site-code', {
             method: 'PUT', headers: headers(true), credentials: 'include',
@@ -216,6 +271,167 @@
         });
         if (res.ok) window.toast?.success('Đã lưu custom code!');
         else { var err = await res.json().catch(function(){return {error:'Lỗi'}}); window.toast?.error(err.error || 'Lưu thất bại'); }
+    });
+
+    // ── Design tokens ─────────────────────────────────────────────────────
+    // Token là nguồn sinh CSS variables + khối @@theme Tailwind (DesignTokenCssBuilder): đổi ở đây
+    // là đổi toàn site. Server chỉ create/update theo danh sách PUT (không xoá thứ thiếu trong
+    // danh sách — tính idempotent của ApplyAsync), nên token bị gỡ khỏi bảng phải DELETE riêng.
+    var DT_GROUPS = [
+        { name: 'Color',  prefix: '--color-'  },
+        { name: 'Font',   prefix: '--font-'   },
+        { name: 'Space',  prefix: '--space-'  },
+        { name: 'Radius', prefix: '--radius-' },
+        { name: 'Shadow', prefix: '--shadow-' }
+    ];
+    var tokensLoaded = false;
+    var dtOriginal = [];
+
+    function loadTokens() {
+        if (tokensLoaded) return;
+        tokensLoaded = true;
+        fetch('/admin/api/builder/design-tokens', { headers: headers(false), credentials: 'include' })
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+            .then(function (list) { dtOriginal = list || []; renderTokens(); })
+            .catch(function () {
+                tokensLoaded = false;
+                document.getElementById('dt-groups').innerHTML =
+                    '<p class="text-sm text-red-600">Không tải được design tokens — hãy tải lại trang.</p>';
+            });
+    }
+
+    function renderTokens() {
+        var host = document.getElementById('dt-groups');
+        host.innerHTML = '';
+        DT_GROUPS.forEach(function (g) {
+            var sec = document.createElement('div');
+            sec.innerHTML =
+                '<div class="flex items-baseline gap-2">' +
+                '<p class="text-sm font-semibold text-slate-800">' + g.name + '</p>' +
+                '<code class="font-mono text-xs text-slate-400">' + g.prefix + '*</code>' +
+                '</div>' +
+                '<div class="mt-2 space-y-2" data-rows="' + g.name + '"></div>' +
+                '<button type="button" class="mt-2 text-xs font-semibold text-indigo-600 hover:underline" data-add>+ Thêm token</button>';
+            var wrap = sec.querySelector('[data-rows]');
+            dtOriginal.filter(function (t) { return t.group === g.name; })
+                .forEach(function (t) { wrap.appendChild(tokenRow(g, t.key, t.value, false)); });
+            sec.querySelector('[data-add]').addEventListener('click', function () {
+                wrap.appendChild(tokenRow(g, '', '', true));
+            });
+            host.appendChild(sec);
+        });
+    }
+
+    /** Một dòng token. Key của token có sẵn khoá lại: đổi tên = xoá dòng cũ + thêm token mới. */
+    function tokenRow(g, key, value, isNew) {
+        var row = document.createElement('div');
+        row.className = 'grid grid-cols-1 items-center gap-2 md:grid-cols-[220px_1fr_auto]';
+
+        var keyInput = document.createElement('input');
+        keyInput.className = 'admin-input font-mono text-xs';
+        keyInput.placeholder = 'brand-500';
+        keyInput.value = key || '';
+        keyInput.dataset.role = 'key';
+        if (!isNew) {
+            keyInput.readOnly = true;
+            keyInput.title = 'Key không đổi được sau khi tạo — muốn đổi tên thì xoá dòng này rồi thêm token mới.';
+        }
+
+        var valWrap = document.createElement('div');
+        valWrap.className = 'flex items-center gap-2';
+        var valInput = document.createElement('input');
+        valInput.className = 'admin-input font-mono text-xs';
+        valInput.placeholder = '#0d7c66, 14px, var(--color-brand-500)…';
+        valInput.value = value || '';
+        valInput.dataset.role = 'value';
+        valWrap.appendChild(valInput);
+
+        // Nhóm Color thêm ô chọn màu. Value gõ tay vẫn là nguồn chính; picker chỉ là lối tắt và
+        // chỉ bật khi value đúng dạng hex (#rgb hoặc #rrggbb) — token màu có thể là var()/rgb().
+        if (g.name === 'Color') {
+            var picker = document.createElement('input');
+            picker.type = 'color';
+            picker.className = 'h-9 w-10 shrink-0 cursor-pointer rounded-lg border border-slate-300 bg-white p-1';
+            picker.title = 'Chọn màu (chỉ bật khi value là mã hex)';
+            var syncPicker = function () {
+                var m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(valInput.value.trim());
+                if (!m) { picker.disabled = true; return; }
+                picker.disabled = false;
+                var h = m[1];
+                if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+                picker.value = '#' + h.toLowerCase();
+            };
+            valInput.addEventListener('input', syncPicker);
+            picker.addEventListener('input', function () { valInput.value = picker.value; });
+            syncPicker();
+            valWrap.appendChild(picker);
+        }
+
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100';
+        del.textContent = 'Xoá';
+        del.title = 'Gỡ khỏi bảng — token thật sự bị xoá khi bấm Lưu';
+        del.addEventListener('click', function () { row.remove(); });
+
+        row.appendChild(keyInput);
+        row.appendChild(valWrap);
+        row.appendChild(del);
+        return row;
+    }
+
+    document.getElementById('dt-save').addEventListener('click', async function () {
+        var payload = [];
+        var seen = {};
+        var order = {};
+        var bad = null;
+        DT_GROUPS.forEach(function (g) {
+            var wrap = document.querySelector('#dt-groups [data-rows="' + g.name + '"]');
+            if (!wrap) return;
+            order[g.name] = 0;
+            Array.prototype.forEach.call(wrap.children, function (row) {
+                var k = row.querySelector('[data-role="key"]').value.trim();
+                var v = row.querySelector('[data-role="value"]').value.trim();
+                if (!k && !v) return; // dòng mới thêm chưa điền gì — bỏ qua
+                if (!k) { bad = bad || 'Một dòng ở nhóm ' + g.name + ' chưa có key.'; return; }
+                if (!/^[a-z0-9\-]+$/.test(k)) { bad = bad || 'Key "' + k + '" chỉ gồm chữ thường, số và gạch ngang.'; return; }
+                var sk = g.name + '/' + k;
+                if (seen[sk]) { bad = bad || 'Trùng key "' + k + '" trong nhóm ' + g.name + '.'; return; }
+                seen[sk] = true;
+                payload.push({ group: g.name, key: k, value: v, sortOrder: order[g.name]++ });
+            });
+        });
+        if (bad) { window.toast?.error(bad); return; }
+
+        var btn = document.getElementById('dt-save');
+        btn.disabled = true;
+        try {
+            var kept = {};
+            payload.forEach(function (t) { kept[t.group + '/' + t.key.toLowerCase()] = true; });
+            var removed = dtOriginal.filter(function (t) { return !kept[t.group + '/' + t.key.toLowerCase()]; });
+            for (var i = 0; i < removed.length; i++) {
+                var dr = await fetch('/admin/api/builder/design-tokens?group=' + encodeURIComponent(removed[i].group) +
+                                     '&key=' + encodeURIComponent(removed[i].key),
+                                     { method: 'DELETE', headers: headers(false), credentials: 'include' });
+                if (!dr.ok) { window.toast?.error('Không xoá được token ' + removed[i].group + '/' + removed[i].key); return; }
+            }
+            if (payload.length) {
+                var res = await fetch('/admin/api/builder/design-tokens', {
+                    method: 'PUT', headers: headers(true), credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    var e = await res.json().catch(function () { return { error: 'Lỗi' }; });
+                    window.toast?.error(e.error || 'Lưu thất bại');
+                    return;
+                }
+            }
+            dtOriginal = payload;
+            renderTokens(); // khoá key của token mới tạo + xếp lại đúng thứ tự server giữ
+            window.toast?.success('Đã lưu design tokens — áp dụng cho toàn site.');
+        } finally {
+            btn.disabled = false;
+        }
     });
 
     function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }

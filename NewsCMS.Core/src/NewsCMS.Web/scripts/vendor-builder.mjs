@@ -45,6 +45,23 @@ const cmFiles = [
   ['codemirror/theme/material-darker.css', 'theme/material-darker.min.css'],
 ];
 
+// Beautify + minify cho panel Code (nc-code-format.js) → wwwroot/lib/codeformat/.
+// Tự viết bộ format là sai chỗ: minify CSS/JS đúng cần AST (regex vs phép chia, ASI, at-rule),
+// làm tay thì lỗi âm thầm phá CSS/JS đang chạy trên trang public.
+// terser nặng ~1MB nên nc-code-format.js nạp LAZY, chỉ khi thật sự bấm lưu/format.
+const fmtTarget = join(webRoot, 'wwwroot', 'lib', 'codeformat');
+const fmtFiles = [
+  // beautifier.min.js gộp cả 3 (js/css/html) và expose global `beautifier`.
+  ['js-beautify/js/lib/beautifier.min.js', 'beautifier.min.js'],
+  ['js-beautify/LICENSE', 'LICENSE-js-beautify.txt'],
+  // csso: bundle IIFE gán `var csso` ở top-level → thành window.csso khi nạp bằng <script>.
+  ['csso/dist/csso.js', 'csso.js'],
+  ['csso/LICENSE', 'LICENSE-csso.txt'],
+  // terser: UMD gán global.Terser. Có minify_sync nên không cần Promise ở chỗ lưu.
+  ['terser/dist/bundle.min.js', 'terser.min.js'],
+  ['terser/LICENSE', 'LICENSE-terser.txt'],
+];
+
 mkdirSync(target, { recursive: true });
 
 for (const [src, dest] of files) {
@@ -61,4 +78,12 @@ for (const [src, dest] of cmFiles) {
 }
 
 console.log(`\ngrapesjs ${readVersion('grapesjs')}, @tailwindcss/browser ${readVersion('@tailwindcss/browser')}, codemirror ${readVersion('codemirror')}`);
+
+mkdirSync(fmtTarget, { recursive: true });
+for (const [src, dest] of fmtFiles) {
+  copyFileSync(join(nodeModules, src), join(fmtTarget, dest));
+  console.log(`  vendored ${src} -> wwwroot/lib/codeformat/${dest}`);
+}
+
+console.log(`js-beautify ${readVersion('js-beautify')}, csso ${readVersion('csso')}, terser ${readVersion('terser')}`);
 console.log('Done. KHÔNG copy file .map để giữ wwwroot gọn.');

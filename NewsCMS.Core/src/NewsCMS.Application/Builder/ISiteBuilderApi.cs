@@ -100,6 +100,12 @@ public interface ISiteBuilderApi
     Task<IReadOnlyList<DesignTokenSpec>> ListDesignTokensAsync(CancellationToken ct = default);
     Task<Result> SaveDesignTokensAsync(IReadOnlyList<DesignTokenSpec> tokens, CancellationToken ct = default);
 
+    /// <summary>
+    /// Xoá một token theo Group+Key. Cần riêng vì SaveDesignTokensAsync chỉ create/update theo
+    /// danh sách (tính chất idempotent của ApplyAsync) — thiếu token trong danh sách không bị xoá.
+    /// </summary>
+    Task<Result> DeleteDesignTokenAsync(string group, string key, CancellationToken ct = default);
+
     Task<SiteCustomCodeDto> GetCustomCodeAsync(CancellationToken ct = default);
     Task<Result<SiteCustomCodeDto>> SaveCustomCodeAsync(SiteCustomCodeSaveRequest request, CancellationToken ct = default);
 

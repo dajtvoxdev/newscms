@@ -114,7 +114,8 @@ internal sealed class BuilderRenderFixture : IDisposable
             new FakeSiteCode(),
             SeoMetas,
             renderer,
-            blockReg);
+            blockReg,
+            Signal);
     }
 
     // ── Seed ──────────────────────────────────────────────────────────────────────
