@@ -11,7 +11,6 @@ env:
   DOTNET_VERSION: '8.0.x'
   SOLUTION: NewsCMS.Core/NewsCMS.Core.sln
   WEB_PROJECT: NewsCMS.Core/src/NewsCMS.Web/NewsCMS.Web.csproj
-  TEST_PROJECT: NewsCMS.Core/tests/NewsCMS.Tests/NewsCMS.Tests.csproj
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
@@ -23,7 +22,7 @@ concurrency:
 
 jobs:
   build-test:
-    name: Build & Unit Test (.NET 8)
+    name: Build (.NET 8)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,24 +46,10 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.SOLUTION }} --configuration Release --no-restore
 
-      # --no-build: build một lần ở step trên rồi test lại đúng output đó.
-      # Build song song + test cùng lúc từng gây flaky (khoá DLL) nên tách hẳn ra.
-      - name: Unit test
-        run: >
-          dotnet test ${{ env.TEST_PROJECT }}
-          --configuration Release
-          --no-build
-          --logger "trx;LogFileName=unit-tests.trx"
-          --results-directory ${{ github.workspace }}/artifacts/test-results
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-test-results
-          path: artifacts/test-results
-          if-no-files-found: ignore
-          retention-days: 14
+      # Unit test KHÔNG chạy trong CI (bỏ theo yêu cầu 2026-09-07): test chạy local
+      # trước khi commit (dotnet test — lưu ý bẫy độ sâu ArtifactsPath của
+      # NavbarUnitSummaryTests, xem memory newscms-tests-artifacts-path-depth).
+      # Muốn bật lại trong CI: lấy step "Unit test" + "Upload test results" từ lịch sử git.
 
   e2e:
     name: E2E (Playwright)
