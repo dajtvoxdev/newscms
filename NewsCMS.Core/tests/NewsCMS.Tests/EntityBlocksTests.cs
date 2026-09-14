@@ -361,7 +361,9 @@ public sealed class EntityBlocksTests
 
         Assert.Contains("/media/blend-1.jpg", html);
         Assert.Contains("/media/blend-2.jpg", html);
-        Assert.Contains("onclick=", html);
+        // Thumb đổi ảnh chính qua data-gal-thumb (CSP chặn inline onclick) — nhìn vào đúng móc.
+        Assert.Contains("data-gal-thumb=", html);
+        Assert.DoesNotContain("onclick=", html);
     }
 
     // ── 8. related-posts ─────────────────────────────────────────────────────────

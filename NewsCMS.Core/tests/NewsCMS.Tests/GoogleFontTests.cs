@@ -121,8 +121,11 @@ public sealed class GoogleFontTests
     {
         await using var db = NewDb();
         var id = await SeedPageAsync(db, customCss: ".hero{font-family:Arial, sans-serif}");
+        // FakeTokenCss mặc định khai báo font catalog — muốn kiểm tra "không dùng font" phải
+        // render với bản token CSS rỗng, nếu không chính token đã luôn kéo font link về.
+        var renderer = NewRenderer(db, tokenCssWithoutFonts: true);
 
-        var html = (await NewRenderer(db).RenderAsync(id, "vi"))!.Html;
+        var html = (await renderer.RenderAsync(id, "vi"))!.Html;
 
         Assert.DoesNotContain("fonts.googleapis.com", html);
     }
@@ -145,7 +148,7 @@ public sealed class GoogleFontTests
         return page.Id;
     }
 
-    private static PageRenderer NewRenderer(AppDbContext db)
+    private static PageRenderer NewRenderer(AppDbContext db, bool tokenCssWithoutFonts = false)
     {
         var cache = new MemoryCache(new MemoryCacheOptions());
         var signal = new SiteCacheSignal();
@@ -164,7 +167,7 @@ public sealed class GoogleFontTests
 
         return new PageRenderer(
             db,
-            new FakeTokenCss(),
+            new FakeTokenCss(tokenCssWithoutFonts),
             new FakeSiteCode(),
             new DynamicBlockRenderer(new EmptyBlockRegistry(), cache, signal),
             site,
@@ -179,11 +182,13 @@ public sealed class GoogleFontTests
         .UseInMemoryDatabase($"gfont-{Guid.NewGuid()}")
         .Options);
 
-    private sealed class FakeTokenCss : IDesignTokenCssBuilder
+    private sealed class FakeTokenCss(bool withoutFonts = false) : IDesignTokenCssBuilder
     {
         // Nội dung token CSS thật: :root khai báo font qua custom property — đúng hình dạng BuildCssAsync sinh ra.
         public Task<string> BuildCssAsync(CancellationToken ct = default) => Task.FromResult(
-            ":root {\n  --font-display: \"Be Vietnam Pro\", sans-serif;\n  --font-body: \"Be Vietnam Pro\", sans-serif;\n}");
+            withoutFonts
+                ? ":root {\n  --color-brand-500: #0d7c66;\n}"
+                : ":root {\n  --font-display: \"Be Vietnam Pro\", sans-serif;\n  --font-body: \"Be Vietnam Pro\", sans-serif;\n}");
         public Task<string> GetCssHashAsync(CancellationToken ct = default) => Task.FromResult("hash");
     }
 

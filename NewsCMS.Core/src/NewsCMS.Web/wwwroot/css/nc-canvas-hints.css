@@ -82,3 +82,45 @@ section > div:only-child:empty::after {
 .gjs-hovered {
   outline-color: rgba(13, 124, 102, .45) !important;
 }
+
+/* ── Part-picker (Phase 5): chọn phần chi tiết [data-nc-part] trong khối động ──
+ * Body canvas nhận class nc-partpick khi đang ở chế độ chọn phần (xem nc-builder-extensions
+ * 2f). Outline + con trỏ chỉ vẽ cho phần được trỏ — CSS này không bao giờ chạy trên public
+ * vì nc-canvas-hints.css chỉ được nạp trong iframe canvas. */
+body.nc-partpick {
+  cursor: crosshair;
+}
+
+body.nc-partpick [data-nc-part],
+body.nc-partpick [data-nc-part] * {
+  cursor: crosshair;
+}
+
+/* Highlight tất cả phần có thể chọn: viền gạch mờ luôn hiện cho biết "đây là thứ chọn được". */
+body.nc-partpick [data-nc-part] {
+  outline: 2px dashed rgba(13, 124, 102, .28);
+  outline-offset: 1px;
+}
+
+/* Phần đang trỏ: viền đậm + nền nhạt brand để rõ mục tiêu bấm. */
+body.nc-partpick [data-nc-part]:hover {
+  outline: 2px dashed #0d7c66 !important;
+  outline-offset: 2px;
+  background-color: rgba(13, 124, 102, .07) !important;
+  box-shadow: 0 0 0 2px rgba(13, 124, 102, .18);
+}
+
+/* Nhãn nổi theo chuột khi trỏ vào phần — dựng bằng JS trong enterPartPick,
+ * position absolute nên không cần transform từ ngoài. */
+.nc-partpick-badge {
+  position: fixed;
+  z-index: 2147483647;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #fff;
+  font: 600 11.5px system-ui, sans-serif;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .35);
+  pointer-events: none;
+}

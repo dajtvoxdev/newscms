@@ -994,3 +994,30 @@
   border-color: #fecaca;
   color: #b91c1c;
 }
+
+/* ── Part-picker (Phase 5): toast báo chế độ chọn phần ───────────────────────
+ * Element do nc-part-pick JS dựng trong .gjs-editor (panel admin, KHÔNG phải canvas) —
+ * class này không bao giờ xuất hiện trên trang public nên an toàn. */
+.nc-partpick-toast {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12000;
+  max-width: min(560px, 92vw);
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #fff;
+  font: 600 12.5px system-ui, sans-serif;
+  line-height: 1.45;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, .35);
+  text-align: center;
+  white-space: normal;
+}
+.nc-partpick-toast.is-err {
+  background: #b91c1c;
+}
+.nc-partpick-btn {
+  width: 100%;
+}

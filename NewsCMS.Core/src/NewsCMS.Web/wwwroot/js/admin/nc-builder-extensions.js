@@ -254,6 +254,10 @@
             traits: buildPropTraits(def)
           },
           init() {
+            // Gán data-nc-id duy nhất cho mỗi instance: picker dùng id này để scoped CSS rule
+            // sống sót qua cả public render (DynamicBlockRenderer chỉ thay InnerHtml, giữ wrapper attrs).
+            var a = this.getAttributes();
+            if (!a['data-nc-id']) this.setAttributes({ 'data-nc-id': 'nc' + Math.random().toString(36).slice(2, 8) }, { silent: true });
             this.listenTo(this, 'change:attributes:data-nc-props', this.refreshPreview);
           },
           refreshPreview() {
@@ -1415,6 +1419,12 @@
       // Truy vết CSS: thêm cho MỌI component, kể cả thẻ text — chỗ hay phải dò nhất lại chính là
       // một cái <h2> bị CSS viết tay ở đâu đó đổi font.
       if (!has('nc_css_trace')) coll.add({ type: 'nc-css-trace', name: 'nc_css_trace', label: '' });
+
+      // Khối động: nút vào chế độ chọn phần chi tiết (data-nc-part) để style riêng từng phần.
+      if (comp.getAttributes() && comp.getAttributes()['data-nc-block'] && !has('nc_part_pick')) {
+        var partTrait = { type: 'nc-part-pick', name: 'nc_part_pick', label: '' };
+        try { coll.unshift(partTrait); } catch (e) { coll.add(partTrait); }
+      }
     });
   }
 
@@ -2441,8 +2451,15 @@
     registerHtmlEmbed(editor);
     registerEmbedTrait(editor);
     wireSelectionTraits(editor);
+    registerPartPickTrait(editor);
     setupPanelErgonomics(editor);
     setupStyleUpgrades(editor);
+
+    // data-nc-id của khối động phải là duy nhất: paste/copy nguyên khối khiến hai khối dùng
+    // chung id, rule part-picker của khối này vô tình đè khối kia. Khi thấy id trùng → cấp mới.
+    editor.on('component:add', function (comp) {
+      setTimeout(function () { ensureUniqueNcId(editor, comp); }, 0);
+    });
 
     // Nút "Code" trên topbar do Edit.cshtml tạo — bắt sự kiện tại đây.
     var btnCode = document.getElementById('btn-code');
@@ -2652,9 +2669,25 @@
     try { return editor.getSelected() || null; } catch (e) { return null; }
   }
 
+  /**
+   * Mục tiêu style đang hoạt động: nếu Style Manager đang nhắm một CssRule (tạo từ part-picker)
+   * thì mọi thao tác đọc/ghi widget phải chạy trên rule đó chứ không phải component đang bôi đỏ
+   * trong canvas. Rule và component đều có getStyle/addStyle nên dùng chung một accessor.
+   */
+  function styleTarget(editor) {
+    try {
+      var sm = editor.StyleManager;
+      var t = sm && sm.getTarget ? sm.getTarget() : null;
+      if (t && typeof t.getStyle === 'function' && typeof t.addStyle === 'function') return t;
+    } catch (e) { /* rơi xuống selected component */ }
+    return selectedComponent(editor);
+  }
+
   function computedOf(editor) {
-    var cmp = selectedComponent(editor);
-    var el = cmp && cmp.getEl ? cmp.getEl() : null;
+    // Rule không có element trong canvas — computed chỉ có nghĩa với component.
+    var t = styleTarget(editor);
+    if (!t || !t.getEl) return null;
+    var el = t.getEl();
     if (!el || !el.ownerDocument) return null;
     var win = el.ownerDocument.defaultView;
     return win ? win.getComputedStyle(el) : null;
@@ -2663,7 +2696,7 @@
   /** Style inline GrapesJS đang giữ trên component — chưa giải var(). */
   function styleOf(cmp) {
     if (!cmp || !cmp.getStyle) return {};
-    try { return cmp.getStyle() || {}; } catch (e) { return {}; }
+    try { var s = cmp.getStyle(); return s || {}; } catch (e) { return {}; }
   }
 
   function declaredOf(cmp, cssName) {
@@ -2671,9 +2704,9 @@
   }
 
   function applyStyle(editor, styles) {
-    var cmp = selectedComponent(editor);
-    if (!cmp || !cmp.addStyle) return;
-    cmp.addStyle(styles);
+    var t = styleTarget(editor);
+    if (!t || !t.addStyle) return;
+    t.addStyle(styles);
   }
 
   function pair(cssName, value) {
@@ -2788,7 +2821,7 @@
         }
 
         el.__ncPaint = function () {
-          var cmp = selectedComponent(editor);
+          var cmp = styleTarget(editor);
           var cs = computedOf(editor);
           var declared = declaredOf(cmp, cssName);
           var shown = cs ? String(cs.getPropertyValue(cssName) || '').trim() : '';
@@ -2917,9 +2950,9 @@
         el.appendChild(steps);
 
         function paint() {
-          var cmp = selectedComponent(editor);
+          var t = styleTarget(editor);
           var cs = computedOf(editor);
-          var declared = styleOf(cmp);
+          var declared = t ? (typeof t.getStyle === 'function' ? (t.getStyle() || {}) : {}) : {};
           SPACE_SIDES.forEach(function (side) {
             var inp = inputs[side];
             // Không ghi đè ô người dùng đang gõ — con trỏ nhảy và mất chữ.
@@ -3006,7 +3039,7 @@
         }
 
         el.__ncPaint = function () {
-          var cmp = selectedComponent(editor);
+          var cmp = styleTarget(editor);
           var declared = declaredOf(cmp, cssName);
           var chips = row.querySelectorAll('.nc-chip');
           var matched = false;
@@ -3170,6 +3203,263 @@
     });
   }
 
+  // ═════════════════════════════════════════════════════════════════════════════
+  // 2f) PART-PICKER: chọn phần chi tiết (data-nc-part) trong canvas rồi style riêng
+  // ═════════════════════════════════════════════════════════════════════════════
+
+  /*
+   * Server thêm data-nc-part vào HTML từng khối động (xem Phase 5). Người dùng muốn style
+   * "cái ảnh" chứ không phải "cả khối tin" — nút này vào chế độ chọn phần:
+   *
+   *   - Cả canvas body nhận class nc-partpick; CSS trong nc-canvas-hints.css vẽ outline
+   *     gạch + badge theo chuột cho phần tử [data-nc-part] dưới trỏ.
+   *   - Bấm vào một phần: lấy data-nc-part, ghép selector scoped theo khối
+   *     [data-nc-id="…"] [data-nc-part="…"] (data-nc-id là id instance của khối, gán lúc
+   *     component init — wrapper giữ attribute qua cả lần renderer thay InnerHtml, nên rule
+   *     này cũng chạy trên trang public).
+   *   - Tạo rule trong CssComposer (setRule/getRule), đưa vào StyleManager làm target.
+   *     CssComposer nằm trong CompiledCss (getCss) nên part style lưu cùng trang; tới lúc
+   *     renderer thay InnerHtml (đổi dữ liệu chẳng hạn) rule vẫn sống vì nó không nằm trong
+   *     InnerHtml. Widget style (2e) đọc/ghi qua styleTarget() nên nhắm rule là ăn ngay.
+   *
+   * Esc / bấm ngoài phần = thoát chế độ chọn. Bấm phần đã có rule → vào thẳng StyleManager
+   * sửa rule đó, không tạo trùng.
+   */
+  var PART_PICK = { active: false, comp: null, doc: null, badge: null, offs: [] };
+  var PART_LABELS = {
+    'card': 'Thẻ', 'card-body': 'Thân thẻ', 'image': 'Ảnh', 'thumb': 'Ảnh nhỏ',
+    'title': 'Tiêu đề', 'item-title': 'Tiêu đề mục', 'excerpt': 'Mô tả', 'cta': 'Nút',
+    'meta': 'Dòng meta', 'date': 'Ngày đăng', 'author': 'Tác giả', 'category': 'Chuyên mục',
+    'views': 'Lượt xem', 'price': 'Giá', 'price-compare': 'Giá gốc', 'name': 'Tên',
+    'list': 'Danh sách', 'item': 'Mục', 'wrapper': 'Khung', 'track': 'Dãy trượt',
+    'slide': 'Trang trượt', 'gallery': 'Thư viện', 'grid': 'Lưới', 'stack': 'Cột dọc',
+    'main': 'Ảnh chính', 'thumbs': 'Dải ảnh nhỏ', 'thumb-image': 'Ảnh nhỏ',
+    'caption': 'Chú thích', 'lightbox': 'Lightbox', 'origin': 'Nguồn gốc', 'tag': 'Nhãn',
+    'empty': 'Trạng thái rỗng', 'link': 'Link', 'separator': 'Dấu phân cách',
+    'current': 'Trang hiện tại', 'count': 'Số lượng', 'frame': 'Khung video',
+    'player': 'Trình phát', 'placeholder': 'Chỗ trống',
+    'placeholder-text': 'Chữ mẫu', 'placeholder-inner': 'Hộp mẫu',
+    'placeholder-icon': 'Biểu tượng mẫu', 'placeholder-title': 'Tiêu đề mẫu',
+    'placeholder-hint': 'Gợi ý mẫu', 'placeholder-url': 'Link mẫu',
+    'head': 'Đầu trang', 'eyebrow': 'Chữ nhỏ', 'intro': 'Giới thiệu',
+    'viewport': 'Khung sách', 'book': 'Sách', 'page': 'Trang', 'page-image': 'Ảnh trang',
+    'nudge': 'Gợi ý lật', 'bar': 'Thanh công cụ', 'prev': 'Nút trước',
+    'counter': 'Bộ đếm', 'next': 'Nút sau', 'fullscreen': 'Toàn màn hình',
+    'download': 'Tải PDF', 'hint': 'Dòng gợi ý'
+  };
+
+  function partLabel(name) {
+    return PART_LABELS[name] || name.replace(/-/g, ' ');
+  }
+
+  function partSelectorFor(ncId, part) {
+    return '[data-nc-id="' + ncId + '"] [data-nc-part="' + part + '"]';
+  }
+
+  /** Tìm rule đã tồn tại theo selector đầy đủ — so nguyên chuỗi tránh phụ thuộc parser. */
+  function findPartRule(editor, ncId, part) {
+    var want = partSelectorFor(ncId, part);
+    var norm = function (s) { return String(s || '').replace(/\s+/g, ''); };
+    var all = editor.CssComposer.getAll();
+    for (var i = 0; i < all.length; i++) {
+      try {
+        var r = all[i];
+        var sels = r.getSelectors && r.getSelectors().getFullString ?
+          r.getSelectors().getFullString() : '';
+        var add = r.get ? (r.get('selectorsAdd') || '') : '';
+        if (norm(sels + (add ? ' ' + add : '')) === norm(want)) return r;
+      } catch (e) { /* rule lạ — bỏ qua */ }
+    }
+    return null;
+  }
+
+  function partRuleOf(editor, ncId, part) {
+    var ex = findPartRule(editor, ncId, part);
+    if (ex) return ex;
+    var sel = partSelectorFor(ncId, part);
+    try { return editor.CssComposer.setRule(sel, {}, {}) || null; }
+    catch (e) { return null; }
+  }
+
+  function partFlash(editor, msg, isErr) {
+    var root = document.querySelector('.gjs-editor');
+    if (!root) return;
+    var host = document.getElementById('nc-partpick-toast');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'nc-partpick-toast';
+      host.className = 'nc-partpick-toast';
+      root.appendChild(host);
+    }
+    host.textContent = msg;
+    host.classList.toggle('is-err', !!isErr);
+    clearTimeout(partFlash._t);
+    partFlash._t = setTimeout(function () { if (host) host.textContent = ''; }, 2600);
+  }
+
+  function enterPartPick(editor, comp) {
+    if (PART_PICK.active) return;
+    onCanvasReady(editor, function (doc) {
+      if (PART_PICK.active) return;
+      PART_PICK.active = true;
+      PART_PICK.comp = comp;
+      PART_PICK.doc = doc;
+      doc.body.classList.add('nc-partpick');
+
+      var badge = doc.createElement('div');
+      badge.className = 'nc-partpick-badge';
+      badge.style.display = 'none';
+      doc.body.appendChild(badge);
+      PART_PICK.badge = badge;
+
+      // pointerover trên document của canvas — GrapesJS tự bọc phần tử, pointermove của nó
+      // không mang theo closest() của từng node một cách tin cậy; dùng over/leave.
+      var last = null;
+      function onMovePos(ev) {
+        var t = ev.target;
+        var part = t && t.closest ? t.closest('[data-nc-part]') : null;
+        if (!part) { badge.style.display = 'none'; last = null; return; }
+        if (part !== last) {
+          last = part;
+          badge.textContent = 'Chỉnh: ' + partLabel(part.getAttribute('data-nc-part') || '') +
+            ' — bấm để style riêng';
+        }
+        badge.style.display = '';
+        var r = part.getBoundingClientRect();
+        badge.style.left = Math.max(0, r.left + r.width / 2) + 'px';
+        badge.style.top = Math.max(0, r.top - 4) + 'px';
+        badge.style.transform = 'translate(-50%, -100%)';
+      }
+      function onOver(ev) { onMovePos(ev); }
+      function onLeave(ev) {
+        var to = ev.relatedTarget;
+        if (!to || !doc.contains(to)) { badge.style.display = 'none'; last = null; }
+      }
+
+      function onClick(ev) {
+        var t = ev.target;
+        var part = t && t.closest ? t.closest('[data-nc-part]') : null;
+        var hostEl = comp.getEl ? comp.getEl() : null;
+        if (part && hostEl && hostEl.contains(part)) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          var partName = part.getAttribute('data-nc-part') || '';
+          var ncId = comp.getAttributes()['data-nc-id'];
+          if (!ncId) {
+            partFlash(editor, 'Khối thiếu data-nc-id — thử lại sau khi lưu trang.', true);
+            exitPartPick(editor);
+            return;
+          }
+          var rule = partRuleOf(editor, ncId, partName);
+          exitPartPick(editor);
+          if (!rule) { partFlash(editor, 'Không dựng được rule cho phần này.', true); return; }
+          try { editor.StyleManager.select(rule); } catch (e) { /* rule không select được */ }
+          command(editor, 'open-sm');
+          partFlash(editor, 'Đang style phần "' + partLabel(partName) + '" — áp cho mọi ' +
+            partLabel(partName) + ' trong khối này (cả trên trang public).');
+          repaintWidgets();
+        } else {
+          exitPartPick(editor);
+        }
+      }
+
+      function onKey(ev) {
+        if (ev.key === 'Escape') exitPartPick(editor);
+      }
+
+      doc.addEventListener('pointerover', onOver, true);
+      doc.addEventListener('pointerout', onLeave, true);
+      doc.addEventListener('click', onClick, true);
+      doc.addEventListener('keydown', onKey, true);
+      PART_PICK.offs = [
+        function () {
+          doc.removeEventListener('pointerover', onOver, true);
+          doc.removeEventListener('pointerout', onLeave, true);
+          doc.removeEventListener('click', onClick, true);
+          doc.removeEventListener('keydown', onKey, true);
+        }
+      ];
+    });
+  }
+
+  function exitPartPick(editor) {
+    if (!PART_PICK.active) return;
+    PART_PICK.offs.forEach(function (off) { try { off(); } catch (e) { /* bỏ */ } });
+    PART_PICK.offs = [];
+    if (PART_PICK.badge && PART_PICK.badge.parentNode) {
+      PART_PICK.badge.parentNode.removeChild(PART_PICK.badge);
+    }
+    if (PART_PICK.doc) PART_PICK.doc.body.classList.remove('nc-partpick');
+    PART_PICK.active = false;
+    PART_PICK.comp = null;
+    PART_PICK.doc = null;
+    PART_PICK.badge = null;
+  }
+
+  /** Mọi component [data-nc-block] phải có data-nc-id duy nhất trong trang. */
+  function ensureUniqueNcId(editor, comp) {
+    if (!comp || !(comp.getAttributes() || {})['data-nc-block']) return;
+    var wrapper = editor.getWrapper();
+    if (!wrapper) return;
+    var id = comp.getAttributes()['data-nc-id'];
+    if (!id) {
+      // Khối cũ lưu trước khi có id — cấp mới để part-picker dùng được.
+      comp.setAttributes({ 'data-nc-id': 'nc' + Math.random().toString(36).slice(2, 8) }, { silent: true });
+      return;
+    }
+    var seen = false;
+    wrapper.find('[data-nc-block]').forEach(function (c) {
+      if (c === comp) return;
+      if ((c.getAttributes() || {})['data-nc-id'] === id) seen = true;
+    });
+    if (seen) {
+      comp.setAttributes({ 'data-nc-id': 'nc' + Math.random().toString(36).slice(2, 8) }, { silent: true });
+    }
+  }
+
+  function registerPartPickTrait(editor) {
+    editor.TraitManager.addType('nc-part-pick', {
+      noLabel: true,
+      createInput: function (o) {
+        var comp = o && o.component;
+        var wrap = document.createElement('div');
+        wrap.className = 'nc-partpick-wrap';
+        var states = document.createElement('div');
+        states.className = 'nc-partpick-states';
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'nc-trait-btn nc-partpick-btn';
+        btn.textContent = '🎯 Chọn phần chi tiết';
+        btn.title = 'Bấm để chọn một phần (ảnh, tiêu đề, nút…) của khối rồi style riêng phần đó';
+
+        function refresh() {
+          var hostEl = comp && comp.getEl ? comp.getEl() : null;
+          var parts = hostEl ? hostEl.querySelectorAll('[data-nc-part]') : null;
+          var count = parts ? parts.length : 0;
+          btn.textContent = count
+            ? ('🎯 Chọn phần chi tiết (' + count + ')')
+            : '🎯 Chọn phần chi tiết';
+          states.textContent = '';
+        }
+
+        btn.addEventListener('click', function () {
+          if (PART_PICK.active) { exitPartPick(editor); return; }
+          var hostEl = comp.getEl ? comp.getEl() : null;
+          if (!hostEl || !hostEl.querySelector('[data-nc-part]')) {
+            partFlash(editor, 'Khối đang chưa có phần nào để chọn — thử nhấn "Làm mới".', true);
+            return;
+          }
+          enterPartPick(editor, comp);
+        });
+        wrap.appendChild(btn);
+        wrap.appendChild(states);
+        refresh();
+        return wrap;
+      },
+      onEvent: function () {}
+    });
+  }
+
   /** Gắn toàn bộ nâng cấp Style Manager. Gọi một lần từ register(). */
   function setupStyleUpgrades(editor) {
     if (global.ncTokens && OPTS.tokenCssUrl) global.ncTokens.load(OPTS.tokenCssUrl);
@@ -3194,6 +3484,12 @@
     editor.on('component:selected', schedulePaint);
     editor.on('component:styleUpdate', schedulePaint);
     editor.on('component:update', schedulePaint);
+    // Part-picker (2f) đưa CssRule làm target cho Style Manager — rule đổi style không bắn
+    // component:styleUpdate, phải bắt change:style của rule để widget tô lại.
+    try {
+      var rules = editor.CssComposer.getAll();
+      if (rules && rules.on) rules.on('change:style', schedulePaint);
+    } catch (e) { /* chưa sẵn sàng */ }
   }
 
   function refreshAllDynamicBlocks(editor) {
