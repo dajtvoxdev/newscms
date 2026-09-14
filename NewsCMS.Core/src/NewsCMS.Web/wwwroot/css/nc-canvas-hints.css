@@ -1,0 +1,84 @@
+/*
+ * nc-canvas-hints.css — gợi ý tương tác CHỈ TRONG CANVAS BUILDER, không phục vụ trang public.
+ *
+ * Vì sao là file riêng chứ không viết vào nc-builder.css:
+ *   nc-builder.css được PageRenderer nạp bằng <link> tĩnh trên CẢ TRANG PUBLIC khi HTML có
+ *   class ncv-*. Rule ở đó phải là nội dung trang thật. Selector dưới đây nhắm vào class
+ *   GrapesJS (gjs-*) vốn chỉ tồn tại trong iframe canvas — nhưng nếu đặt chung file thì mỗi
+ *   lần tải nc-builder.css là tải cả phần rùa, và một sơ suất đánh class sẽ rò style ra
+ *   khách. Tách file = biên giới vật lý, xóa link khỏi canvas.styles là hết ngay.
+ *
+ * Tên class đối chiếu trực tiếp trên grapes.min.css 0.23.5 (vendored):
+ *   .gjs-placeholder(.horizontal|.vertical) + .gjs-placeholder-int  — vạch thả
+ *   .gjs-badge                                                      — nhãn khối lúc kéo
+ *   .gjs-selected / .gjs-selected-parent / .gjs-hovered             — trạng thái chọn
+ *   .gjs-freezed                                                    — canvas đóng băng lúc drag
+ * Nạp qua canvas.styles của Edit.cshtml / EditShell.cshtml.
+ */
+
+/* ── Vùng thả trống nhìn thấy được ───────────────────────────────────────────
+ * Section/Container mới kéo ruột rỗng cao 0px → không thể thả trúng. Cho chiều cao
+ * tối thiểu + viền đứt + nhãn hướng dẫn khi wrapper/component chưa có nội dung hiển thị.
+ * :only-child vì wrapper luôn có một child; component tự do dùng selector attribute. */
+[data-gjs-type]:empty,
+section > div:only-child:empty {
+  min-height: 72px;
+}
+
+[data-gjs-type]:not([data-nc-block]):empty::after,
+section > div:only-child:empty::after {
+  content: 'Thả khối vào đây';
+  display: block;
+  padding: 26px 12px;
+  text-align: center;
+  font: 600 13px system-ui, sans-serif;
+  letter-spacing: .02em;
+  color: #94a3b8;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  background: repeating-linear-gradient(135deg, #f8fafc 0 12px, #f1f5f9 12px 24px);
+}
+
+/* Khối động đang chờ preview cũng cần chỗ đứng — placeholder server trả về đã có padding
+ * nhưng component chưa render thì không thấy gì để nhắm. */
+[data-nc-block] {
+  min-height: 48px;
+}
+
+/* ── Drop-indicator rõ ràng ──────────────────────────────────────────────────
+ * Mặc định: border 3–5px màu xanh lá hệ thống (var(--gjs-color-green)). Đổi sang màu
+ * brand của builder + dày hơn một chút cho dễ thấy trên nền trắng. */
+.gjs-placeholder.horizontal {
+  border-width: 4px 6px !important;
+  border-color: transparent #0d7c66 !important;
+}
+.gjs-placeholder.vertical {
+  border-width: 6px 4px !important;
+  border-color: #0d7c66 transparent !important;
+}
+.gjs-placeholder-int {
+  background-color: #0d7c66 !important;
+  box-shadow: 0 0 0 3px rgba(13, 124, 102, .25), 0 0 12px rgba(13, 124, 102, .45);
+}
+
+/* ── Nhãn khối lúc kéo (badge) ─────────────────────────────────────────────── */
+.gjs-badge {
+  background-color: #0f172a !important;
+  font-family: system-ui, sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: .02em;
+  padding: 3px 8px !important;
+  border-radius: 0 0 6px 6px !important;
+}
+
+/* ── Trạng thái chọn / hover ───────────────────────────────────────────────── */
+.gjs-selected {
+  outline-color: #0d7c66 !important;
+}
+.gjs-selected-parent {
+  border-color: rgba(13, 124, 102, .55) !important;
+}
+.gjs-hovered {
+  outline-color: rgba(13, 124, 102, .45) !important;
+}

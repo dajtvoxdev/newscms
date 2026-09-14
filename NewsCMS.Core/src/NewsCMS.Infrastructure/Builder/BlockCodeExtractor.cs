@@ -18,6 +18,10 @@ namespace NewsCMS.Infrastructure.Builder;
 ///                  Có selector → mọi selector được thêm tiền tố scope; <c>&amp;</c> = chính khối;
 ///                  <c>^</c> = KHÔNG scope (nhắm phần tử ngoài khối, vd section cha).
 ///   data-nc-js   — JS của khối, được bọc IIFE với biến <c>root</c> trỏ tới chính khối.
+///   data-nc-html — HTML thô người dùng tự nhúng. Đổ thẳng vào ruột khối lúc render và KHÔNG đi
+///                  qua ContentSanitizer (đó chính là mục đích: snippet bên thứ ba, iframe,
+///                  script…). Vì vậy quyền ghi nó khoá sau Builder.Code.Manage / scope
+///                  builder.code, ngang với CustomJs.
 /// </summary>
 public static class BlockCodeExtractor
 {
@@ -27,6 +31,7 @@ public static class BlockCodeExtractor
     private const string SidAttr = "data-nc-sid";
     private const string CssAttr = "data-nc-css";
     private const string JsAttr = "data-nc-js";
+    private const string HtmlAttr = "data-nc-html";
 
     /// <summary>
     /// Tách code khối khỏi <paramref name="html"/>. Không có attribute nào thì trả nguyên HTML
@@ -39,12 +44,13 @@ public static class BlockCodeExtractor
 
         var hasCss = html.Contains(CssAttr, StringComparison.OrdinalIgnoreCase);
         var hasJs = html.Contains(JsAttr, StringComparison.OrdinalIgnoreCase);
-        if (!hasCss && !hasJs) return new Result(html, string.Empty, string.Empty);
+        var hasEmbed = html.Contains(HtmlAttr, StringComparison.OrdinalIgnoreCase);
+        if (!hasCss && !hasJs && !hasEmbed) return new Result(html, string.Empty, string.Empty);
 
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
 
-        var nodes = doc.DocumentNode.SelectNodes($"//*[@{CssAttr}] | //*[@{JsAttr}]");
+        var nodes = doc.DocumentNode.SelectNodes($"//*[@{CssAttr}] | //*[@{JsAttr}] | //*[@{HtmlAttr}]");
         if (nodes is null || nodes.Count == 0) return new Result(html, string.Empty, string.Empty);
 
         var css = new StringBuilder();
@@ -58,9 +64,17 @@ public static class BlockCodeExtractor
             var blockCss = node.Attributes[CssAttr]?.DeEntitizeValue;
             var blockJs = node.Attributes[JsAttr]?.DeEntitizeValue;
 
+            var blockHtml = node.Attributes[HtmlAttr]?.DeEntitizeValue;
+
             var hasBlockCss = !string.IsNullOrWhiteSpace(blockCss);
             var hasBlockJs = !string.IsNullOrWhiteSpace(blockJs);
-            if (!hasBlockCss && !hasBlockJs) continue;
+            var hasBlockHtml = !string.IsNullOrWhiteSpace(blockHtml);
+
+            // Khối nhúng chưa dán mã: vẫn phải gỡ attribute để trang public không lộ data-nc-html="".
+            if (node.Attributes[HtmlAttr] is not null && !hasBlockHtml)
+                node.Attributes.Remove(HtmlAttr);
+
+            if (!hasBlockCss && !hasBlockJs && !hasBlockHtml) continue;
 
             // Khối chưa có sid (vd. HTML viết tay qua MCP) → gán tạm để scope vẫn đúng.
             var sid = node.GetAttributeValue(SidAttr, string.Empty);
@@ -83,10 +97,26 @@ public static class BlockCodeExtractor
                 js.Append(WrapJs(blockJs!, sid));
                 node.Attributes.Remove(JsAttr);
             }
+
+            if (hasBlockHtml)
+            {
+                // Đổ nguyên văn vào ruột khối, thay hẳn ruột cũ. Builder không lưu preview vào
+                // CompiledHtml nên ruột cũ luôn rỗng; MCP/HTML viết tay thì ý định cũng là thay.
+                node.InnerHtml = blockHtml!;
+                node.Attributes.Remove(HtmlAttr);
+            }
         }
 
         return new Result(doc.DocumentNode.OuterHtml, css.ToString().Trim(), js.ToString().Trim());
     }
+
+    /// <summary>
+    /// HTML có mang khối nhúng mã thô (<c>data-nc-html</c>) hay không. Tầng API dùng để đòi quyền
+    /// Builder.Code.Manage: nội dung nhúng KHÔNG đi qua ContentSanitizer nên ngang mức rủi ro với
+    /// CustomJs — cho phép chạy mã tuỳ ý trên trình duyệt của khách.
+    /// </summary>
+    public static bool CarriesRawHtml(string? html) =>
+        !string.IsNullOrEmpty(html) && html.Contains(HtmlAttr, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Selector đại diện một khối trong CSS/JS đã scope.</summary>
     public static string ScopeSelector(string sid) => $"[{SidAttr}=\"{sid}\"]";

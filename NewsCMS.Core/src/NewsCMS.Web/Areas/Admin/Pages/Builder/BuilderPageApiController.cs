@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NewsCMS.Application.Builder;
+using NewsCMS.Infrastructure.Builder;
 using NewsCMS.Shared.Constants;
 
 namespace NewsCMS.Web.Areas.Admin.Pages.Builder;
@@ -95,12 +96,17 @@ public class BuilderPageApiController : ControllerBase
     }
 
     /// <summary>
-    /// Request có mang JS chạy trên trình duyệt khách hay không → đòi Builder.Code.Manage,
-    /// kể cả khi user đã có PageEdit. Ngoài CustomJs còn phải soi <c>data-nc-js</c> trong HTML:
-    /// đó là JS riêng của từng khối, BlockCodeExtractor sẽ nối vào script của trang lúc render.
-    /// Request không mang JS vẫn qua được để người thiếu quyền sửa phần còn lại của trang.
+    /// Request có mang mã chạy trên trình duyệt khách hay không → đòi Builder.Code.Manage,
+    /// kể cả khi user đã có PageEdit. Ba nguồn:
+    ///   • <c>CustomJs</c> — JS riêng của trang;
+    ///   • <c>data-nc-js</c> trong HTML — JS riêng từng khối, BlockCodeExtractor nối vào script
+    ///     của trang lúc render;
+    ///   • <c>data-nc-html</c> trong HTML — khối "Nhúng HTML", đổ nguyên văn vào trang lúc render
+    ///     nên KHÔNG qua ContentSanitizer: thừa sức mang script/iframe/overlay.
+    /// Request không mang mã vẫn qua được để người thiếu quyền sửa phần còn lại của trang.
     /// </summary>
     private static bool CarriesScript(BuilderPageSaveRequest request) =>
         !string.IsNullOrWhiteSpace(request.CustomJs)
-        || (request.CompiledHtml?.Contains("data-nc-js", StringComparison.OrdinalIgnoreCase) ?? false);
+        || (request.CompiledHtml?.Contains("data-nc-js", StringComparison.OrdinalIgnoreCase) ?? false)
+        || BlockCodeExtractor.CarriesRawHtml(request.CompiledHtml);
 }

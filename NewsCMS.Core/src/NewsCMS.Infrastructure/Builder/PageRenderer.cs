@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NewsCMS.Application.Builder;
@@ -190,6 +191,9 @@ public sealed class PageRenderer : IPageRenderer
         var siteCode = await _siteCode.GetAsync(ct);
 
         var tokenCssUrl = $"/_nc/site/{_currentSite.Slug}-{await _tokenCss.GetCssHashAsync(ct)}.css";
+        // Nội dung token CSS cũng là nguồn dò font: layout/page chỉ tham chiếu var(--font-*)
+        // thì tên font chữ literal chỉ tồn tại ở đây — bỏ qua sẽ không render được thẻ font Google.
+        var tokenCss = await _tokenCss.BuildCssAsync(ct);
 
         // Reuse nonce từ CspNonceMiddleware (nếu có) để script/style inline không bị CSP chặn.
         // Middleware chạy TRƯỚC theme nên nonce đã nằm trong HttpContext.Items["__CspNonce"];
@@ -203,6 +207,13 @@ public sealed class PageRenderer : IPageRenderer
         // thời gỡ attribute khỏi HTML gửi ra ngoài để không lộ mã nguồn và không phình trang.
         var pageBlocks = BlockCodeExtractor.Extract(content);
 
+        // Mã nhúng thô (data-nc-html) đổ thẳng vào ruột khối nên <script> của nó KHÔNG được
+        // PageRenderer bọc nonce như CustomJs — CspNonceMiddleware sẽ chặn chạy. Gắn nonce vào
+        // mọi thẻ <script> không có thuộc tính src trong phần HTML vừa bóc: đó đúng là mã người
+        // quản trị đã dán có chủ đích (quyền Builder.Code.Manage), cùng mức tin cậy với CustomJs.
+        // Script có src không cần nonce, và nonce cũ lưu sẵn trong DB không khớp header per-request.
+        pageBlocks = pageBlocks with { Html = StampInlineScriptNonce(pageBlocks.Html, nonce) };
+
         // Shell cũng chạy DynamicBlockRenderer: từ khi shell dựng được bằng builder trực quan, nó
         // chứa khối động thật (site-menu cho nav header/footer). Thiếu bước này thì placeholder
         // data-nc-block trong shell ra trang public dưới dạng thẻ rỗng — menu mất hút mà không có
@@ -211,6 +222,7 @@ public sealed class PageRenderer : IPageRenderer
             ? layout?.CompiledHtml
             : await _dynamicBlockRenderer.RenderAsync(layout.CompiledHtml, _currentSite.SiteId, culture, route, ct);
         var layoutBlocks = BlockCodeExtractor.Extract(layoutHtml);
+        layoutBlocks = layoutBlocks with { Html = StampInlineScriptNonce(layoutBlocks.Html, nonce) };
 
         var needsVariantCss = UsesVariantClass(pageBlocks.Html) || UsesVariantClass(layoutBlocks.Html);
 
@@ -219,7 +231,7 @@ public sealed class PageRenderer : IPageRenderer
             title, culture, route, entityType, entityId, detail, pageSlug, ct);
 
         var html = BuildHtml(
-            layoutBlocks.Html, pageBlocks.Html, effectiveTitle, culture, tokenCssUrl,
+            layoutBlocks.Html, pageBlocks.Html, effectiveTitle, culture, tokenCssUrl, tokenCss,
             JoinParts(siteCode.CustomCss, layout?.CompiledCss, layout?.CustomCss, layoutBlocks.Css,
                       contentCss, contentCustomCss, pageBlocks.Css),
             JoinParts(siteCode.CustomJs, layout?.CustomJs, layoutBlocks.Js, contentJs, pageBlocks.Js),
@@ -366,17 +378,19 @@ public sealed class PageRenderer : IPageRenderer
 
     private static string BuildHtml(
         string? shellHtml, string? content, string title, string culture,
-        string tokenCssUrl, string inlineCss, string customJs,
+        string tokenCssUrl, string? tokenCss, string inlineCss, string customJs,
         string? headHtml, string? bodyEndHtml, string nonce, bool needsVariantCss,
         string? seoTags = null)
     {
         var nonceAttr = $"nonce=\"{nonce}\"";
 
         // Font Google: nạp ĐÚNG font đang được dùng, phát hiện từ chính CSS/HTML sắp render.
+        // Token CSS đứng đầu danh sách dò: trang chỉ dùng var(--font-body) (không viết tên font
+        // literal) vẫn được nạp đúng font khai báo trong design token.
         // Không dùng @import trong khối <style> bên dưới vì @import chỉ hợp lệ ở đầu stylesheet,
         // mà inlineCss là nhiều tầng CSS nối lại (site → layout → page) nên font của page sẽ rơi
         // vào giữa và bị trình duyệt bỏ qua. Thẻ <link> không có ràng buộc thứ tự đó.
-        var fontsLink = BuildGoogleFontsLink(inlineCss, content, shellHtml);
+        var fontsLink = BuildGoogleFontsLink(tokenCss, inlineCss, content, shellHtml);
 
         // Utility precompile (npm run css:site) đứng TRƯỚC token CSS: token phải ghi đè được
         // giá trị mặc định trong bundle. Nhờ bundle này, trang tạo qua MCP/API có utility ngay
@@ -489,6 +503,20 @@ public sealed class PageRenderer : IPageRenderer
     {
         var bytes = RandomNumberGenerator.GetBytes(16);
         return Convert.ToBase64String(bytes);
+    }
+
+    /// <summary>
+    /// Gắn nonce CSP vào các thẻ <c>&lt;script&gt;</c> inline (không có <c>src</c>) trong HTML khối.
+    /// Mã nhúng thô đi thẳng vào ruột khối nên không qua chỗ bọc nonce của CustomJs; thiếu nonce
+    /// thì CspNonceMiddleware chặn script chạy trên trang public. Thẻ đã có nonce hoặc có src giữ
+    /// nguyên — src không cần nonce, nonce cũ lưu sẵn trong DB không khớp header per-request.
+    /// </summary>
+    internal static string StampInlineScriptNonce(string? html, string nonce)
+    {
+        if (string.IsNullOrEmpty(html) || string.IsNullOrEmpty(nonce)) return html ?? string.Empty;
+        return Regex.Replace(html, "<script(?![^>]*\\bsrc\\s*=)(?![^>]*\\bnonce\\s*=)([^>]*)>",
+            m => $"<script nonce=\"{nonce}\"{m.Groups[1].Value}>",
+            RegexOptions.IgnoreCase);
     }
 
     /// <summary>

@@ -124,6 +124,8 @@ public sealed class SeoMetaService : ISeoMetaService
 
                 var prodImage = meta?.OgImage ?? prod.Thumbnail?.FilePath;
                 var price = prod.SalePrice ?? prod.Price;
+                // Không theo dõi tồn kho (bán showroom) → luôn InStock; chỉ kho về 0 khi có tracking.
+                var inStock = !prod.IsTrackingStock || prod.StockQuantity > 0;
                 return JsonSerializer.Serialize(new
                 {
                     at_context = "https://schema.org",
@@ -137,7 +139,7 @@ public sealed class SeoMetaService : ISeoMetaService
                         at_type = "Offer",
                         price = price,
                         priceCurrency = "VND",
-                        availability = prod.StockQuantity > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+                        availability = inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
                     }
                 }, JsonOpts).Replace("at_", "@");
 

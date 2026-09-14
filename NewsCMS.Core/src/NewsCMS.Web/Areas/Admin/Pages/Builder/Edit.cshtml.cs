@@ -18,17 +18,20 @@ public class EditModel : PageModel
     private readonly IDesignTokenCssBuilder _tokenCss;
     private readonly ICurrentSite _currentSite;
     private readonly ISiteCustomCodeService _siteCode;
+    private readonly ISiteLayoutService _layouts;
 
     public EditModel(
         IBuilderPageService service,
         IDesignTokenCssBuilder tokenCss,
         ICurrentSite currentSite,
-        ISiteCustomCodeService siteCode)
+        ISiteCustomCodeService siteCode,
+        ISiteLayoutService layouts)
     {
         _service = service;
         _tokenCss = tokenCss;
         _currentSite = currentSite;
         _siteCode = siteCode;
+        _layouts = layouts;
     }
 
     public Guid PageId { get; set; }
@@ -58,6 +61,15 @@ public class EditModel : PageModel
     /// khoá sau Code.Manage) để user chỉ có PageEdit vẫn xem đúng.
     /// </summary>
     public string SiteCustomCss { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// CSS của shell đang gán cho trang (CompiledCss + CustomCss) — PageRenderer nối lớp này vào
+    /// &lt;head&gt; trang public NGAY SAU CSS site, nên canvas thiếu nó thì trang dựng qua MCP/API
+    /// (chỉ có CompiledCss trên layout, không có BuilderJson) hiện không style: SVG icon phình
+    /// tràn canvas, section mất màu mất cột. Nạp server-side như SiteCustomCss để user chỉ có
+    /// PageEdit vẫn xem đúng.
+    /// </summary>
+    public string LayoutCss { get; private set; } = string.Empty;
 
     /// <summary>
     /// Font Google dựng dropdown "Font family" trong Style Manager. Lấy từ cùng một
@@ -108,12 +120,24 @@ public class EditModel : PageModel
         SiteCustomCss = siteCode.CustomCss ?? string.Empty;
         SiteCustomJs = siteCode.CustomJs ?? string.Empty;
         SiteHeadHtml = siteCode.HeadHtml ?? string.Empty;
-        HasCodeScope = User.HasClaim(Permissions.Prefix, Permissions.Builder.CodeManage);
-        HasSeoScope = User.HasClaim(Permissions.Prefix, Permissions.Seo.EditMeta);
-        HasRestoreScope = User.HasClaim(Permissions.Prefix, Permissions.Builder.RevisionRestore);
-        HasLayoutScope = User.HasClaim(Permissions.Prefix, Permissions.Builder.LayoutManage);
 
         var page = result.Value!;
+
+        // CSS shell gán cho trang: LayoutId null = shell mặc định của site (PageRenderer cũng
+        // fallback vậy khi compose). Thiếu thì canvas preview trang không style.
+        var layoutId = page.LayoutId;
+        if (layoutId is null)
+        {
+            var defaultShell = await _layouts.ListAsync(ct);
+            layoutId = defaultShell.FirstOrDefault(l => l.Kind == "Shell" && l.IsDefault)?.Id;
+        }
+        if (layoutId is { } lid)
+        {
+            var layout = await _layouts.GetByIdAsync(lid, ct);
+            if (layout.Succeeded && layout.Value is { } l)
+                LayoutCss = string.Join("\n", new[] { l.CompiledCss, l.CustomCss }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        }
+
         PageId = page.Id;
         PageTitle = page.Title;
         Slug = page.Slug;
@@ -126,6 +150,10 @@ public class EditModel : PageModel
             "Scheduled" => "Hẹn giờ",
             _ => "Nháp"
         };
+        HasCodeScope = User.HasClaim(Permissions.Prefix, Permissions.Builder.CodeManage);
+        HasSeoScope = User.HasClaim(Permissions.Prefix, Permissions.Seo.EditMeta);
+        HasRestoreScope = User.HasClaim(Permissions.Prefix, Permissions.Builder.RevisionRestore);
+        HasLayoutScope = User.HasClaim(Permissions.Prefix, Permissions.Builder.LayoutManage);
 
         return Page();
     }

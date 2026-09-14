@@ -86,6 +86,9 @@ public sealed class BuilderPageService : IBuilderPageService
                 return Result<BuilderPageDto>.Failure($"Slug '{storedSlug}' đã tồn tại.");
         }
 
+        // Trang đã xoá mềm vẫn giữ chỗ trong unique index nhưng vô hình với query filter ở trên.
+        await ReleaseDeletedSlugAsync(null, storedSlug, ct);
+
         Guid? parentPageId = request.ParentPageId == Guid.Empty ? null : request.ParentPageId;
         if (parentPageId.HasValue)
         {
@@ -131,7 +134,10 @@ public sealed class BuilderPageService : IBuilderPageService
         var storedSlug = NormalizeSlugForStorage(request.Slug);
 
         // Kiểm tra slug trùng (trừ chính page đang sửa). Homepage chỉ cho 1.
-        if (!string.Equals(NormalizeSlugForStorage(page.Slug), storedSlug, StringComparison.OrdinalIgnoreCase))
+        // So sánh với slug THÔ trong DB, không phải bản normalize: trang cũ lưu 'home' và request
+        // gửi '' normalize ra bằng nhau, nhưng UPDATE vẫn ghi giá trị khác vào cột → vẫn đụng
+        // unique index. Bỏ qua nhánh này là lỗi chỉ lộ ra dưới dạng 500 lúc SaveChanges.
+        if (!string.Equals(page.Slug, storedSlug, StringComparison.Ordinal))
         {
             if (IsHomeSlug(storedSlug))
             {
@@ -147,6 +153,8 @@ public sealed class BuilderPageService : IBuilderPageService
                 if (slugExists)
                     return Result<BuilderPageDto>.Failure($"Slug '{storedSlug}' đã tồn tại.");
             }
+
+            await ReleaseDeletedSlugAsync(id, storedSlug, ct);
         }
 
         var incomingHtml = _sanitizer.SanitizeBuilder(request.CompiledHtml);
@@ -248,6 +256,10 @@ public sealed class BuilderPageService : IBuilderPageService
 
         page.IsDeleted = true;
         page.DeletedAt = DateTime.UtcNow;
+        // Nhả slug ngay khi xoá: unique index IX_Pages_SiteId_Slug KHÔNG lọc IsDeleted, nên một
+        // trang đã xoá vẫn giữ chỗ slug đó mãi mãi. Global query filter lại ẩn nó đi, nên mọi
+        // kiểm tra trùng slug đều báo "trống" rồi UPDATE/INSERT đâm thẳng vào index → 500.
+        page.Slug = DeletedSlug(page.Slug, page.Id);
         await _db.SaveChangesAsync(ct);
 
         _routeRegistry.Invalidate();
@@ -353,6 +365,42 @@ public sealed class BuilderPageService : IBuilderPageService
 
         var text = System.Net.WebUtility.HtmlDecode(Regex.Replace(html, "<[^>]*>", " "));
         return string.IsNullOrWhiteSpace(text);
+    }
+
+    /// <summary>
+    /// Nhả slug đang bị một trang ĐÃ XOÁ MỀM giữ chỗ, để trang sống ghi vào được.
+    ///
+    /// Vì sao cần: unique index IX_Pages_SiteId_Slug không lọc IsDeleted, còn global query filter
+    /// thì lọc — nên trang đã xoá là điểm mù hoàn hảo: mọi kiểm tra trùng đều nói "slug trống",
+    /// SaveChanges mới lòi ra SqlException 2601 và trả 500 cho builder (gặp thật 2026-09-12 trên
+    /// trang chủ site phuphuc: slug '' do một trang đã xoá giữ, trang sống mang slug 'home' nên
+    /// không lưu nổi). Trang đã xoá không còn route, không có đường phục hồi, nên đổi slug của nó
+    /// là an toàn.
+    /// </summary>
+    private async Task ReleaseDeletedSlugAsync(Guid? excludeId, string storedSlug, CancellationToken ct)
+    {
+        // IgnoreQueryFilters bỏ CẢ scope site → phải tự chặn lại theo SiteId, nếu không sẽ đi đổi
+        // slug của site khác.
+        var siteId = _db.CurrentSiteId;
+        var squatters = await _db.Pages
+            .IgnoreQueryFilters()
+            .Where(p => p.SiteId == siteId && p.IsDeleted && p.Slug == storedSlug)
+            .Where(p => excludeId == null || p.Id != excludeId)
+            .ToListAsync(ct);
+
+        foreach (var squatter in squatters)
+            squatter.Slug = DeletedSlug(squatter.Slug, squatter.Id);
+
+        if (squatters.Count > 0) await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Slug đánh dấu "đã xoá", đủ duy nhất để không đụng unique index lần nữa.</summary>
+    private static string DeletedSlug(string? slug, Guid id)
+    {
+        var suffix = "-deleted-" + id.ToString("N")[..8];
+        var head = string.IsNullOrWhiteSpace(slug) ? "home" : slug.Trim();
+        if (head.Length + suffix.Length > 320) head = head[..(320 - suffix.Length)];
+        return head + suffix;
     }
 
     private static string NormalizeSlugForStorage(string? slug)

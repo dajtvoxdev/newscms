@@ -105,4 +105,51 @@ public sealed class BlockCodeExtractorTests
         Assert.Equal(html, result.Html);
         Assert.Equal(string.Empty, result.Css);
     }
+
+    // ── Khối nhúng HTML (data-nc-html) ───────────────────────────────────────────
+
+    [Fact]
+    public void Extract_EmbedHtml_DoNguyenVanVaoRuotKhoi()
+    {
+        // Cả điểm quan trọng của tính năng: mã đi ra NGUYÊN VĂN, kể cả iframe lạ và script —
+        // những thứ ContentSanitizer luôn cắt khi chúng nằm thẳng trong HTML.
+        const string raw = "<iframe src=\"https://maps.example/embed?id=7\"></iframe><script>init()</script>";
+        var html = $"<div data-nc-html=\"{System.Net.WebUtility.HtmlEncode(raw)}\"></div>";
+
+        var result = BlockCodeExtractor.Extract(html);
+
+        Assert.Contains("<iframe src=\"https://maps.example/embed?id=7\"></iframe>", result.Html);
+        Assert.Contains("<script>init()</script>", result.Html);
+        // Attribute bị gỡ: không lộ mã nguồn hai lần và không làm phình trang.
+        Assert.DoesNotContain("data-nc-html", result.Html);
+    }
+
+    [Fact]
+    public void Extract_EmbedRong_ChiGoAttribute()
+    {
+        var result = BlockCodeExtractor.Extract("<div data-nc-html=\"\">giu nguyen</div>");
+
+        Assert.DoesNotContain("data-nc-html", result.Html);
+        Assert.Contains("giu nguyen", result.Html);
+    }
+
+    [Fact]
+    public void Extract_EmbedKemCssKhoi_CaHaiCungChay()
+    {
+        var html = "<div data-nc-sid=\"emb1\" data-nc-css=\"padding:12px\" "
+                 + "data-nc-html=\"" + System.Net.WebUtility.HtmlEncode("<b>xin chao</b>") + "\"></div>";
+
+        var result = BlockCodeExtractor.Extract(html);
+
+        Assert.Contains("<b>xin chao</b>", result.Html);
+        Assert.Contains("[data-nc-sid=\"emb1\"]{padding:12px}", result.Css);
+    }
+
+    [Fact]
+    public void CarriesRawHtml_NhanDienDeTangApiDoiQuyen()
+    {
+        Assert.True(BlockCodeExtractor.CarriesRawHtml("<div data-nc-html=\"&lt;b&gt;x&lt;/b&gt;\"></div>"));
+        Assert.False(BlockCodeExtractor.CarriesRawHtml("<div class=\"hero\">khong co gi</div>"));
+        Assert.False(BlockCodeExtractor.CarriesRawHtml(null));
+    }
 }

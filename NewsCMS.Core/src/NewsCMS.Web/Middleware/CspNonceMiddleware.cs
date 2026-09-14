@@ -61,7 +61,12 @@ public class CspNonceMiddleware
                   $"font-src 'self' https://fonts.gstatic.com; " +
                   $"img-src 'self' data: https:; " +
                   $"connect-src 'self'; " +
-                  $"frame-src 'none'; " +
+                  // frame-src từng là 'none' — chặn luôn iframe bản đồ/widget mà khối "Nhúng HTML"
+                  // (data-nc-html) sinh ra, dù mã nhúng đã đổ vào trang nguyên vẹn. Khung nhúng là
+                  // nội dung admin chủ đích dán vào (quyền Builder.Code.Manage), và trang bị nhúng vẫn
+                  // tự bảo vệ bằng X-Frame-Options/CSP frame-ancestors của chính nó, nên mở cho https
+                  // là mức chặt hợp lý: chặn frame http/data/javascript, không chặn nguồn nhúng thật.
+                  $"frame-src https:; " +
                   $"object-src 'none'; " +
                   $"base-uri 'self'";
 

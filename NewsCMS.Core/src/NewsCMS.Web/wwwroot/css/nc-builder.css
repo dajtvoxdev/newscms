@@ -377,19 +377,32 @@
 /* Dòng chứa rule vừa nhảy tới trong CodeMirror — nháy sáng một nhịp rồi tắt. */
 .CodeMirror .nc-cm-hit { background: rgba(250, 204, 21, .28); }
 
+/* ── Khối nhúng HTML (data-nc-html) ─────────────────────────────────────────── */
+/* Chỉ có tác dụng trong canvas builder: attribute bị BlockCodeExtractor gỡ khi render
+   trang public, nên rule này không bao giờ chạm tới trang thật. Viền đứt + chiều cao tối
+   thiểu để khối nhúng rỗng (hoặc chỉ chứa script) vẫn nhìn thấy và bấm chọn được. */
+[data-nc-html] {
+  min-height: 28px;
+  outline: 1px dashed rgba(13, 124, 102, .45);
+  outline-offset: 2px;
+}
+
 /* ── Modal code editor ──────────────────────────────────────────────────────── */
 
 #nc-code-modal,
 #nc-blockcode-modal,
+#nc-embed-modal,
 #nc-seo-modal,
 #nc-history-modal { display: none; }
 #nc-code-modal.open,
 #nc-blockcode-modal.open,
+#nc-embed-modal.open,
 #nc-seo-modal.open,
 #nc-history-modal.open { display: block; }
 
 #nc-code-modal .nc-modal-backdrop,
 #nc-blockcode-modal .nc-modal-backdrop,
+#nc-embed-modal .nc-modal-backdrop,
 #nc-seo-modal .nc-modal-backdrop,
 #nc-history-modal .nc-modal-backdrop {
   position: fixed;
@@ -400,6 +413,7 @@
 
 #nc-code-modal .nc-modal,
 #nc-blockcode-modal .nc-modal,
+#nc-embed-modal .nc-modal,
 #nc-seo-modal .nc-modal,
 #nc-history-modal .nc-modal {
   position: fixed;
@@ -531,6 +545,7 @@
 
 #nc-code-modal .nc-btn,
 #nc-blockcode-modal .nc-btn,
+#nc-embed-modal .nc-btn,
 #nc-seo-modal .nc-btn,
 #nc-history-modal .nc-btn {
   padding: 8px 16px;
@@ -543,10 +558,12 @@
 }
 #nc-code-modal .nc-btn:hover,
 #nc-blockcode-modal .nc-btn:hover,
+#nc-embed-modal .nc-btn:hover,
 #nc-seo-modal .nc-btn:hover,
 #nc-history-modal .nc-btn:hover { background: #f1f5f9; }
 #nc-code-modal .nc-btn-primary,
 #nc-blockcode-modal .nc-btn-primary,
+#nc-embed-modal .nc-btn-primary,
 #nc-seo-modal .nc-btn-primary,
 #nc-history-modal .nc-btn-primary {
   background: #0d7c66;
@@ -555,6 +572,7 @@
 }
 #nc-code-modal .nc-btn-primary:hover,
 #nc-blockcode-modal .nc-btn-primary:hover,
+#nc-embed-modal .nc-btn-primary:hover,
 #nc-seo-modal .nc-btn-primary:hover,
 #nc-history-modal .nc-btn-primary:hover { background: #0a6352; }
 
@@ -623,6 +641,87 @@
 }
 .nc-shell-select:focus { outline: none; border-color: #0d7c66; }
 
+/* ── Thư viện khối ở PANEL TRÁI (setupPanelErgonomics) ─────────────────────── */
+
+.nc-blocks-left {
+  position: absolute;
+  top: var(--gjs-canvas-top, 40px);
+  left: 0;
+  bottom: 0;
+  width: 250px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 2px 0 10px rgba(15, 23, 42, .06);
+  font-family: system-ui, sans-serif;
+}
+.nc-blocks-left-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.nc-blocks-search {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-family: inherit;
+}
+.nc-blocks-search:focus { outline: none; border-color: #0d7c66; }
+.nc-blocks-left .gjs-blocks-c {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+/* Block container GrapesJS mặc định có chiều cao cố định theo panel cũ → thả lỏng. */
+.nc-blocks-left .gjs-sm-sector,
+.nc-blocks-left [data-gjs-type="blocks"] { height: auto !important; }
+
+/* Canvas GrapesJS absolute full-container; panel views phải có nền để block-manager cũ
+ * (đã dời sang .nc-blocks-left) không để lại vùng trắng chồng canvas. z-index 4 > 3 của
+ * blocks-left để nút gốc vẫn bấm được khi cần chuyển tab. */
+.gjs-pn-views { background: #2f3135 !important; }
+.gjs-pn-views-container { background: #fff !important; }
+
+/* ── Tab panel phải: Nội dung / Style / Lớp / Kết cấu ──────────────────────── */
+
+.nc-sm-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 6px 0;
+  background: var(--gjs-main-dark-color, #3b3f45);
+  font-family: system-ui, sans-serif;
+}
+.nc-sm-tab {
+  flex: 1;
+  padding: 7px 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #9aa0a8;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  cursor: pointer;
+  transition: color .12s, border-color .12s;
+}
+.nc-sm-tab:hover { color: #e2e8f0; }
+.nc-sm-tab.active {
+  color: #fff;
+  border-bottom-color: #0d7c66;
+}
+
 /* ── Block card trong panel Blocks ──────────────────────────────────────────── */
 
 .gjs-block .ncblk {
@@ -635,4 +734,263 @@
 .gjs-block .ncblk-icon svg {
   width: 22px;
   height: 22px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   Phase 4 — Widget Style Manager: color swatch, spacing box, radius/shadow chips,
+   device indicator. Chỉ tồn tại trong admin panel (trang public không có .nc-color
+   hay .nc-box nên CSS vô hại dù nc-builder.css cũng được PageRenderer nạp).
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Color token swatches ─────────────────────────────────────────────────── */
+.nc-color { padding: 6px 0; }
+.nc-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.nc-sw {
+  width: 28px;
+  height: 28px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color .12s, box-shadow .12s;
+  background-clip: padding-box;
+}
+.nc-sw:hover { border-color: #94a3b8; }
+.nc-sw.on {
+  border-color: #0d7c66;
+  box-shadow: 0 0 0 2px rgba(13, 124, 102, .3);
+}
+.nc-sw-free {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.nc-sw-free input[type=color] {
+  position: absolute;
+  inset: -4px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.nc-sw-clear {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nc-sw-clear:hover { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+.nc-color-cur {
+  margin-top: 5px;
+  padding: 4px 8px;
+  background: #f8fafc;
+  border-radius: 5px;
+  font-size: 11px;
+  font-family: monospace;
+  color: #475569;
+  word-break: break-all;
+}
+.nc-color-cur.is-empty { color: #94a3b8; font-style: italic; }
+
+/* ── Spacing box widget (margin/padding 4 cạnh) ───────────────────────────── */
+.nc-box { padding: 6px 0; }
+.nc-box-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.nc-box-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+.nc-box-link {
+  padding: 2px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all .12s;
+}
+.nc-box-link:hover { border-color: #0d7c66; color: #0d7c66; }
+.nc-box-link.on {
+  background: rgba(13, 124, 102, .1);
+  border-color: #0d7c66;
+  color: #0d7c66;
+}
+.nc-box-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 3px;
+  position: relative;
+  padding: 22px 0;
+}
+.nc-box-mid {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.nc-box-in {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  background: #fff;
+  font-size: 12px;
+  font-family: monospace;
+  text-align: center;
+  outline: none;
+  transition: border-color .12s, box-shadow .12s;
+}
+.nc-box-in:focus,
+.nc-box-in.active {
+  border-color: #0d7c66;
+  box-shadow: 0 0 0 2px rgba(13, 124, 102, .2);
+}
+.nc-box-top    { grid-column: 1 / -1; justify-self: center; width: 65%; }
+.nc-box-right  { justify-self: end; }
+.nc-box-bottom { grid-column: 1 / -1; justify-self: center; width: 65%; }
+.nc-box-left   { justify-self: start; }
+
+/* Step ladder — thang bước 0/4/8/12/16/24/32/48/64px */
+.nc-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 5px;
+}
+.nc-step {
+  padding: 3px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 11px;
+  font-family: monospace;
+  color: #475569;
+  cursor: pointer;
+  transition: all .12s;
+}
+.nc-step:hover {
+  border-color: #0d7c66;
+  background: rgba(13, 124, 102, .06);
+  color: #0d7c66;
+}
+
+/* ── Radius / Shadow chip presets ─────────────────────────────────────────── */
+/* .nc-chips sudah ada untuk trait multi-select; kita pakai untuk radius/shadow juga.
+   Chip row khusus ini: */
+.nc-chips .nc-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.nc-chips .nc-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: all .12s;
+}
+.nc-chips .nc-chip:hover { border-color: #0d7c66; }
+.nc-chips .nc-chip.on {
+  border-color: #0d7c66;
+  background: rgba(13, 124, 102, .1);
+  color: #0a6352;
+  font-weight: 600;
+}
+.nc-chip-dot {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  flex-shrink: 0;
+  background: #fff;
+}
+.nc-chip-input {
+  margin-top: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: monospace;
+  outline: none;
+  transition: border-color .12s;
+}
+.nc-chip-input:focus { border-color: #0d7c66; }
+.nc-chip-input.on {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+/* ── Device indicator (mobile-only warning) ───────────────────────────────── */
+.nc-device-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  margin: 0 0 2px;
+  background: #fff7ed;
+  border-left: 3px solid #f59e0b;
+  font-size: 11.5px;
+  color: #92400e;
+}
+.nc-device-note[hidden] { display: none !important; }
+.nc-device-note-text { flex: 1; line-height: 1.35; }
+.nc-device-btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid #f59e0b;
+  border-radius: 5px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  color: #92400e;
+  cursor: pointer;
+  transition: all .12s;
+  white-space: nowrap;
+}
+.nc-device-btn:hover { background: #fef3c7; }
+.nc-device-btn-danger {
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+.nc-device-btn-danger:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #b91c1c;
 }

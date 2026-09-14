@@ -26,12 +26,14 @@
  *      JS cần quyền Builder.Code.Manage (server chặn ở BuilderPageApiController qua service? —
  *      không: API PUT nhận customJs không kiểm quyền chi tiết; UI ẩn field khi thiếu scope).
  *   4. Library code — snippet CSS/JS dùng sẵn chèn một click vào editor đang mở.
+ *   5. Nhúng HTML — khối "Nhúng HTML" giữ mã thô trong data-nc-html, render nguyên văn ở
+ *      trang public (không qua sanitizer) nên khoá sau quyền Builder.Code.Manage.
  */
 (function (global) {
   'use strict';
 
   // ── Trạng thái module ────────────────────────────────────────────────────────
-  var OPTS = { token: '', blocks: [], sitePresets: [], siteCss: '', hasCodeScope: false, onChange: null, sampleEntityId: null, sampleType: null, pageKind: '' };
+  var OPTS = { token: '', blocks: [], sitePresets: [], siteCss: '', hasCodeScope: false, onChange: null, sampleEntityId: null, sampleType: null, pageKind: '', tokenCssUrl: '' };
 
   // ── Tiện ích ────────────────────────────────────────────────────────────────
   function esc(s) {
@@ -435,6 +437,235 @@
   }
 
 
+  // ═════════════════════════════════════════════════════════════════════════════
+  // 1c) KHỐI NHÚNG HTML THÔ
+  // ═════════════════════════════════════════════════════════════════════════════
+
+  /*
+   * "Nhúng HTML": một div mang đoạn mã người dùng tự dán, cất trong attribute data-nc-html.
+   *
+   * Vì sao mã nằm trong attribute chứ không parse thành component GrapesJS: parse xong là mã bị
+   * viết lại (thứ tự attribute, thẻ tự đóng, script bị bỏ), rồi ContentSanitizer cắt tiếp lúc lưu
+   * — snippet bên thứ ba (iframe bản đồ, widget chat, form nhúng) gần như không bao giờ sống sót.
+   * Giá trị attribute thì sanitizer không đụng tới, nên mã đi qua nguyên vẹn và BlockCodeExtractor
+   * đổ lại vào ruột khối lúc render trang public.
+   *
+   * Canvas chỉ innerHTML để xem trước: <script> KHÔNG chạy trong builder — cố ý, để một snippet
+   * hỏng không giết editor. Muốn thấy nó chạy thật thì mở trang public.
+   *
+   * Quyền: server đòi Builder.Code.Manage cho mọi HTML có data-nc-html (mã thô = chạy được mã tuỳ
+   * ý trên trình duyệt khách). Thiếu quyền thì khối không hiện trong palette và nút sửa bị khoá,
+   * nhưng component type vẫn đăng ký để trang đã có khối nhúng không vỡ khi mở.
+   */
+  var EMBED_ATTR = 'data-nc-html';
+  var EMBED_TYPE = 'nc-html-embed';
+
+  var embedState = { comp: null, btn: null, cm: null };
+
+  function embedCode(comp) {
+    return (comp && (comp.getAttributes() || {})[EMBED_ATTR]) || '';
+  }
+
+  function embedLabel(comp) {
+    var code = String(embedCode(comp)).trim();
+    return code ? '✎ Sửa mã nhúng (' + code.length + ' ký tự)' : '✎ Dán mã HTML';
+  }
+
+  /** Xem trước vào DOM canvas, KHÔNG tạo component con — nhờ vậy mã không bị lưu thành hai bản. */
+  function renderEmbedPreview(comp, el) {
+    if (!el) return;
+    var code = String(embedCode(comp)).trim();
+    if (!code) {
+      el.innerHTML =
+        '<div style="padding:26px;text-align:center;color:#64748b;font-family:system-ui,sans-serif;' +
+        'border:2px dashed #cbd5e1;border-radius:12px;background:#f8fafc">' +
+        '<div style="font-weight:700;margin-bottom:4px">Khối nhúng HTML</div>' +
+        '<div style="font-size:.85rem">Nhấp đúp vào khối để dán mã.</div></div>';
+      return;
+    }
+    el.innerHTML = code;
+  }
+
+  function registerHtmlEmbed(editor) {
+    editor.DomComponents.addType(EMBED_TYPE, {
+      // Nhận diện cả khi trang được parse từ HTML thuần (import, MCP), không riêng BuilderJson.
+      isComponent: function (el) {
+        if (el && el.getAttribute && el.getAttribute(EMBED_ATTR) !== null) return { type: EMBED_TYPE };
+      },
+      model: {
+        defaults: {
+          name: 'Nhúng HTML',
+          tagName: 'div',
+          droppable: false,   // thả khối khác vào trong thì ruột lại bị preview ghi đè
+          editable: false,    // sửa bằng modal, không gõ thẳng vào canvas
+          components: []
+        }
+      },
+      view: {
+        events: { dblclick: 'ncEditCode' },
+        init: function () { this.listenTo(this.model, 'change:attributes', this.ncRefresh); },
+        ncEditCode: function (e) {
+          if (e) { e.preventDefault(); e.stopPropagation(); }
+          openEmbedModal(editor, this.model, null);
+        },
+        ncRefresh: function () { renderEmbedPreview(this.model, this.el); },
+        onRender: function () { renderEmbedPreview(this.model, this.el); }
+      }
+    });
+
+    if (!OPTS.hasCodeScope) return;
+
+    editor.BlockManager.add('nc-html-embed', {
+      label: '<div class="ncblk"><span class="ncblk-icon">' +
+             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+             'stroke-linecap="round" stroke-linejoin="round"><polyline points="8 7 3 12 8 17"/>' +
+             '<polyline points="16 7 21 12 16 17"/><line x1="13" y1="4" x2="11" y2="20"/></svg>' +
+             '</span><span class="ncblk-label">Nhúng HTML</span></div>',
+      category: 'Bố cục',
+      media: '',
+      attributes: { title: 'Dán HTML thô: iframe bản đồ, widget, snippet bên thứ ba' },
+      content: { type: EMBED_TYPE, attributes: { 'data-nc-html': '' } }
+    });
+  }
+
+  function registerEmbedTrait(editor) {
+    editor.TraitManager.addType('nc-html-embed-code', {
+      noLabel: true,
+      createInput({ component }) {
+        var wrap = document.createElement('div');
+        wrap.className = 'nc-blockcode-wrap';
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'nc-trait-btn nc-blockcode-btn';
+        btn.textContent = embedLabel(component);
+        if (OPTS.hasCodeScope) {
+          btn.addEventListener('click', function () { openEmbedModal(editor, component, btn); });
+        } else {
+          btn.disabled = true;
+          btn.title = 'Cần quyền Builder.Code.Manage để sửa mã nhúng.';
+        }
+        wrap.appendChild(btn);
+        return wrap;
+      },
+      onEvent() { /* nút bấm, không ghi attribute */ }
+    });
+  }
+
+  function ensureEmbedModal(editor) {
+    if (document.getElementById('nc-embed-modal')) return;
+
+    var modal = document.createElement('div');
+    modal.id = 'nc-embed-modal';
+    modal.className = 'nc-modal-root';
+    modal.innerHTML =
+      '<div class="nc-modal-backdrop"></div>' +
+      '<div class="nc-modal">' +
+      '  <div class="nc-modal-head"><span>Nhúng HTML vào khối</span>' +
+      '    <button type="button" class="nc-modal-close" title="Đóng">×</button></div>' +
+      '  <div class="nc-tab-pane active"><textarea id="nc-embed-code"></textarea>' +
+      '    <div class="nc-hint">Mã được đổ <b>nguyên văn</b> vào khối khi render trang public — không qua ' +
+      'bộ lọc HTML, nên iframe bản đồ, widget bên thứ ba, thẻ <code>&lt;script&gt;</code> đều sống. ' +
+      'Trong builder chỉ là bản xem trước tĩnh: script không chạy ở canvas. Xoá trắng để gỡ mã. ' +
+      'Cần mã sửa được bằng chuột thì bấm “Chuyển thành khối chỉnh sửa” — khi đó mã đi qua bộ lọc ' +
+      'HTML như mọi khối thường.</div></div>' +
+      '  <div class="nc-modal-foot">' +
+      '    <button type="button" class="nc-btn" id="nc-embed-convert" ' +
+      'title="Parse mã thành khối GrapesJS sửa được bằng chuột (mã sẽ đi qua bộ lọc HTML khi lưu)">' +
+      'Chuyển thành khối chỉnh sửa</button>' +
+      '    <div class="nc-spacer"></div>' +
+      '    <button type="button" class="nc-btn" id="nc-embed-cancel">Huỷ</button>' +
+      '    <button type="button" class="nc-btn-primary" id="nc-embed-save">Áp dụng</button>' +
+      '  </div>' +
+      '</div>';
+    document.body.appendChild(modal);
+
+    modal.querySelector('.nc-modal-close').addEventListener('click', closeEmbedModal);
+    modal.querySelector('.nc-modal-backdrop').addEventListener('click', closeEmbedModal);
+    modal.querySelector('#nc-embed-cancel').addEventListener('click', closeEmbedModal);
+    modal.querySelector('#nc-embed-save').addEventListener('click', function () { saveEmbedCode(editor); });
+    modal.querySelector('#nc-embed-convert').addEventListener('click', function () { convertEmbedToComponents(editor); });
+  }
+
+  function openEmbedModal(editor, comp, btn) {
+    if (!OPTS.hasCodeScope) return;
+    ensureEmbedModal(editor);
+    embedState.comp = comp;
+    embedState.btn = btn || null;
+
+    document.getElementById('nc-embed-modal').classList.add('open');
+
+    if (!embedState.cm) {
+      embedState.cm = global.CodeMirror.fromTextArea(document.getElementById('nc-embed-code'), {
+        mode: 'htmlmixed', theme: 'material-darker', lineNumbers: true, autoRefresh: true,
+        matchBrackets: true, autoCloseBrackets: true, lineWrapping: true
+      });
+    }
+
+    // Beautify khi mở, giống modal code khối: lib chưa nạp xong thì hiện nguyên văn rồi format lại
+    // (chỉ khi người dùng chưa kịp gõ đè lên).
+    var raw = String(embedCode(comp));
+    var shown = fmtBeautify(raw, 'html');
+    embedState.cm.setValue(shown);
+    if (global.ncCodeFormat) {
+      global.ncCodeFormat.ensure(['html']).then(function () {
+        if (embedState.cm && embedState.cm.getValue() === shown) {
+          embedState.cm.setValue(global.ncCodeFormat.beautify(raw, 'html'));
+        }
+      });
+    }
+
+    setTimeout(function () {
+      if (!embedState.cm) return;
+      embedState.cm.refresh();
+      embedState.cm.focus();
+    }, 40);
+  }
+
+  function closeEmbedModal() {
+    var modal = document.getElementById('nc-embed-modal');
+    if (modal) modal.classList.remove('open');
+    embedState.comp = null;
+    embedState.btn = null;
+  }
+
+  function saveEmbedCode(editor) {
+    var comp = embedState.comp;
+    if (!comp) { closeEmbedModal(); return; }
+
+    var attrs = Object.assign({}, comp.getAttributes() || {});
+    // HTML không minify (nc-code-format đặt MINIFIABLE.html = false) — chỉ cắt khoảng trắng thừa.
+    attrs[EMBED_ATTR] = String(embedState.cm ? embedState.cm.getValue() : '').trim();
+    comp.setAttributes(attrs);
+
+    if (embedState.btn) embedState.btn.textContent = embedLabel(comp);
+    renderEmbedPreview(comp, comp.view && comp.view.el);
+    notifyChange();
+    closeEmbedModal();
+  }
+
+  /**
+   * Đổi khối nhúng thành component GrapesJS thật: sửa được bằng chuột, nhưng từ lúc đó mã nằm
+   * thẳng trong CompiledHtml nên ContentSanitizer sẽ lọc (script, iframe lạ, position bị cắt).
+   * Dành cho người dán markup tĩnh rồi muốn kéo thả tiếp, không phải cho snippet bên thứ ba.
+   */
+  function convertEmbedToComponents(editor) {
+    var comp = embedState.comp;
+    if (!comp) { closeEmbedModal(); return; }
+    var code = String(embedState.cm ? embedState.cm.getValue() : '').trim();
+    if (!code) { closeEmbedModal(); return; }
+
+    var parent = comp.parent() || editor.getWrapper();
+    var at = comp.index();
+    comp.remove();
+    var added = parent.append(code, { at: at });
+    var first = Array.isArray(added) ? added[0] : added;
+    if (first) editor.select(first);
+
+    notifyChange();
+    closeEmbedModal();
+  }
+
+
   // Hàng đợi preview: gom nhiều request cùng frame để không spam API.
   var previewTimers = new WeakMap();
 
@@ -446,18 +677,41 @@
   var matchInfo = new WeakMap();
 
   function schedulePreview(editor, component, el, key, props) {
+    // Cache theo key+props: GrapesJS re-render view (kéo khối khác, đổi device, undo…) bắn
+    // onRender → schedulePreview vô điều kiện. Không cache thì mỗi lần re-mount là một lượt
+    // skeleton + fetch: chiều cao khối nháy đổi giữa lúc kéo → vùng thả nhảy dưới con trỏ.
+    var sig = previewSignature(key, props);
+    if (el._ncPrevSig === sig && el.querySelector('*') && !el.querySelector('[data-nc-skeleton]')) {
+      clearLoading(el);
+      return;
+    }
     if (previewTimers.has(el)) clearTimeout(previewTimers.get(el));
     // Đánh dấu đang tải NGAY, không chờ hết debounce: 250ms im lặng khiến người dùng
-    // tưởng thao tác vừa rồi không ăn.
-    markLoading(editor, el);
-    var t = setTimeout(function () {
+    // tưởng thao tác vừa rồi không ăn. NGOẠI TRỪ lúc đang kéo — khi đó đây chỉ là re-render
+    // do drag của khối bên cạnh, thay ruột/skeleton sẽ phá vỡ bố cục canvas giữa cơn drag.
+    if (!(global.ncCanvas && global.ncCanvas.isDragging && global.ncCanvas.isDragging())) {
+      markLoading(editor, el);
+    }
+    var t = setTimeout(function run() {
       previewTimers.delete(el);
+      if (global.ncCanvas && global.ncCanvas.isDragging && global.ncCanvas.isDragging()) {
+        // Kéo chưa xong — hẹn lại cuối phiên drag thay vì fetch vào mặt người dùng.
+        previewTimers.set(el, setTimeout(run, 400));
+        return;
+      }
       fetchPreview(key, props).then(function (res) {
         setMatchInfo(component, res.matchedCount, props);
         injectPreview(editor, el, res.html);
+        el._ncPrevSig = sig;
       });
     }, 250);
     previewTimers.set(el, t);
+  }
+
+  /** Chữ ký preview: cùng key + cùng props thì nội dung hiển thị giống hệt nhau. */
+  function previewSignature(key, props) {
+    try { return key + '|' + JSON.stringify(props || {}); }
+    catch (e) { return key + '|?'; }
   }
 
   /**
@@ -1148,6 +1402,12 @@
         // Thêm vào đầu danh sách trait để dễ thấy.
         var variant = { type: 'nc-style-variant', name: 'nc_variant', label: 'Kiểu hiển thị' };
         try { coll.unshift(variant); } catch (e) { coll.add(variant); }
+      }
+
+      // Khối nhúng HTML: nút sửa mã lên đầu panel — đó là thứ duy nhất người dùng cần ở đây.
+      if (comp.get('type') === EMBED_TYPE && !has('nc_embed')) {
+        var embedTrait = { type: 'nc-html-embed-code', name: 'nc_embed', label: '' };
+        try { coll.unshift(embedTrait); } catch (e) { coll.add(embedTrait); }
       }
 
       if (!has('nc_code')) coll.add({ type: 'nc-block-code', name: 'nc_code', label: '' });
@@ -2178,7 +2438,11 @@
 
     registerDynamicComponents(editor);
     registerLayoutBlocks(editor);
+    registerHtmlEmbed(editor);
+    registerEmbedTrait(editor);
     wireSelectionTraits(editor);
+    setupPanelErgonomics(editor);
+    setupStyleUpgrades(editor);
 
     // Nút "Code" trên topbar do Edit.cshtml tạo — bắt sự kiện tại đây.
     var btnCode = document.getElementById('btn-code');
@@ -2198,10 +2462,749 @@
     });
   }
 
+  // ═════════════════════════════════════════════════════════════════════════════
+  // 2d) THOẠI SẬN PANEL: palette sang trái, tab hợp nhất, viền khối mặc định bật
+  // ═════════════════════════════════════════════════════════════════════════════
+
+  /*
+   * Ba khó chịu của layout panel GrapesJS mặc định:
+   *   - Thư viện khối nằm PANEL PHẢI cùng chỗ với Style/Layer → mỗi lần kéo là kéo ngang
+   *     cả màn hình (1440px+). Webflow/Framer/Elementor đều để trái; chuyển về trái rút
+   *     quãng kéo xuống còn ~250px và đúng quy ước cơ bắp của người dùng.
+   *   - Nút mở Blocks / Layer / Style / Trait bốn nơi riêng, panel phải nhảy lung tung →
+   *     gộp thành một hàng tab Nội dung | Style | Kết cấu ngay đầu panel.
+   *   - sw-visibility (viền khối) mặc định TẮT → ranh giới section không thấy cho tới khi
+   *     người dùng mò ra nút; bật mặc định + nhớ lựa chọn qua localStorage.
+   */
+  var PANEL_LS_KEYS = { visibility: 'nc.builder.visibility' };
+
+  function setupPanelErgonomics(editor) {
+    editor.on('load', function () {
+      setTimeout(function () {
+        moveBlocksPanelToLeft(editor);
+        buildRightTabs(editor);
+        restoreVisibility(editor);
+      }, 0);
+    });
+  }
+
+  /** Kéo panel "Khối" (block manager) từ phải sang trái bằng absolute overlay trong .gjs-editor. */
+  function moveBlocksPanelToLeft(editor) {
+    var editorRoot = document.querySelector('.gjs-editor');
+    if (!editorRoot || document.getElementById('nc-blocks-left')) return;
+
+    var bm = editor.BlockManager;
+    if (!bm || !bm.getContainer) return;
+    var bmEl = bm.getContainer();
+    if (!bmEl) return;
+
+    var wrap = document.createElement('div');
+    wrap.id = 'nc-blocks-left';
+    wrap.className = 'nc-blocks-left';
+    var head = document.createElement('div');
+    head.className = 'nc-blocks-left-head';
+    head.innerHTML = '<span>Thư viện khối</span>';
+    var search = document.createElement('input');
+    search.type = 'search';
+    search.placeholder = 'Tìm khối…';
+    search.className = 'nc-blocks-search';
+    head.appendChild(search);
+    wrap.appendChild(head);
+    wrap.appendChild(bmEl);
+    editorRoot.appendChild(wrap);
+
+    // Lọc block theo từ khóa: ẩn category trống, hiện lại khi xóa trắng.
+    search.addEventListener('input', function () {
+      var q = search.value.trim().toLowerCase();
+      Array.prototype.forEach.call(bmEl.querySelectorAll('.gjs-block'), function (el) {
+        var label = (el.textContent || '').toLowerCase();
+        el.style.display = !q || label.indexOf(q) >= 0 ? '' : 'none';
+      });
+      Array.prototype.forEach.call(bmEl.querySelectorAll('.gjs-block-category'), function (cat) {
+        var any = Array.prototype.some.call(cat.querySelectorAll('.gjs-block'), function (b) {
+          return b.style.display !== 'none';
+        });
+        cat.style.display = !q || any ? '' : 'none';
+      });
+    });
+  }
+
+  /** Hàng tab hợp nhất: Nội dung (traits) | Style | Kết cấu. */
+  function buildRightTabs(editor) {
+    var viewsCont = document.querySelector('.gjs-pn-views-container');
+    if (!viewsCont || document.getElementById('nc-sm-tabs')) return;
+
+    var tabs = [
+      { id: 'trait', label: 'Nội dung', open: function () { command(editor, 'open-tm'); } },
+      { id: 'style', label: 'Style',   open: function () { command(editor, 'open-sm'); } },
+      { id: 'layer', label: 'Kết cấu', open: function () { command(editor, 'open-layers'); } }
+    ];
+
+    var bar = document.createElement('div');
+    bar.id = 'nc-sm-tabs';
+    bar.className = 'nc-sm-tabs';
+    var els = {};
+    tabs.forEach(function (t) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'nc-sm-tab';
+      b.textContent = t.label;
+      b.addEventListener('click', function () { t.open(); syncActiveTab(t.id); });
+      els[t.id] = b;
+      bar.appendChild(b);
+    });
+    viewsCont.insertBefore(bar, viewsCont.firstChild);
+
+    function syncActiveTab(activeId) {
+      Object.keys(els).forEach(function (k) {
+        els[k].classList.toggle('active', k === activeId);
+      });
+    }
+
+    // Khi GrapesJS tự đổi panel (chọn khối động → traits…), đồng bộ tab sáng theo.
+    editor.on('panel:target', function (name) {
+      var target = name && name.get ? name.get('id') : name;
+      if (target === 'open-tm' || target === 'tm') syncActiveTab('trait');
+      else if (target === 'open-sm' || target === 'sm') syncActiveTab('style');
+      else if (target === 'open-layers' || target === 'lm') syncActiveTab('layer');
+    });
+    syncActiveTab('style');
+  }
+
+  function command(editor, id) {
+    try { editor.runCommand(id); } catch (e) { /* lệnh không tồn tại ở bản này */ }
+  }
+
+  /** Bật/tắt khung viền khối: nhớ lựa chọn, mặc định BẬT. */
+  function restoreVisibility(editor) {
+    var wantOn = true;
+    try {
+      var stored = localStorage.getItem(PANEL_LS_KEYS.visibility);
+      if (stored !== null) wantOn = stored === 'on';
+    } catch (e) { /* private mode */ }
+
+    var btnView = null;
+    try { btnView = editor.Panels.getButton('options', 'sw-visibility'); } catch (e) { /* panel khác */ }
+    var isOn = btnView ? !!btnView.get('active') : false;
+
+    if (wantOn !== isOn) command(editor, 'core:component-outline');
+    if (btnView) {
+      btnView.on('change:active', function (m, active) {
+        try { localStorage.setItem(PANEL_LS_KEYS.visibility, active ? 'on' : 'off'); } catch (e) {}
+      });
+    }
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // 2e) STYLE DỄ DÙNG: swatch token, hộp khoảng cách, chip bo góc/bóng, chỉ báo device
+  // ═════════════════════════════════════════════════════════════════════════════
+
+  /*
+   * Style Manager mặc định bắt người biên tập GÕ GIÁ TRỊ: ô hex cho màu, bốn ô text cho
+   * margin, chuỗi văn bản cho box-shadow. Với site đã có design token thì đó là đường ngắn
+   * nhất tới CSS lệch chuẩn — mỗi người một mã màu gần giống, mỗi khối một khoảng cách lẻ.
+   * Bốn property type dưới đây đổi "gõ" thành "chọn", và giá trị được chọn là var(--token)
+   * chứ không phải hằng số, nên đổi token trong admin là đổi cả site:
+   *
+   *   nc-color    swatch var(--color-*) của site + picker màu tự do
+   *   nc-spacing  hộp 4 cạnh + thang bước 0/4/8/12/16/24/32/48/64
+   *   nc-radius   chip var(--radius-*) + Không/Tròn + ô tuỳ ý
+   *   nc-shadow   chip var(--shadow-*) + Không
+   *
+   * CÁCH NỐI VÀO GRAPESJS 0.23.5 (đọc trong grapes.min.js, không đoán):
+   *   StyleManager.addType(id, obj) → Properties.addType; vì extendViewApi=1 và obj không
+   *   có model/view nên obj được merge thẳng vào PropertyView gốc. render() của view gọi
+   *   `create(clbOpts)` rồi `append(createdEl)` — create phải trả VỀ ELEMENT, không phải {el}.
+   *   clbOpts = { el, createdEl, property, props, change, updateStyle }.
+   *
+   *   change/updateStyle trong clbOpts là method reference CHƯA bind (gọi ra thì this =
+   *   clbOpts, updateStyle nổ TypeError vì this.model undefined) nên KHÔNG dùng. Ghi style
+   *   đi qua Component.addStyle — API công khai, đúng semantics componentFirst, tự vào
+   *   undo stack. Đọc giá trị hiện hành lấy từ getComputedStyle của element trong canvas
+   *   cộng với style đã khai báo: computed cho thấy cái người dùng thật sự nhìn thấy
+   *   (gồm cả class và site CSS), declared cho biết swatch token nào đang được chọn
+   *   (computed đã giải var() thành rgb() nên không suy ngược được).
+   */
+
+  /** Thang khoảng cách: bội số 4 — khớp spacing scale Tailwind mà site đang dùng. */
+  var SPACE_STEPS = [0, 4, 8, 12, 16, 24, 32, 48, 64];
+  var SPACE_SIDES = ['top', 'right', 'bottom', 'left'];
+
+  /** Widget đang sống trong Style Manager — cần tô lại khi đổi selection hoặc token về. */
+  var smWidgets = [];
+
+  function forgetWidget(el) {
+    var i = smWidgets.indexOf(el);
+    if (i >= 0) smWidgets.splice(i, 1);
+  }
+
+  function repaintWidgets() {
+    for (var i = smWidgets.length - 1; i >= 0; i--) {
+      var el = smWidgets[i];
+      // GrapesJS render lại sector là vứt DOM cũ; widget rời tài liệu thì bỏ đăng ký,
+      // không thì mỗi lần đổi selection danh sách lại dài thêm một phần tử chết.
+      if (!el.isConnected) { smWidgets.splice(i, 1); continue; }
+      if (el.__ncPaint) el.__ncPaint();
+    }
+  }
+
+  function selectedComponent(editor) {
+    try { return editor.getSelected() || null; } catch (e) { return null; }
+  }
+
+  function computedOf(editor) {
+    var cmp = selectedComponent(editor);
+    var el = cmp && cmp.getEl ? cmp.getEl() : null;
+    if (!el || !el.ownerDocument) return null;
+    var win = el.ownerDocument.defaultView;
+    return win ? win.getComputedStyle(el) : null;
+  }
+
+  /** Style inline GrapesJS đang giữ trên component — chưa giải var(). */
+  function styleOf(cmp) {
+    if (!cmp || !cmp.getStyle) return {};
+    try { return cmp.getStyle() || {}; } catch (e) { return {}; }
+  }
+
+  function declaredOf(cmp, cssName) {
+    return String(styleOf(cmp)[cssName] || '').trim();
+  }
+
+  function applyStyle(editor, styles) {
+    var cmp = selectedComponent(editor);
+    if (!cmp || !cmp.addStyle) return;
+    cmp.addStyle(styles);
+  }
+
+  function pair(cssName, value) {
+    var o = {};
+    o[cssName] = value;
+    return o;
+  }
+
+  /** Đổi giá trị màu về #rrggbb — <input type=color> chỉ nhận đúng dạng đó. */
+  function toHex(value) {
+    var v = String(value || '').trim();
+    if (/^#[0-9a-f]{6}$/i.test(v)) return v;
+    if (/^#[0-9a-f]{3}$/i.test(v)) return '#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3];
+    var m = v.match(/^rgba?\(([^)]+)\)/i);
+    if (!m) return '';
+    var parts = m[1].split(',');
+    if (parts.length < 3) return '';
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var n = parseInt(parts[i], 10);
+      if (isNaN(n)) return '';
+      n = Math.max(0, Math.min(255, n));
+      out += (n < 16 ? '0' : '') + n.toString(16);
+    }
+    return out;
+  }
+
+  /**
+   * Widget chỉ dựng lại hàng swatch/chip khi token về SAU lúc render (load token là fetch
+   * bất đồng bộ, Style Manager có thể mở trước). Đã sẵn sàng thì khỏi đăng ký.
+   */
+  function whenTokensReady(el, rebuild) {
+    var tk = global.ncTokens;
+    if (!tk || tk.ready()) return;
+    el.__ncOff = tk.onReady(function () {
+      if (!el.isConnected) return;
+      rebuild();
+      if (el.__ncPaint) el.__ncPaint();
+    });
+  }
+
+  function dropWidget(el) {
+    if (!el) return;
+    if (el.__ncOff) { el.__ncOff(); el.__ncOff = null; }
+    forgetWidget(el);
+  }
+
+  // ── nc-color ────────────────────────────────────────────────────────────────
+
+  function registerColorType(sm, editor) {
+    sm.addType('nc-color', {
+      create: function (o) {
+        var cssName = (o.property && o.property.get('property')) || 'color';
+        var el = document.createElement('div');
+        el.className = 'nc-color';
+
+        var row = document.createElement('div');
+        row.className = 'nc-swatches';
+        var cur = document.createElement('div');
+        cur.className = 'nc-color-cur';
+        el.appendChild(row);
+        el.appendChild(cur);
+
+        var picker = null;
+
+        function build() {
+          row.innerHTML = '';
+          picker = null;
+
+          var tk = global.ncTokens;
+          (tk ? tk.colors() : []).forEach(function (c) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'nc-sw';
+            b.title = c.key + ' → ' + c.css;
+            b.setAttribute('data-css', c.css);
+            // resolved có thể vẫn là var(...) khi token trỏ ra ngoài site; để trình duyệt
+            // tự giải trong admin document, không giải được thì ô hiện nền caro.
+            b.style.backgroundColor = c.resolved || c.value;
+            b.addEventListener('click', function () {
+              applyStyle(editor, pair(cssName, c.css));
+              repaintWidgets();
+            });
+            row.appendChild(b);
+          });
+
+          // Màu tự do: token không bao giờ phủ hết nhu cầu. Bỏ nó là bắt người dùng rời
+          // builder đi sửa token giữa chừng — tệ hơn cả ô hex cũ.
+          var free = document.createElement('label');
+          free.className = 'nc-sw nc-sw-free';
+          free.title = 'Màu tự do';
+          picker = document.createElement('input');
+          picker.type = 'color';
+          picker.value = '#0d7c66';
+          picker.addEventListener('input', function () {
+            applyStyle(editor, pair(cssName, picker.value));
+            repaintWidgets();
+          });
+          free.appendChild(picker);
+          row.appendChild(free);
+
+          var clear = document.createElement('button');
+          clear.type = 'button';
+          clear.className = 'nc-sw nc-sw-clear';
+          clear.textContent = '✕';
+          clear.title = 'Bỏ ' + cssName + ' — trở về giá trị kế thừa';
+          clear.addEventListener('click', function () {
+            applyStyle(editor, pair(cssName, ''));
+            repaintWidgets();
+          });
+          row.appendChild(clear);
+        }
+
+        el.__ncPaint = function () {
+          var cmp = selectedComponent(editor);
+          var cs = computedOf(editor);
+          var declared = declaredOf(cmp, cssName);
+          var shown = cs ? String(cs.getPropertyValue(cssName) || '').trim() : '';
+
+          cur.textContent = declared || shown || 'mặc định';
+          cur.classList.toggle('is-empty', !declared && !shown);
+
+          var sws = row.querySelectorAll('.nc-sw[data-css]');
+          for (var i = 0; i < sws.length; i++) {
+            sws[i].classList.toggle('on', sws[i].getAttribute('data-css') === declared);
+          }
+          var hex = toHex(shown);
+          if (picker && hex) picker.value = hex;
+        };
+
+        build();
+        el.__ncPaint();
+        whenTokensReady(el, build);
+        smWidgets.push(el);
+        return el;
+      },
+      destroy: function (o) { dropWidget(o && o.createdEl); }
+    });
+  }
+
+  // ── nc-spacing ──────────────────────────────────────────────────────────────
+
+  function registerSpacingType(sm, editor) {
+    sm.addType('nc-spacing', {
+      create: function (o) {
+        var cssName = (o.property && o.property.get('property')) || 'margin';
+        var el = document.createElement('div');
+        el.className = 'nc-box';
+
+        var linked = false;
+        var activeSide = 'top';
+        var inputs = {};
+
+        // Ghi LONGHAND từng cạnh chứ không ghi shorthand: shorthand margin/padding đè cả
+        // bốn cạnh, tức là sửa một cạnh sẽ đóng băng ba cạnh còn lại theo giá trị computed
+        // hiện tại — mất khả năng kế thừa từ class/site CSS.
+        function write(sides, value) {
+          var out = {};
+          sides.forEach(function (s) { out[cssName + '-' + s] = value; });
+          applyStyle(editor, out);
+          paint();
+        }
+
+        /** Số trần → px; chuỗi khác (auto, 2rem, 5%) để nguyên. */
+        function normalize(raw) {
+          var v = String(raw == null ? '' : raw).trim();
+          if (!v) return '0';
+          return /^-?\d+(\.\d+)?$/.test(v) ? v + 'px' : v;
+        }
+
+        var head = document.createElement('div');
+        head.className = 'nc-box-head';
+
+        var linkBtn = document.createElement('button');
+        linkBtn.type = 'button';
+        linkBtn.className = 'nc-box-link';
+        linkBtn.textContent = '4 cạnh';
+        linkBtn.title = 'Bật để sửa cả bốn cạnh cùng lúc';
+        linkBtn.setAttribute('aria-pressed', 'false');
+        linkBtn.addEventListener('click', function () {
+          linked = !linked;
+          linkBtn.classList.toggle('on', linked);
+          linkBtn.setAttribute('aria-pressed', linked ? 'true' : 'false');
+        });
+        head.appendChild(linkBtn);
+
+        var nameEl = document.createElement('span');
+        nameEl.className = 'nc-box-name';
+        nameEl.textContent = cssName === 'padding' ? 'Lót trong (padding)' : 'Lề ngoài (margin)';
+        head.appendChild(nameEl);
+        el.appendChild(head);
+
+        var grid = document.createElement('div');
+        grid.className = 'nc-box-grid';
+
+        var mid = document.createElement('span');
+        mid.className = 'nc-box-mid';
+        mid.textContent = cssName;
+        grid.appendChild(mid);
+
+        SPACE_SIDES.forEach(function (side) {
+          var inp = document.createElement('input');
+          inp.type = 'text';
+          inp.inputMode = 'numeric';
+          inp.className = 'nc-box-in nc-box-' + side;
+          inp.title = side;
+          inp.setAttribute('data-side', side);
+          inp.addEventListener('focus', function () {
+            activeSide = side;
+            SPACE_SIDES.forEach(function (s) {
+              inputs[s].classList.toggle('active', s === side);
+            });
+          });
+          inp.addEventListener('change', function () {
+            write(linked ? SPACE_SIDES : [side], normalize(inp.value));
+          });
+          inp.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            write(linked ? SPACE_SIDES : [side], normalize(inp.value));
+            inp.blur();
+          });
+          inputs[side] = inp;
+          grid.appendChild(inp);
+        });
+        el.appendChild(grid);
+
+        var steps = document.createElement('div');
+        steps.className = 'nc-steps';
+        SPACE_STEPS.forEach(function (n) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'nc-step';
+          b.textContent = String(n);
+          b.title = 'Đặt ' + (linked ? 'cả 4 cạnh' : 'cạnh ' + activeSide) + ' = ' + (n === 0 ? '0' : n + 'px');
+          b.addEventListener('click', function () {
+            write(linked ? SPACE_SIDES : [activeSide], n === 0 ? '0' : n + 'px');
+          });
+          steps.appendChild(b);
+        });
+        el.appendChild(steps);
+
+        function paint() {
+          var cmp = selectedComponent(editor);
+          var cs = computedOf(editor);
+          var declared = styleOf(cmp);
+          SPACE_SIDES.forEach(function (side) {
+            var inp = inputs[side];
+            // Không ghi đè ô người dùng đang gõ — con trỏ nhảy và mất chữ.
+            if (!inp || document.activeElement === inp) return;
+            var prop = cssName + '-' + side;
+            var raw = String(declared[prop] || '').trim();
+            if (!raw) raw = cs ? String(cs.getPropertyValue(prop) || '').trim() : '';
+            inp.value = raw.replace(/px$/i, '');
+          });
+        }
+
+        el.__ncPaint = paint;
+        paint();
+        smWidgets.push(el);
+        return el;
+      },
+      destroy: function (o) { dropWidget(o && o.createdEl); }
+    });
+  }
+
+  // ── nc-radius / nc-shadow ───────────────────────────────────────────────────
+
+  /**
+   * Chip preset. kind='radius' thêm ô tuỳ ý + chip "Tròn"; kind='shadow' chỉ có chip.
+   * Mỗi chip có ô xem trước nhỏ để không phải đọc tên token mà đoán hình dạng.
+   */
+  function registerChipType(sm, editor, typeId, cssName, kind) {
+    sm.addType(typeId, {
+      create: function (o) {
+        var el = document.createElement('div');
+        el.className = 'nc-chips';
+
+        var row = document.createElement('div');
+        row.className = 'nc-chip-row';
+        el.appendChild(row);
+
+        function items() {
+          var tk = global.ncTokens;
+          var list = kind === 'radius' ? (tk ? tk.radii() : []) : (tk ? tk.shadows() : []);
+          var out = [{ key: 'none', css: kind === 'radius' ? '0' : 'none', label: 'Không' }];
+          list.forEach(function (t) { out.push({ key: t.key, css: t.css, label: t.key }); });
+          if (kind === 'radius') out.push({ key: 'full', css: '9999px', label: 'Tròn' });
+          return out;
+        }
+
+        function build() {
+          row.innerHTML = '';
+          items().forEach(function (it) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'nc-chip';
+            b.title = it.css;
+            b.setAttribute('data-css', it.css);
+            var dot = document.createElement('span');
+            dot.className = 'nc-chip-dot';
+            if (kind === 'radius') dot.style.borderRadius = it.css;
+            else dot.style.boxShadow = it.css === 'none' ? 'none' : it.css;
+            b.appendChild(dot);
+            var lab = document.createElement('span');
+            lab.textContent = it.label;
+            b.appendChild(lab);
+            b.addEventListener('click', function () {
+              applyStyle(editor, pair(cssName, it.css));
+              repaintWidgets();
+            });
+            row.appendChild(b);
+          });
+        }
+
+        var custom = null;
+        if (kind === 'radius') {
+          // Chip preset không phủ được mọi giá trị (border-radius 3px chẳng hạn).
+          custom = document.createElement('input');
+          custom.type = 'text';
+          custom.className = 'nc-chip-input';
+          custom.placeholder = 'Tuỳ ý…';
+          custom.addEventListener('change', function () {
+            var v = custom.value.trim();
+            if (!v) return;
+            applyStyle(editor, pair(cssName, /^-?\d+(\.\d+)?$/.test(v) ? v + 'px' : v));
+            repaintWidgets();
+          });
+          el.appendChild(custom);
+        }
+
+        el.__ncPaint = function () {
+          var cmp = selectedComponent(editor);
+          var declared = declaredOf(cmp, cssName);
+          var chips = row.querySelectorAll('.nc-chip');
+          var matched = false;
+          for (var i = 0; i < chips.length; i++) {
+            var hit = chips[i].getAttribute('data-css') === declared;
+            chips[i].classList.toggle('on', hit);
+            if (hit) matched = true;
+          }
+          if (custom) {
+            if (document.activeElement !== custom) custom.value = matched ? '' : declared;
+            custom.classList.toggle('on', !matched && !!declared);
+          }
+        };
+
+        build();
+        el.__ncPaint();
+        whenTokensReady(el, build);
+        smWidgets.push(el);
+        return el;
+      },
+      destroy: function (o) { dropWidget(o && o.createdEl); }
+    });
+  }
+
+  // ── Chỉ báo device ──────────────────────────────────────────────────────────
+
+  function deviceInfo(editor) {
+    var name = '';
+    var media = '';
+    try { name = editor.getDevice() || ''; } catch (e) { /* DeviceManager chưa sẵn sàng */ }
+    try {
+      var dm = editor.DeviceManager;
+      var model = dm && dm.getSelected ? dm.getSelected() : null;
+      if (model) {
+        name = name || model.get('name') || '';
+        media = (model.getWidthMedia ? model.getWidthMedia() : model.get('widthMedia')) || '';
+      }
+    } catch (e) { /* bản khác */ }
+    return { name: name, media: String(media || '') };
+  }
+
+  /**
+   * Rule CSS áp riêng cho cỡ màn hình này VÀ thuộc đúng khối đang chọn.
+   * So khớp selector bằng getFullString để không xoá nhầm rule của khối khác trùng class.
+   */
+  function deviceRulesOf(editor, cmp, media) {
+    var css = editor.CssComposer;
+    if (!css || !css.getRules || !media) return [];
+    var sels = cmp.getSelectors ? cmp.getSelectors() : null;
+    if (!sels) return [];
+    var want = (sels.getFullString ? sels.getFullString() : sels.getFullName()) || '';
+    if (!want) return [];
+
+    var needle = media.replace(/\s/g, '');
+    return css.getRules().filter(function (rule) {
+      var m = rule.get('media') || [];
+      var list = Array.isArray(m) ? m : [m];
+      var inMedia = list.some(function (q) {
+        return String(q).replace(/\s/g, '').indexOf(needle) !== -1;
+      });
+      if (!inMedia) return false;
+      var rs = rule.getSelectors ? rule.getSelectors() : null;
+      if (!rs) return false;
+      var full = (rs.getFullString ? rs.getFullString() : rs.getFullName()) || '';
+      return full === want;
+    });
+  }
+
+  /*
+   * Sửa riêng cho Mobile là nguồn nhầm lẫn lớn nhất của Style Manager: người dùng đổi
+   * màu ở device Mobile rồi quay lại Desktop thấy không đổi, tưởng builder hỏng. GrapesJS
+   * không nói gì về chuyện đó — thêm một dòng cảnh báo ngay đầu panel Style.
+   */
+  function setupDeviceNote(editor) {
+    var note = null, text = null, back = null, drop = null, built = false;
+
+    // Style Manager render SECTOR LIST vào div class "gjs-sm-sectors" (class do JS gắn lúc
+    // render, CSS không có rule riêng nên grep grapes.min.css không thấy — DOM thì có).
+    // Panel có thể chưa render khi register() chạy, nên tạo lại mỗi lần cần + idempotent.
+    function ensure() {
+      if (built) return true;
+      var sectors = document.querySelector('.gjs-sm-sectors');
+      if (!sectors || !sectors.parentNode) return false;
+
+      note = document.createElement('div');
+      note.className = 'nc-device-note';
+      note.hidden = true;
+      sectors.parentNode.insertBefore(note, sectors);
+
+      text = document.createElement('span');
+      text.className = 'nc-device-note-text';
+      note.appendChild(text);
+
+      back = document.createElement('button');
+      back.type = 'button';
+      back.className = 'nc-device-btn';
+      back.textContent = 'Về Desktop';
+      back.addEventListener('click', function () { editor.setDevice('Desktop'); });
+      note.appendChild(back);
+
+      drop = document.createElement('button');
+      drop.type = 'button';
+      drop.className = 'nc-device-btn nc-device-btn-danger';
+      drop.textContent = 'Xóa style riêng';
+      drop.addEventListener('click', function () { clearDeviceStyles(editor, flash); });
+      note.appendChild(drop);
+
+      built = true;
+      sync();
+      return true;
+    }
+
+    /** Báo kết quả ngắn ngay trên thanh — khỏi phải dựng thêm toast. */
+    function flash(msg) {
+      if (!ensure()) return;
+      text.textContent = msg;
+      clearTimeout(flash._t);
+      flash._t = setTimeout(function () { sync(); }, 3200);
+    }
+
+    function sync() {
+      if (!ensure()) return;
+      var d = deviceInfo(editor);
+      var on = !!d.name && d.name !== 'Desktop';
+      note.hidden = !on;
+      if (!on) return;
+      text.textContent = 'Đang sửa riêng cho ' + d.name + (d.media ? ' (≤' + d.media + ')' : '')
+        + ' — thay đổi chỉ áp ở cỡ này.';
+      drop.title = 'Xóa mọi khai báo chỉ áp ở ' + (d.media || d.name) + ' trên khối đang chọn';
+    }
+
+    editor.on('change:device', sync);
+    editor.on('load', sync);
+    // Panel Style có thể mở sau khi register() — đợi nó render xong rồi lắp thanh cảnh báo.
+    editor.on('panel:target', function () { setTimeout(ensure, 0); });
+    sync();
+  }
+
+  function clearDeviceStyles(editor, flash) {
+    var d = deviceInfo(editor);
+    var cmp = selectedComponent(editor);
+    if (!cmp) { flash('Chưa chọn khối nào.'); return; }
+    if (!d.media || d.name === 'Desktop') { flash('Đang ở Desktop — không có style riêng.'); return; }
+
+    var rules = deviceRulesOf(editor, cmp, d.media);
+    if (!rules.length) { flash('Khối này chưa có style riêng cho ' + d.name + '.'); return; }
+
+    var confirm = global.confirmDialog;
+    if (!confirm) { flash('Thiếu hộp thoại xác nhận.'); return; }
+
+    confirm('Xóa ' + rules.length + ' khai báo chỉ áp cho ' + d.name + ' trên khối đang chọn? Có thể hoàn tác bằng Ctrl+Z.', {
+      title: 'Xóa style riêng',
+      yesLabel: 'Xóa',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      var all = editor.CssComposer.getAll();
+      rules.forEach(function (r) { try { all.remove(r); } catch (e) { /* rule đã bị gỡ */ } });
+      flash('Đã xóa ' + rules.length + ' khai báo riêng cho ' + d.name + '.');
+      repaintWidgets();
+    });
+  }
+
+  /** Gắn toàn bộ nâng cấp Style Manager. Gọi một lần từ register(). */
+  function setupStyleUpgrades(editor) {
+    if (global.ncTokens && OPTS.tokenCssUrl) global.ncTokens.load(OPTS.tokenCssUrl);
+
+    var sm = editor.StyleManager;
+    if (!sm || !sm.addType) return;
+
+    registerColorType(sm, editor);
+    registerSpacingType(sm, editor);
+    registerChipType(sm, editor, 'nc-radius', 'border-radius', 'radius');
+    registerChipType(sm, editor, 'nc-shadow', 'box-shadow', 'shadow');
+    setupDeviceNote(editor);
+
+    // Đổi selection / đổi style đều phải tô lại widget: giá trị hiển thị lấy từ canvas
+    // chứ không từ property model, nên GrapesJS không tự cập nhật giúp.
+    // Debounce vì component:styleUpdate bắn liên tục lúc kéo thanh số.
+    var paintTimer = null;
+    function schedulePaint() {
+      if (paintTimer) clearTimeout(paintTimer);
+      paintTimer = setTimeout(function () { paintTimer = null; repaintWidgets(); }, 90);
+    }
+    editor.on('component:selected', schedulePaint);
+    editor.on('component:styleUpdate', schedulePaint);
+    editor.on('component:update', schedulePaint);
+  }
+
   function refreshAllDynamicBlocks(editor) {
     if (!editor) return;
     var wrapper = editor.getWrapper();
     if (!wrapper) return;
+    // Xóa cache để "Làm mới toàn bộ" ăn thật kể cả khi props không đổi.
+    wrapper.find('[data-nc-block]').forEach(function (comp) {
+      var el = comp.view && comp.view.el;
+      if (el) el._ncPrevSig = null;
+    });
     wrapper.find('[data-nc-block]').forEach(function (comp) {
       var el = comp.view && comp.view.el;
       var key = comp.getAttributes()['data-nc-block'];

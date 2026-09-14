@@ -35,7 +35,9 @@ public class AppDbContext
     }
 
     /// <summary>Site hiện tại cho query filter/stamp. Empty = chưa resolve (seeder, design-time).</summary>
-    private Guid CurrentSiteId => _currentSite?.SiteId ?? Guid.Empty;
+    // internal (không private): service trong cùng assembly cần site hiện tại khi phải truy vấn
+    // với IgnoreQueryFilters — bỏ filter là bỏ luôn scope site, phải tự chặn lại theo SiteId.
+    internal Guid CurrentSiteId => _currentSite?.SiteId ?? Guid.Empty;
 
     /// <summary>Khi true (seeder/admin cross-site), bỏ qua việc tự stamp SiteId rỗng.</summary>
     public bool BypassSiteScope { get; set; }

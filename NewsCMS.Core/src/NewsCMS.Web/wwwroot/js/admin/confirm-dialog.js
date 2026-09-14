@@ -41,6 +41,12 @@
         yesBtn = dialog.querySelector('.acd-yes');
         noBtn = dialog.querySelector('.acd-no');
 
+        // Nút xác nhận / huỷ: đóng dialog với returnValue tương ứng — promise trong
+        // confirmDialog() đang chờ sự kiện close mới resolve, thiếu bước này thì bấm
+        // không có phản hồi nào (dialog chỉ tắt bằng Esc hoặc click ngoài).
+        yesBtn.addEventListener('click', function () { dialog.close('ok'); });
+        noBtn.addEventListener('click', function () { dialog.close('cancel'); });
+
         // Click ngoài card hoặc Esc/Cancel → coi như từ chối.
         dialog.addEventListener('click', function (e) {
             if (e.target === dialog) dialog.close('cancel');
@@ -131,7 +137,8 @@
         const form = e.target;
         if (!(form instanceof HTMLFormElement)) return;
         const msg = form.getAttribute('data-confirm');
-        if (!msg || form.dataset.confirmBound === 'pending') return;
+        // Có cờ ('pending' đang hỏi, 'skip' lần submit sau xác nhận) → để đi tiếp.
+        if (!msg || form.dataset.confirmBound) return;
 
         e.preventDefault();
         form.dataset.confirmBound = 'pending';
@@ -142,15 +149,19 @@
             yesLabel: form.getAttribute('data-confirm-yes') || undefined,
             noLabel: form.getAttribute('data-confirm-no') || undefined
         }).then(function (ok) {
-            delete form.dataset.confirmBound;
-            if (!ok) return;
+            if (!ok) { delete form.dataset.confirmBound; return; }
             form.dispatchEvent(new CustomEvent('nc-confirm-accepted'));
-            // Submit lại nhưng bỏ qua bridge: gọi submit() không kích hoạt sự kiện submit.
+            // requestSubmit() BẮN LẠI sự kiện submit — giữ cờ qua đúng lần bắn đó,
+            // không thì bridge chặn tiếp, mở lại dialog và POST không bao giờ đi.
+            // Gỡ ngay sau khi submit chạy xong (sự kiện bắn đồng bộ) để lần bấm
+            // sau vẫn được hỏi như thường.
+            form.dataset.confirmBound = 'skip';
             if (typeof form.requestSubmit === 'function') {
                 form.requestSubmit();
             } else {
-                form.submit();
+                form.submit();   // submit() không bắn sự kiện — không cần cờ
             }
+            delete form.dataset.confirmBound;
         });
     }, true);
 

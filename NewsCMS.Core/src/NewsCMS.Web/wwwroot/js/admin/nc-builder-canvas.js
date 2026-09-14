@@ -21,7 +21,7 @@
     'use strict';
 
     var editor = null;
-    var OPTS = { token: '', siteCss: '', siteHeadHtml: '', siteJs: '', googleFonts: [] };
+    var OPTS = { token: '', siteCss: '', layoutCss: '', siteHeadHtml: '', siteJs: '', googleFonts: [] };
 
     function apiHeaders(json) {
         var h = { 'RequestVerificationToken': OPTS.token };
@@ -64,6 +64,7 @@
         OPTS = Object.assign(OPTS, opts || {});
 
         var SITE_CUSTOM_CSS = OPTS.siteCss || '';
+        var LAYOUT_CSS = OPTS.layoutCss || '';
         var SITE_HEAD_HTML = OPTS.siteHeadHtml || '';
         var SITE_CUSTOM_JS = OPTS.siteJs || '';
         var GOOGLE_FONTS = OPTS.googleFonts || [];
@@ -136,6 +137,16 @@
                 doc.head.appendChild(st);
             }
 
+            // 1b) CSS shell gán cho trang (1 lần) — PageRenderer public nối lớp này sau CSS site;
+            // canvas thiếu thì trang dựng qua MCP (CSS nằm trên layout, không có BuilderJson) hiện
+            // không style: SVG icon phình tràn canvas, section mất màu mất cột.
+            if (LAYOUT_CSS && !doc.getElementById('nc-layout-css')) {
+                var stl = doc.createElement('style');
+                stl.id = 'nc-layout-css';
+                stl.textContent = LAYOUT_CSS;
+                doc.head.appendChild(stl);
+            }
+
             var chain = Promise.resolve();
 
             // 2) HeadHtml (1 lần): font + <link> CSS vendor chèn thẳng; <script src> vendor chạy tuần tự.
@@ -174,11 +185,25 @@
 
         // Debounce: preview khối động nạp bất đồng bộ; đợi lắng rồi mới chạy JS site để nó thấy đủ
         // khối. nc-builder-extensions.js gọi window.ncHydrateCanvas sau mỗi lần chèn preview.
+        // Bỏ qua khi đang kéo thả: hydrate ghi <script>/JS site vào canvas giữa chừng một phiên
+        // drag là nguồn gây khựng + nháy bố cục (kéo khối khác làm re-render → schedulePreview lại
+        // → ncHydrateCanvas). Hết drag, lệnh hoãn dưới tự chạy.
         var ncHydrateTimer = null;
+        var ncDragging = false;
+        function ncIsDragging() { return ncDragging; }
+        editor.on('drag:start', function () { ncDragging = true; });
+        editor.on('drag:end', function () {
+            ncDragging = false;
+            // Một nhịp rebuild Tailwind tập trung cho mọi thay đổi vừa bị dồn.
+            if (global.ncTailwind && global.ncTailwind.resume) global.ncTailwind.resume(editor);
+            ncScheduleHydrate(300);
+        });
+
         function ncScheduleHydrate(delay) {
             if (ncHydrateTimer) clearTimeout(ncHydrateTimer);
             ncHydrateTimer = setTimeout(function () {
                 ncHydrateTimer = null;
+                if (ncDragging) { ncScheduleHydrate(400); return; }
                 ncHydrateCanvas();
                 ncEnsureCanvasFonts();
             }, delay || 500);
@@ -200,12 +225,14 @@
             var doc = editor.Canvas.getDocument();
             if (!doc || !doc.head) return;
 
-            // Quét cả CSS của trang lẫn CSS site: font có thể do người dùng gõ tay trong tab Code.
+            // Quét CSS của trang lẫn CSS site/shell: font có thể do người dùng gõ tay trong tab
+            // Code, hoặc khai báo qua custom property --font-* trong token/shell (trang chỉ tham
+            // chiếu var(--font-body) thì tên font literal chỉ nằm ở đó).
             var css = '';
             try { css = editor.getCss() || ''; } catch (e) { /* canvas chưa sẵn sàng */ }
-            css += '\n' + (SITE_CUSTOM_CSS || '');
+            css += '\n' + (SITE_CUSTOM_CSS || '') + '\n' + (LAYOUT_CSS || '');
 
-            var re = /font-family\s*:\s*([^;}]+)/gi;
+            var re = /(?:font-family|--font-[a-z0-9-]+)\s*:\s*([^;}]+)/gi;
             var m;
             while ((m = re.exec(css)) !== null) {
                 m[1].split(',').forEach(function (part) {
@@ -226,12 +253,24 @@
             }
         }
 
-        // Chọn font trong Style Manager phải thấy ngay. Debounce vì 'update' bắn liên tục lúc gõ.
+        // Chọn font trong Style Manager phải thấy ngay, nhưng ĐỪNG quét theo 'update':
+        // ncEnsureCanvasFonts gọi editor.getCss() — serialize toàn bộ CssComposer + regex trên
+        // site/layout CSS — mà 'update' bắn liên tục lúc kéo thả và gõ style. Trước đây mỗi nhịp
+        // update là một lần serialize cả cây CSS: thủ phạm phụ làm giảm FPS khi drag.
+        // Chuyển sang event mục tiêu: chỉ khi style của component đổi thật (font-family nằm ở
+        // đó) hoặc khi thêm/xoá component. Debounce 600ms gom nhiều chỉnh sửa liên tiếp.
         var ncFontScanTimer = null;
-        editor.on('update', function () {
+        function ncScheduleFontScan() {
+            if (ncDragging) return; // hết drag, drag:end sẽ hydrate (kèm scan font)
             if (ncFontScanTimer) clearTimeout(ncFontScanTimer);
-            ncFontScanTimer = setTimeout(function () { ncFontScanTimer = null; ncEnsureCanvasFonts(); }, 300);
-        });
+            ncFontScanTimer = setTimeout(function () {
+                ncFontScanTimer = null;
+                ncEnsureCanvasFonts();
+            }, 600);
+        }
+        editor.on('component:styleUpdate', ncScheduleFontScan);
+        editor.on('component:add', ncScheduleFontScan);
+        editor.on('component:remove', ncScheduleFontScan);
 
         // ── Thư viện ảnh: Asset Manager đọc thẳng từ Media ────────────────────────
         // GrapesJS khởi tạo assetManager rỗng. Thay vì nạp sẵn vài trăm ảnh lúc mở builder,
@@ -430,6 +469,8 @@
         // assetManager (đã truyền vào grapesjs.init trước đó, nhưng chỉ chạy khi người dùng upload).
         global.ncCanvas.assets = ncAssets;
         global.ncCanvas.uploadFile = ncUploadToMedia;
+        // Cho extensions biết canvas đang drag để chặn preview re-fetch giữa chừng.
+        global.ncCanvas.isDragging = ncIsDragging;
     }
 
     global.ncCanvas = { attach: attach, fontFamilyOptions: fontFamilyOptions };

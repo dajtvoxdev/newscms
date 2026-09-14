@@ -120,6 +120,8 @@
     <script src="~/js/admin/nc-css-inspector.js" asp-append-version="true"></script>
     <!-- Beautify khi mở / minify khi lưu cho mọi editor code (csso/terser/js-beautify nạp lười). -->
     <script src="~/js/admin/nc-code-format.js" asp-append-version="true"></script>
+    <!-- Design token swatch: nạp token site rồi bơm swatch/chip/widget vào Style Manager. -->
+    <script src="~/js/admin/nc-design-tokens.js" asp-append-version="true"></script>
     <script src="~/js/admin/nc-builder-extensions.js" asp-append-version="true"></script>
     <!-- Hạ tầng canvas dùng chung với màn sửa trang: hydrate preview, font Google, Asset Manager. -->
     <script src="~/js/admin/nc-builder-canvas.js" asp-append-version="true"></script>
@@ -359,27 +361,46 @@
 
                 styleManager: {
                     sectors: [
+                        // Cơ cấu sector giống Edit.cshtml: lựa chọn dễ hiểu ở trên, property thô
+                        // dồn vào "Nâng cao" đóng sẵn. Widget token (nc-color/nc-spacing/nc-radius/
+                        // nc-shadow) đăng ký ở nc-builder-extensions.js — sửa ở đây là sửa cả màn trang.
                         { name: 'Bố cục', open: true, properties: [
-                            'display', 'position',
-                            { property: 'top' }, { property: 'right' }, { property: 'bottom' }, { property: 'left' },
-                            'flex-direction', 'flex-wrap', 'justify-content', 'align-items', 'align-content', 'gap',
-                            'flex-grow', 'flex-shrink', 'flex-basis', 'order',
-                            'grid-template-columns', 'grid-template-rows', 'grid-gap',
-                            'overflow', 'z-index'
+                            'display', 'flex-direction', 'flex-wrap', 'justify-content', 'align-items', 'gap'
                         ] },
-                        { name: 'Kích thước', properties: ['width','height','max-width','min-width','max-height','min-height'] },
-                        { name: 'Khoảng cách', properties: ['margin','padding'] },
+                        { name: 'Kích thước', properties: ['width','height','max-width','min-width'] },
+                        { name: 'Khoảng cách', properties: [
+                            { property: 'margin', type: 'nc-spacing' },
+                            { property: 'padding', type: 'nc-spacing' }
+                        ] },
                         { name: 'Chữ', properties: [
                             { property: 'font-family', name: 'Font family', type: 'select', default: '',
                               options: ncCanvas.fontFamilyOptions(GOOGLE_FONTS) },
-                            'font-size','font-weight','color','text-align','text-transform','line-height','letter-spacing','text-decoration'] },
-                        { name: 'Trang trí', properties: ['background-color','background-image','background-size','background-position','background-repeat','border','border-width','border-radius','box-shadow','opacity'] },
-                        { name: 'Hiệu ứng', properties: ['transition','transform','cursor'] }
+                            'font-size','font-weight',
+                            { property: 'color', type: 'nc-color' },
+                            'text-align','text-transform','line-height','letter-spacing','text-decoration'] },
+                        { name: 'Trang trí', properties: [
+                            { property: 'background-color', type: 'nc-color' },
+                            'background-image','background-size','background-position','background-repeat',
+                            { property: 'border-width' },
+                            { extend: 'border-color', type: 'nc-color', name: 'Màu viền' },
+                            { property: 'border-radius', type: 'nc-radius' },
+                            { property: 'box-shadow', type: 'nc-shadow' },
+                            'opacity'
+                        ] },
+                        { name: 'Hiệu ứng', properties: ['transition','transform','cursor'] },
+                        { name: 'Nâng cao', properties: [
+                            'position',
+                            { property: 'top' }, { property: 'right' }, { property: 'bottom' }, { property: 'left' },
+                            'align-content', 'flex-grow', 'flex-shrink', 'flex-basis', 'order',
+                            'grid-template-columns', 'grid-template-rows', 'grid-gap',
+                            'max-height', 'min-height', 'overflow', 'z-index'
+                        ] }
                     ]
                 },
 
-                // Cùng bộ CSS và cùng THỨ TỰ như PageRenderer.BuildHtml.
-                canvas: { styles: ['/css/site-utilities.css', TOKEN_CSS_URL, '/css/nc-builder.css'] },
+                // Cùng bộ CSS và cùng THỨ TỰ như PageRenderer.BuildHtml + lớp gợi ý kéo-thả
+                // chỉ-canvas (nc-canvas-hints.css — xem chú thích trong Edit.cshtml).
+                canvas: { styles: ['/css/site-utilities.css', TOKEN_CSS_URL, '/css/nc-builder.css', '/css/nc-canvas-hints.css'] },
 
                 // Vùng nội dung trang rỗng trong builder (nội dung thật do từng trang cung cấp) nên
                 // phải vẽ chỗ giữ chỗ, nếu không header và footer dính liền nhau và người dùng
@@ -458,6 +479,7 @@
                     if (window.ncBuilder) {
                         ncBuilder.register(editor, {
                             token: TOKEN,
+                            tokenCssUrl: TOKEN_CSS_URL,
                             blocks: catalog ? catalog.blocks : [],
                             sitePresets: catalog ? catalog.sitePresets : [],
                             siteCss: SITE_CUSTOM_CSS,

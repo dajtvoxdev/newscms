@@ -107,7 +107,7 @@ public sealed class NewsGridBlock : IDynamicBlock, IBlockMatchCounter
         // Ở layout "featured" card đầu chiếm cả hàng nên ảnh cao hơn để tương xứng.
         var imgHeight = shared.IsFeaturedLayout && isFirst ? 340 : 192;
 
-        sb.Append($"<article class=\"chu-card\" style=\"background:var(--color-surface);border:1px solid rgba(93,46,13,0.1);border-radius:var(--radius-card);overflow:hidden;display:flex;flex-direction:column{shared.ItemExtraStyle(minCardWidth, isFirst)}\">");
+        sb.Append($"<article data-nc-part=\"card\" class=\"chu-card\" style=\"background:var(--color-surface);border:1px solid rgba(93,46,13,0.1);border-radius:var(--radius-card);overflow:hidden;display:flex;flex-direction:column{shared.ItemExtraStyle(minCardWidth, isFirst)}\">");
 
         if (!string.IsNullOrWhiteSpace(post.ImageUrl))
         {
@@ -115,7 +115,7 @@ public sealed class NewsGridBlock : IDynamicBlock, IBlockMatchCounter
             var size = post.Width is > 0 && post.Height is > 0
                 ? $" width=\"{post.Width}\" height=\"{post.Height}\""
                 : "";
-            sb.Append($"<a href=\"{WebUtility.HtmlEncode(url)}\" style=\"display:block;height:{imgHeight}px;overflow:hidden;background:rgba(228,226,221,1)\">");
+            sb.Append($"<a data-nc-part=\"image\" href=\"{WebUtility.HtmlEncode(url)}\" style=\"display:block;height:{imgHeight}px;overflow:hidden;background:rgba(228,226,221,1)\">");
             sb.Append($"<img src=\"{WebUtility.HtmlEncode(post.ImageUrl)}\" alt=\"{alt}\"{size} loading=\"lazy\" style=\"width:100%;height:100%;object-fit:cover;display:block\">");
             sb.Append("</a>");
         }
@@ -125,7 +125,7 @@ public sealed class NewsGridBlock : IDynamicBlock, IBlockMatchCounter
         // Nhãn chuyên mục · ngày · tác giả — mỗi phần bật/tắt qua trait dùng chung.
         if (shared.ShowDate || shared.ShowAuthor)
         {
-            sb.Append("<div style=\"font-size:0.7rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-accent-500);margin-bottom:8px\">");
+            sb.Append("<div data-nc-part=\"meta\" style=\"font-size:0.7rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-accent-500);margin-bottom:8px\">");
             sb.Append(WebUtility.HtmlEncode(post.CategoryName));
             if (shared.ShowDate)
             {
@@ -143,24 +143,24 @@ public sealed class NewsGridBlock : IDynamicBlock, IBlockMatchCounter
         }
         else
         {
-            sb.Append("<div style=\"font-size:0.7rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-accent-500);margin-bottom:8px\">");
+            sb.Append("<div data-nc-part=\"meta\" style=\"font-size:0.7rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-accent-500);margin-bottom:8px\">");
             sb.Append(WebUtility.HtmlEncode(post.CategoryName));
             sb.Append("</div>");
         }
 
-        sb.Append("<h3 style=\"margin:0 0 10px;font-family:var(--font-display);font-size:1.1rem;color:var(--color-brand-500);line-height:1.35\">");
+        sb.Append("<h3 data-nc-part=\"title\" style=\"margin:0 0 10px;font-family:var(--font-display);font-size:1.1rem;color:var(--color-brand-500);line-height:1.35\">");
         sb.Append($"<a href=\"{WebUtility.HtmlEncode(url)}\" style=\"color:inherit;text-decoration:none\">");
         sb.Append(WebUtility.HtmlEncode(post.Title));
         sb.Append("</a></h3>");
 
         if (shared.ShowExcerpt && !string.IsNullOrWhiteSpace(post.Excerpt))
         {
-            sb.Append("<p style=\"margin:0 0 14px;color:var(--color-muted);font-size:0.92rem;line-height:1.6;flex:1\">");
+            sb.Append("<p data-nc-part=\"excerpt\" style=\"margin:0 0 14px;color:var(--color-muted);font-size:0.92rem;line-height:1.6;flex:1\">");
             sb.Append(WebUtility.HtmlEncode(Truncate(post.Excerpt, ExcerptMaxChars)));
             sb.Append("</p>");
         }
 
-        sb.Append($"<a href=\"{WebUtility.HtmlEncode(url)}\" class=\"chu-cta\" style=\"margin-top:auto\">");
+        sb.Append($"<a data-nc-part=\"cta\" href=\"{WebUtility.HtmlEncode(url)}\" class=\"chu-cta\" style=\"margin-top:auto\">");
         sb.Append(WebUtility.HtmlEncode(ctaLabel));
         sb.Append(CupIconSpan);
         sb.Append(ArrowIconSpan);

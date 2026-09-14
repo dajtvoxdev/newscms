@@ -66,6 +66,72 @@
     });
   }
 
+  // ── Shim pause/resume cho runtime ─────────────────────────────────────────────
+  // tailwind-browser.js đăng ký MutationObserver trên documentElement của iframe canvas với
+  // childList+subtree+attributeFilter:["class"]. GrapesJS đổi class trạng thái (hover/select) và
+  // re-render DOM liên tục lúc kéo thả → MỖI mutation là một lần build lại toàn bộ CSS trong
+  // iframe (compiler 275KB, không debounce). Đây là nguồn gốc chính của cảm giác "kéo không mượt".
+  //
+  // Cách shim: patch MutationObserver.prototype.observe TRƯỚC khi nạp runtime để ghi lại mọi
+  // instance observer thật; pause() gọi disconnect() trên tất cả, resume() gọi observe() lại với
+  // đúng options đã lưu. Chỉ ảnh hưởng observer do runtime tạo trong iframe — admin document
+  // (bootstrap, panel React/backbone…) không dùng MutationObserver nên không bị đụng.
+  //
+  // Vì sao không chặn ở mức GrapesJS: drag-end mới biết người dùng dừng tay, nhưng con trỏ đã
+  // đứng yên trong khi build còn chạy dở; disconnect ngay lúc bắt đầu kéo là duy nhất giữ được
+  // FPS. Chi phí: style vừa đổi trong lúc kéo chưa compile — bù bằng rebuild ngay sau resume().
+  var twObservers = [];
+  var twPaused = false;
+  var patched = false;
+
+  function installShim(win) {
+    if (!win || !win.MutationObserver || patched) return;
+    patched = true;
+    var NativeMO = win.MutationObserver;
+    function PatchedMO(cb) {
+      var self = this;
+      var real = new NativeMO(cb);
+      this._real = real;
+      this._targets = [];
+      this.observe = function (target, opts) {
+        self._targets.push({ target: target, opts: opts });
+        if (!twPaused) real.observe(target, opts);
+      };
+      this.disconnect = function () { return real.disconnect(); };
+      this.takeRecords = function () { return real.takeRecords(); };
+      twObservers.push(this);
+    }
+    PatchedMO.prototype = Object.create(NativeMO.prototype || {});
+    win.MutationObserver = PatchedMO;
+  }
+
+  function pauseRuntime(editor) {
+    if (twPaused) return;
+    twPaused = true;
+    twObservers.forEach(function (o) { o._real.disconnect(); });
+    log('runtime tạm dừng (đang kéo)');
+  }
+
+  function resumeRuntime(editor) {
+    if (!twPaused) return;
+    twPaused = false;
+    twObservers.forEach(function (o) {
+      o._targets.forEach(function (t) { o._real.observe(t.target, t.opts); });
+    });
+    // Build một nhịp ngay khi nối lại: class đổi trong lúc kéo chưa được compile.
+    // Runtime chỉ theo dõi attributeFilter:["class"] nên phải toggle CLASS chứ không phải
+    // data-attribute — thêm rồi gỡ là đủ hai mutation kích build (runtime debounce nội bộ).
+    var doc = editor && editor.Canvas.getDocument();
+    if (doc && doc.documentElement && doc.body) {
+      var el = doc.documentElement;
+      el.classList.add('nc-tw-rebuild');
+      setTimeout(function () {
+        try { el.classList.remove('nc-tw-rebuild'); } catch (e) { /* frame reload */ }
+      }, 120);
+    }
+    log('runtime tiếp tục');
+  }
+
   /**
    * Bơm Tailwind runtime vào iframe canvas: đặt CSS nguồn trước, rồi mới nạp script
    * (runtime đọc nguồn ngay lúc khởi động).
@@ -76,6 +142,10 @@
 
     // Đã bơm rồi thì thôi — editor.on('load') có thể bắn lại khi đổi device.
     if (doc.getElementById(SOURCE_ID)) return true;
+
+    // Shim PHẢI gắn trước khi runtime chạy: runtime tạo MutationObserver ngay lúc khởi động,
+    // observe() của nó phải đi qua bản patch thì pause/resume mới bắt được.
+    installShim(doc.defaultView);
 
     var source = doc.createElement('style');
     source.id = SOURCE_ID;
@@ -125,6 +195,11 @@
     // Editor có thể đã load xong trước khi attach được gọi.
     if (editor.Canvas && editor.Canvas.getDocument()) bootstrapCanvas(editor);
 
+    // Kéo thả: dừng build Tailwind trong suốt phiên drag, dựng lại một nhịp khi thả.
+    // Hai event của GrapesJS core (CommandPlugin phát `drag:start`/`drag:end` trên editor).
+    editor.on('drag:start', function () { pauseRuntime(editor); });
+    editor.on('drag:end', function () { resumeRuntime(editor); });
+
     log('đã gắn', { hasTheme: !!state.themeCss });
   }
 
@@ -151,6 +226,9 @@
   global.ncTailwind = {
     attach: attach,
     getCompiledCss: getCompiledCss,
-    isReady: function () { return state.ready; }
+    isReady: function () { return state.ready; },
+    /** Cho phép nơi khác tạm dừng build khi biết trước sắp có bão mutation (vd hydrate canvas). */
+    pause: pauseRuntime,
+    resume: resumeRuntime
   };
 })(window);

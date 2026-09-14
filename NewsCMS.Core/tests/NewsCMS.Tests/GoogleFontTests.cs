@@ -48,6 +48,32 @@ public sealed class GoogleFontTests
     }
 
     [Fact]
+    public void DetectUsed_FindsFontInTokenCustomProperty()
+    {
+        // Token CSS khai báo font qua custom property --font-*; trang chỉ tham chiếu var(--font-*)
+        // nên tên font literal chỉ xuất hiện ở một chỗ này — detector phải bắt được.
+        var tokenCss = ":root{--font-display:\"Be Vietnam Pro\", sans-serif;--font-body:\"Work Sans\", system-ui}";
+
+        var used = GoogleFontCatalog.DetectUsed(tokenCss).Select(f => f.Name).ToList();
+
+        Assert.Equal(new[] { "Be Vietnam Pro", "Work Sans" }, used);
+    }
+
+    [Fact]
+    public async Task RenderAsync_EmitsFontLink_WhenOnlyTokenCssNamesTheFont()
+    {
+        // Trường hợp thật của site dựng qua MCP: layout/page dùng var(--font-display), token CSS
+        // là nơi duy nhất chứa tên font. Trước khi detector nhận custom property, trang như vậy
+        // rơi về font hệ thống và mất dấu tiếng Việt mà không có lỗi nào.
+        await using var db = NewDb();
+        var id = await SeedPageAsync(db, customCss: ".hero{font-family:var(--font-display)}");
+
+        var html = (await NewRenderer(db).RenderAsync(id, "vi"))!.Html;
+
+        Assert.Contains("https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro", html);
+    }
+
+    [Fact]
     public void DetectUsed_ReturnsCatalogOrder_NotDeclarationOrder()
     {
         // URL ổn định thì cache CDN/trình duyệt còn dùng lại được sau khi người dùng sửa CSS.
@@ -155,7 +181,9 @@ public sealed class GoogleFontTests
 
     private sealed class FakeTokenCss : IDesignTokenCssBuilder
     {
-        public Task<string> BuildCssAsync(CancellationToken ct = default) => Task.FromResult(string.Empty);
+        // Nội dung token CSS thật: :root khai báo font qua custom property — đúng hình dạng BuildCssAsync sinh ra.
+        public Task<string> BuildCssAsync(CancellationToken ct = default) => Task.FromResult(
+            ":root {\n  --font-display: \"Be Vietnam Pro\", sans-serif;\n  --font-body: \"Be Vietnam Pro\", sans-serif;\n}");
         public Task<string> GetCssHashAsync(CancellationToken ct = default) => Task.FromResult("hash");
     }
 

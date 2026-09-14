@@ -4,6 +4,7 @@ using ModelContextProtocol.Server;
 using NewsCMS.Application.Builder;
 using NewsCMS.Application.Common;
 using NewsCMS.Application.Site;
+using NewsCMS.Infrastructure.Builder;
 using NewsCMS.Web.Middleware;
 
 namespace NewsCMS.Web.Mcp;
@@ -146,6 +147,11 @@ public sealed class SiteBuilderMcpTools
         if (SpecCarriesCustomJs(spec) && !HasScope(ApiKeyScopes.BuilderCode))
             return Error($"Spec có customJs nhưng key thiếu scope '{ApiKeyScopes.BuilderCode}'.");
 
+        // data-nc-html = khối "Nhúng HTML": render nguyên văn, KHÔNG qua sanitizer → cùng mức
+        // rủi ro với customJs, nên cùng một cổng scope.
+        if (SpecCarriesRawHtml(spec) && !HasScope(ApiKeyScopes.BuilderCode))
+            return Error($"Spec có khối nhúng HTML (data-nc-html) nhưng key thiếu scope '{ApiKeyScopes.BuilderCode}'.");
+
         return Serialize(await _api.ApplyAsync(spec, ct));
     }
 
@@ -164,6 +170,10 @@ public sealed class SiteBuilderMcpTools
         if (Deny(ApiKeyScopes.BuilderWrite) is { } denied) return denied;
         if (!string.IsNullOrWhiteSpace(customJs) && !HasScope(ApiKeyScopes.BuilderCode))
             return Error($"customJs cần scope '{ApiKeyScopes.BuilderCode}'.");
+        if (BlockCodeExtractor.CarriesRawHtml(compiledHtml) && !HasScope(ApiKeyScopes.BuilderCode))
+            return Error($"Khối nhúng HTML (data-nc-html) cần scope '{ApiKeyScopes.BuilderCode}'.");
+        if (BlockCodeExtractor.CarriesRawHtml(compiledHtml) && !HasScope(ApiKeyScopes.BuilderCode))
+            return Error($"Khối nhúng HTML (data-nc-html) cần scope '{ApiKeyScopes.BuilderCode}'.");
 
         Guid? id = null;
         if (!string.IsNullOrWhiteSpace(pageId))
@@ -322,6 +332,10 @@ public sealed class SiteBuilderMcpTools
     private static bool SpecCarriesCustomJs(SiteSpec spec) =>
         (spec.Pages ?? Array.Empty<PageSpec>()).Any(p => !string.IsNullOrWhiteSpace(p.CustomJs))
         || (spec.Layouts ?? Array.Empty<LayoutSpec>()).Any(l => !string.IsNullOrWhiteSpace(l.CustomJs));
+
+    private static bool SpecCarriesRawHtml(SiteSpec spec) =>
+        (spec.Pages ?? Array.Empty<PageSpec>()).Any(p => BlockCodeExtractor.CarriesRawHtml(p.CompiledHtml))
+        || (spec.Layouts ?? Array.Empty<LayoutSpec>()).Any(l => BlockCodeExtractor.CarriesRawHtml(l.CompiledHtml));
 
     private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, JsonOpts);
 

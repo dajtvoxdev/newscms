@@ -139,6 +139,10 @@ public class ContentSanitizer
         sanitizer.AllowedAttributes.Add("data-nc-css");
         sanitizer.AllowedAttributes.Add("data-nc-js");
         sanitizer.AllowedAttributes.Add("data-*");
+        // HtmlSanitizer 8.x: data attributes bị khoá sau cờ riêng AllowDataAttributes — chỉ thêm
+        // "data-*" vào AllowedAttributes là KHÔNG đủ, mọi data-label/data-* ngoài data-nc-* vẫn
+        // bị gỡ im lặng khi lưu (bảng giá mobile của site builder từng dính).
+        sanitizer.AllowDataAttributes = true;
         sanitizer.AllowedAttributes.Add("frameborder");
         sanitizer.AllowedAttributes.Add("allowfullscreen");
         sanitizer.AllowedAttributes.Add("allow");

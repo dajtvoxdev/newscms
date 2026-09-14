@@ -128,8 +128,21 @@ public sealed class ProductGalleryBlock : IDynamicBlock
         var productName = WebUtility.HtmlEncode(p.Name);
         var galleryUid = "nc-gal-" + Math.Abs(entityId.GetHashCode());
 
+        // JS đổi ảnh cho preset thumbnails — nạp qua data-nc-js để CSP cho qua (xem chú thích
+        // ở nút thumbnail bên dưới). root = chính container gallery.
+        var galleryJs = preset == "thumbnails" && allImages.Count > 1
+            ? "root.addEventListener('click',function(e){var b=e.target.closest('[data-gal-thumb]');if(!b)return;"
+            + "var m=root.querySelector('img');if(!m)return;m.src=b.getAttribute('data-gal-thumb');"
+            + "root.querySelectorAll('[data-gal-thumb]').forEach(function(x){"
+            + "x.style.border=x===b?'2px solid var(--color-brand-500, #0d7c66)':'1px solid #e2e8f0';});});"
+            : null;
+
+        var jsAttr = galleryJs is null
+            ? string.Empty
+            : $" data-nc-js=\"{WebUtility.HtmlEncode(galleryJs)}\"";
+
         var sb = new StringBuilder();
-        sb.Append($"<div class=\"nc-product-gallery\" style=\"margin-bottom:24px\">");
+        sb.Append($"<div class=\"nc-product-gallery\"{jsAttr} style=\"margin-bottom:24px\">");
 
         if (preset == "grid")
         {
@@ -170,7 +183,10 @@ public sealed class ProductGalleryBlock : IDynamicBlock
                     var imgUrl = WebUtility.HtmlEncode(allImages[i]);
                     var isSelected = i == 0;
                     var border = isSelected ? "2px solid var(--color-brand-500, #0d7c66)" : "1px solid #e2e8f0";
-                    sb.Append($"<button type=\"button\" onclick=\"document.getElementById('{galleryUid}-main').src='{imgUrl}';\" " +
+                    // KHÔNG dùng onclick="...": theme Universal gắn CSP script-src 'nonce-…' chặn inline
+                    // event handler — click đổi ảnh im lặng không chạy. JS đi qua data-nc-js thay thế
+                    // (BlockCodeExtractor bóc, PageRenderer inject bằng nonce nên CSP cho qua).
+                    sb.Append($"<button type=\"button\" data-gal-thumb=\"{imgUrl}\" " +
                               $"style=\"flex-shrink:0;padding:0;background:none;border:{border};border-radius:8px;overflow:hidden;cursor:pointer;width:64px;height:64px;\">");
                     sb.Append($"<img src=\"{imgUrl}\" alt=\"thumb {i + 1}\" loading=\"lazy\" style=\"width:100%;height:100%;object-fit:cover;display:block\">");
                     sb.Append("</button>");

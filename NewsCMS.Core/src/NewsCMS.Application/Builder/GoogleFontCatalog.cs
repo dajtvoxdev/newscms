@@ -76,6 +76,15 @@ public static class GoogleFontCatalog
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>
+    /// Bắt khai báo custom property cho font token: <c>--font-display: "Be Vietnam Pro", sans-serif</c>
+    /// trong token CSS. Trang chỉ tham chiếu var(--font-*) mà không viết tên font literal vẫn phải
+    /// được nạp đúng font — detector chỉ nhìn font-family thuần sẽ bỏ sót trường hợp này.
+    /// </summary>
+    private static readonly Regex FontTokenDeclaration = new(
+        @"--font-[a-z0-9-]*\s*:\s*([^;}]+)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>
     /// Tìm font trong danh sách đang thật sự được dùng ở CSS/HTML truyền vào.
     ///
     /// Nhờ vậy trang public tự nạp đúng font cần mà không phải thêm cột vào CSDL hay bắt builder
@@ -93,6 +102,16 @@ public static class GoogleFontCatalog
             if (string.IsNullOrWhiteSpace(source)) continue;
 
             foreach (Match m in FontFamilyDeclaration.Matches(source))
+            {
+                foreach (var family in m.Groups[1].Value.Split(','))
+                {
+                    var name = family.Trim().Trim('"', '\'', ' ');
+                    if (name.Length == 0) continue;
+                    if (ByName.ContainsKey(name)) hits.Add(name);
+                }
+            }
+
+            foreach (Match m in FontTokenDeclaration.Matches(source))
             {
                 foreach (var family in m.Groups[1].Value.Split(','))
                 {

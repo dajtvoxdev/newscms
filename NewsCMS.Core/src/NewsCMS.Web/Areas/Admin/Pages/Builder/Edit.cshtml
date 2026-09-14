@@ -156,6 +156,8 @@
     <script src="~/js/admin/nc-css-inspector.js" asp-append-version="true"></script>
     <!-- Beautify khi mở / minify khi lưu cho mọi editor code (csso/terser/js-beautify nạp lười). -->
     <script src="~/js/admin/nc-code-format.js" asp-append-version="true"></script>
+    <!-- Design token swatch: nạp token site rồi bơm swatch/chip/widget vào Style Manager. -->
+    <script src="~/js/admin/nc-design-tokens.js" asp-append-version="true"></script>
     <script src="~/js/admin/nc-builder-extensions.js" asp-append-version="true"></script>
     <!-- Hạ tầng canvas dùng chung với màn sửa shell: hydrate preview, font Google, Asset Manager. -->
     <script src="~/js/admin/nc-builder-canvas.js" asp-append-version="true"></script>
@@ -421,31 +423,50 @@
 
             styleManager: {
                 sectors: [
+                    // "Bố cục" chỉ giữ lựa chọn người biên tập hiểu được; property thô của
+                    // flex/grid (basis, shrink, order, z-index…) dồn vào sector "Nâng cao"
+                    // đóng sẵn — mở panel không còn thấy một rừng ô nhập vô nghĩa.
                     { name: 'Bố cục', open: true, properties: [
-                        'display', 'position',
-                        { property: 'top' }, { property: 'right' }, { property: 'bottom' }, { property: 'left' },
-                        'flex-direction', 'flex-wrap', 'justify-content', 'align-items', 'align-content', 'gap',
-                        'flex-grow', 'flex-shrink', 'flex-basis', 'order',
-                        'grid-template-columns', 'grid-template-rows', 'grid-gap',
-                        'overflow', 'z-index'
+                        'display', 'flex-direction', 'flex-wrap', 'justify-content', 'align-items', 'gap'
                     ] },
-                    { name: 'Kích thước', properties: ['width','height','max-width','min-width','max-height','min-height'] },
-                    { name: 'Khoảng cách', properties: ['margin','padding'] },
+                    { name: 'Kích thước', properties: ['width','height','max-width','min-width'] },
+                    { name: 'Khoảng cách', properties: [
+                        { property: 'margin', type: 'nc-spacing' },
+                        { property: 'padding', type: 'nc-spacing' }
+                    ] },
                     { name: 'Chữ', properties: [
                         // font-family khai đầy đủ (không để mặc định của GrapesJS) để nhét thêm
                         // font Google vào dropdown. Danh sách dựng ở ncCanvas.fontFamilyOptions().
                         { property: 'font-family', name: 'Font family', type: 'select', default: '',
                           options: ncCanvas.fontFamilyOptions(GOOGLE_FONTS) },
-                        'font-size','font-weight','color','text-align','text-transform','line-height','letter-spacing','text-decoration'] },
-                    { name: 'Trang trí', properties: ['background-color','background-image','background-size','background-position','background-repeat','border','border-width','border-radius','box-shadow','opacity'] },
-                    { name: 'Hiệu ứng', properties: ['transition','transform','cursor'] }
+                        'font-size', 'font-weight',
+                        { property: 'color', type: 'nc-color' },
+                        'text-align', 'text-transform', 'line-height', 'letter-spacing', 'text-decoration' ] },
+                    { name: 'Trang trí', properties: [
+                        { property: 'background-color', type: 'nc-color' },
+                        'background-image', 'background-size', 'background-position', 'background-repeat',
+                        { property: 'border-width' },
+                        { extend: 'border-color', type: 'nc-color', name: 'Màu viền' },
+                        { property: 'border-radius', type: 'nc-radius' },
+                        { property: 'box-shadow', type: 'nc-shadow' },
+                        'opacity'
+                    ] },
+                    { name: 'Hiệu ứng', properties: ['transition','transform','cursor'] },
+                    { name: 'Nâng cao', properties: [
+                        'position',
+                        { property: 'top' }, { property: 'right' }, { property: 'bottom' }, { property: 'left' },
+                        'align-content', 'flex-grow', 'flex-shrink', 'flex-basis', 'order',
+                        'grid-template-columns', 'grid-template-rows', 'grid-gap',
+                        'max-height', 'min-height', 'overflow', 'z-index'
+                    ] }
                 ]
             },
 
             // Cùng bộ CSS và cùng THỨ TỰ như PageRenderer.BuildHtml, nên canvas hiển thị giống
             // trang public: utility precompile → token của site → định nghĩa variant ncv-*.
-            // Tailwind runtime trong iframe vẫn chạy song song để compile class vừa gõ.
-            canvas: { styles: ['/css/site-utilities.css', TOKEN_CSS_URL, '/css/nc-builder.css'] },
+            // nc-canvas-hints.css là lớp CUỐI và CHỈ ở đây: gợi ý kéo-thả (vùng thả trống, vạch
+            // thả, badge) — PageRenderer không nạp nó nên trang public không thấy gì.
+            canvas: { styles: ['/css/site-utilities.css', TOKEN_CSS_URL, '/css/nc-builder.css', '/css/nc-canvas-hints.css'] },
 
             // componentFirst: style áp lên chính component đang chọn khi nó chưa có class —
             // không tự sinh class rác, và không vô tình sửa mọi phần tử cùng class.
@@ -505,6 +526,7 @@
                 if (window.ncBuilder) {
                     ncBuilder.register(editor, {
                         token: TOKEN,
+                        tokenCssUrl: TOKEN_CSS_URL,
                         blocks: catalog ? catalog.blocks : [],
                         sitePresets: catalog ? catalog.sitePresets : [],
                         siteCss: SITE_CUSTOM_CSS,
@@ -574,6 +596,7 @@
         ncCanvas.attach(editor, {
             token: TOKEN,
             siteCss: SITE_CUSTOM_CSS,
+            layoutCss: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.LayoutCss)),
             siteHeadHtml: SITE_HEAD_HTML,
             siteJs: SITE_CUSTOM_JS,
             googleFonts: GOOGLE_FONTS

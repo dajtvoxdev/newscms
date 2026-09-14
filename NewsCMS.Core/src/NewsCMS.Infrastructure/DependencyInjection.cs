@@ -143,6 +143,7 @@ public static class DependencyInjection
         services.AddScoped<IDynamicBlock, Builder.Blocks.PdfFlipbookBlock>();
         services.AddScoped<IDynamicBlock, Builder.Blocks.GalleryBlock>();
         services.AddScoped<IDynamicBlock, Builder.Blocks.SiteMenuBlock>();
+        services.AddScoped<IDynamicBlock, Builder.Blocks.VideoEmbedBlock>();
 
         // Phase 2 (v3): Khối trường dữ liệu cho template trang chi tiết (EntityScoped = true).
         services.AddScoped<IDynamicBlock, Builder.Blocks.EntityTitleBlock>();
