@@ -114,7 +114,7 @@ public sealed class GalleryBlock : IDynamicBlock, IBlockMatchCounter
 
         var sb = new StringBuilder();
         // data-nc-gallery: móc cho lightbox; thiếu JS thì attribute này vô hại.
-        sb.Append("<div class=\"nc-gallery\"");
+        sb.Append("<div data-nc-part=\"list\" class=\"nc-gallery\"");
         if (lightbox) sb.Append(" data-nc-gallery=\"1\"");
         sb.Append($" style=\"{shared.ContainerStyle(MinTileWidth, 16)}\">");
 
@@ -236,12 +236,12 @@ public sealed class GalleryBlock : IDynamicBlock, IBlockMatchCounter
         var figureStyle = $"margin:0;overflow:hidden;border-radius:var(--radius-card,12px)" +
                           shared.ItemExtraStyle(MinTileWidth);
 
-        sb.Append($"<figure style=\"{figureStyle}\">");
+        sb.Append($"<figure data-nc-part=\"item\" style=\"{figureStyle}\">");
 
         // Lightbox mở ảnh gốc bằng chính <a href> — không JS thì đây vẫn là link ảnh dùng được.
-        if (lightbox) sb.Append($"<a href=\"{src}\" data-nc-lightbox target=\"_blank\" rel=\"noopener\" style=\"display:block\">");
+        if (lightbox) sb.Append($"<a data-nc-part=\"lightbox\" href=\"{src}\" data-nc-lightbox target=\"_blank\" rel=\"noopener\" style=\"display:block\">");
 
-        sb.Append($"<img src=\"{src}\" alt=\"{alt}\"{size} loading=\"lazy\" decoding=\"async\" style=\"");
+        sb.Append($"<img data-nc-part=\"image\" src=\"{src}\" alt=\"{alt}\"{size} loading=\"lazy\" decoding=\"async\" style=\"");
         sb.Append(crop
             ? $"width:100%;aspect-ratio:{ratio};object-fit:cover;display:block"
             : "width:100%;height:auto;display:block");
@@ -251,7 +251,7 @@ public sealed class GalleryBlock : IDynamicBlock, IBlockMatchCounter
 
         if (showCaption && !string.IsNullOrWhiteSpace(caption))
         {
-            sb.Append("<figcaption style=\"padding:8px 2px 0;font-size:.85rem;color:var(--color-muted,#64748b)\">");
+            sb.Append("<figcaption data-nc-part=\"caption\" style=\"padding:8px 2px 0;font-size:.85rem;color:var(--color-muted,#64748b)\">");
             sb.Append(WebUtility.HtmlEncode(caption));
             sb.Append("</figcaption>");
         }

@@ -100,13 +100,13 @@ public sealed class EntityTitleBlock : IDynamicBlock
         // Khi không có RouteContext (kéo vào trang tĩnh hoặc xem trước chưa chọn entity)
         if (context.Route is null)
         {
-            return $"<{tag} style=\"{style};opacity:0.85\">(Tiêu đề bài viết / sản phẩm mẫu)</{tag}>";
+            return $"<{tag} data-nc-part=\"title\" style=\"{style};opacity:0.85\">(Tiêu đề bài viết / sản phẩm mẫu)</{tag}>";
         }
 
         var detail = await _contentTypes.LoadDetailAsync(context.Route.RouteType, context.Route.EntityId, ct);
         var title = detail?.Title ?? context.Route.Slug;
 
-        return $"<{tag} style=\"{style}\">{WebUtility.HtmlEncode(title)}</{tag}>";
+        return $"<{tag} data-nc-part=\"title\" style=\"{style}\">{WebUtility.HtmlEncode(title)}</{tag}>";
     }
 }
 

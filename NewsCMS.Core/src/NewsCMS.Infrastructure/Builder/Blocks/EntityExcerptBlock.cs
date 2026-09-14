@@ -94,14 +94,14 @@ public sealed class EntityExcerptBlock : IDynamicBlock
         // Khi không có RouteContext
         if (context.Route is null)
         {
-            return $"<p style=\"{style}\">(Đoạn mô tả ngắn hoặc sapo mở đầu của bài viết / sản phẩm mẫu...)</p>";
+            return $"<p data-nc-part=\"excerpt\" style=\"{style}\">(Đoạn mô tả ngắn hoặc sapo mở đầu của bài viết / sản phẩm mẫu...)</p>";
         }
 
         var detail = await _contentTypes.LoadDetailAsync(context.Route.RouteType, context.Route.EntityId, ct);
         if (detail is null || string.IsNullOrWhiteSpace(detail.Excerpt))
             return string.Empty;
 
-        return $"<p style=\"{style}\">{WebUtility.HtmlEncode(detail.Excerpt)}</p>";
+        return $"<p data-nc-part=\"excerpt\" style=\"{style}\">{WebUtility.HtmlEncode(detail.Excerpt)}</p>";
     }
 }
 

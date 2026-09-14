@@ -62,7 +62,7 @@ public sealed class ProductGridBlock : IDynamicBlock, IBlockMatchCounter
         if (products.Count == 0) return shared.EmptyState("<!-- product-grid: no products -->");
 
         var sb = new StringBuilder();
-        sb.Append($"<div style=\"{shared.ContainerStyle(MinCardWidth)};padding:24px 0\">");
+        sb.Append($"<div data-nc-part=\"list\" style=\"{shared.ContainerStyle(MinCardWidth)};padding:24px 0\">");
         for (var i = 0; i < products.Count; i++) AppendCard(sb, products[i], shared, i == 0);
         sb.Append("</div>");
         return sb.ToString();
@@ -77,25 +77,25 @@ public sealed class ProductGridBlock : IDynamicBlock, IBlockMatchCounter
 
         var imgHeight = shared.IsFeaturedLayout && isFirst ? 320 : 180;
 
-        sb.Append($"<a href=\"/san-pham/{Enc(p.Slug)}\" style=\"text-decoration:none;color:inherit;display:block;border:1px solid #e2e8f0;border-radius:12px;padding:12px;background:#fff{shared.ItemExtraStyle(MinCardWidth, isFirst)}\">");
+        sb.Append($"<a data-nc-part=\"card\" href=\"/san-pham/{Enc(p.Slug)}\" style=\"text-decoration:none;color:inherit;display:block;border:1px solid #e2e8f0;border-radius:12px;padding:12px;background:#fff{shared.ItemExtraStyle(MinCardWidth, isFirst)}\">");
 
         if (!string.IsNullOrEmpty(p.ImageUrl))
         {
-            sb.Append($"<img src=\"{Enc(p.ImageUrl)}\" alt=\"{Enc(p.Name)}\" loading=\"lazy\"");
+            sb.Append($"<img data-nc-part=\"image\" src=\"{Enc(p.ImageUrl)}\" alt=\"{Enc(p.Name)}\" loading=\"lazy\"");
             sb.Append($" style=\"width:100%;height:{imgHeight}px;object-fit:cover;border-radius:8px;margin-bottom:8px;display:block\">");
         }
 
-        sb.Append($"<h4 style=\"margin:0 0 4px;font-size:.95rem;font-weight:600;color:#0f172a\">{Enc(p.Name)}</h4>");
+        sb.Append($"<h4 data-nc-part=\"name\" style=\"margin:0 0 4px;font-size:.95rem;font-weight:600;color:#0f172a\">{Enc(p.Name)}</h4>");
 
         // Giá khuyến mại (nếu có) hiện trước, giá gốc gạch ngang bên cạnh.
         if (p.SalePrice is > 0 && p.SalePrice < p.Price)
         {
-            sb.Append($"<div style=\"color:#0d7c66;font-weight:700;font-size:1.1rem\">{p.SalePrice:N0}₫");
-            sb.Append($"<span style=\"margin-left:8px;color:#94a3b8;font-weight:400;font-size:.85rem;text-decoration:line-through\">{p.Price:N0}₫</span></div>");
+            sb.Append($"<div data-nc-part=\"price\" style=\"color:#0d7c66;font-weight:700;font-size:1.1rem\">{p.SalePrice:N0}₫");
+            sb.Append($"<span data-nc-part=\"price-compare\" style=\"margin-left:8px;color:#94a3b8;font-weight:400;font-size:.85rem;text-decoration:line-through\">{p.Price:N0}₫</span></div>");
         }
         else if (p.Price > 0)
         {
-            sb.Append($"<div style=\"color:#0d7c66;font-weight:700;font-size:1.1rem\">{p.Price:N0}₫</div>");
+            sb.Append($"<div data-nc-part=\"price\" style=\"color:#0d7c66;font-weight:700;font-size:1.1rem\">{p.Price:N0}₫</div>");
         }
 
         sb.Append("</a>");

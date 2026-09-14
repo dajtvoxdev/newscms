@@ -94,8 +94,8 @@ public sealed class EntityContentBlock : IDynamicBlock
         // Khi không có RouteContext
         if (context.Route is null)
         {
-            return $"<div class=\"nc-post-body\" style=\"{style};padding:16px 0;opacity:0.75\">" +
-                   "<p><em>(Nội dung chi tiết của bài viết hoặc mô tả sản phẩm sẽ hiển thị tại đây khi xem trên trang public.)</em></p>" +
+            return $"<div data-nc-part=\"wrapper\" class=\"nc-post-body\" style=\"{style};padding:16px 0;opacity:0.75\">" +
+                   "<p><em data-nc-part=\"placeholder-text\">(Nội dung chi tiết của bài viết hoặc mô tả sản phẩm sẽ hiển thị tại đây khi xem trên trang public.)</em></p>" +
                    "<p>Khối này tự động nhúng toàn bộ mã HTML đã được định dạng và khử độc từ trình soạn thảo quản trị.</p>" +
                    "</div>";
         }
@@ -105,7 +105,7 @@ public sealed class EntityContentBlock : IDynamicBlock
             return string.Empty;
 
         // Content đã được khử độc an toàn qua ContentSanitizer khi lưu ở admin
-        return $"<div class=\"nc-post-body\" style=\"{style}\">{detail.Body}</div>";
+        return $"<div data-nc-part=\"wrapper\" class=\"nc-post-body\" style=\"{style}\">{detail.Body}</div>";
     }
 }
 

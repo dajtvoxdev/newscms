@@ -83,11 +83,11 @@ public sealed class EntityMetaBlock : IDynamicBlock
         // Khi không có RouteContext
         if (context.Route is null)
         {
-            return $"<div style=\"color:var(--color-muted,#94a3b8);font-size:0.85rem;margin-bottom:24px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:{justify}\">" +
-                   (showCategory ? "<a href=\"#\" style=\"font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-accent-500,#0d7c66);text-decoration:none\">CHUYÊN MỤC</a>" : "") +
-                   (showDate ? $"<span>{DateTime.Now.ToString(dateFormat, CultureInfo.GetCultureInfo("vi-VN"))}</span>" : "") +
-                   (showAuthor ? "<span>Tác giả mẫu</span>" : "") +
-                   (showViews ? "<span>1.234 lượt xem</span>" : "") +
+            return $"<div data-nc-part=\"wrapper\" style=\"color:var(--color-muted,#94a3b8);font-size:0.85rem;margin-bottom:24px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:{justify}\">" +
+                   (showCategory ? "<a data-nc-part=\"category\" href=\"#\" style=\"font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-accent-500,#0d7c66);text-decoration:none\">CHUYÊN MỤC</a>" : "") +
+                   (showDate ? $"<span data-nc-part=\"date\">{DateTime.Now.ToString(dateFormat, CultureInfo.GetCultureInfo("vi-VN"))}</span>" : "") +
+                   (showAuthor ? "<span data-nc-part=\"author\">Tác giả mẫu</span>" : "") +
+                   (showViews ? "<span data-nc-part=\"views\">1.234 lượt xem</span>" : "") +
                    "</div>";
         }
 
@@ -107,31 +107,31 @@ public sealed class EntityMetaBlock : IDynamicBlock
         }
 
         var sb = new StringBuilder();
-        sb.Append($"<div style=\"color:var(--color-muted);font-size:0.85rem;margin-bottom:24px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:{justify}\">");
+        sb.Append($"<div data-nc-part=\"wrapper\" style=\"color:var(--color-muted);font-size:0.85rem;margin-bottom:24px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:{justify}\">");
 
         if (showCategory && !string.IsNullOrWhiteSpace(categoryName))
         {
             var href = !string.IsNullOrWhiteSpace(categorySlug) ? $"/{WebUtility.HtmlEncode(categorySlug)}" : "#";
-            sb.Append($"<a href=\"{href}\" style=\"font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-accent-500);text-decoration:none\">");
+            sb.Append($"<a data-nc-part=\"category\" href=\"{href}\" style=\"font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-accent-500);text-decoration:none\">");
             sb.Append(WebUtility.HtmlEncode(categoryName));
             sb.Append("</a>");
         }
 
         if (showDate && publishedAt.HasValue)
         {
-            sb.Append("<span>");
+            sb.Append("<span data-nc-part=\"date\">");
             sb.Append(publishedAt.Value.ToString(dateFormat, CultureInfo.GetCultureInfo("vi-VN")));
             sb.Append("</span>");
         }
 
         if (showAuthor && !string.IsNullOrWhiteSpace(authorName))
         {
-            sb.Append($"<span>Tác giả: {WebUtility.HtmlEncode(authorName)}</span>");
+            sb.Append($"<span data-nc-part=\"author\">Tác giả: {WebUtility.HtmlEncode(authorName)}</span>");
         }
 
         if (showViews && viewCount > 0)
         {
-            sb.Append($"<span>{viewCount:N0} lượt xem</span>");
+            sb.Append($"<span data-nc-part=\"views\">{viewCount:N0} lượt xem</span>");
         }
 
         sb.Append("</div>");

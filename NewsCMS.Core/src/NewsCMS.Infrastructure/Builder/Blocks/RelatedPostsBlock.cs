@@ -70,11 +70,11 @@ public sealed class RelatedPostsBlock : IDynamicBlock
         // Khi không có RouteContext
         if (context.Route is null)
         {
-            return $"<section style=\"margin-top:48px;padding-top:32px;border-top:1px solid #e2e8f0;\">" +
-                   $"<h3 style=\"margin:0 0 20px;font-size:1.3rem;font-weight:600;color:var(--color-brand-500,#0f172a)\">{WebUtility.HtmlEncode(title)} (mẫu)</h3>" +
-                   $"<div style=\"{shared.ContainerStyle(MinCardWidth, 20)}\">" +
-                   "<div style=\"border:1px dashed #cbd5e1;border-radius:12px;padding:16px;background:#f8fafc;color:#94a3b8;font-size:0.9rem\">Bài viết liên quan 1</div>" +
-                   "<div style=\"border:1px dashed #cbd5e1;border-radius:12px;padding:16px;background:#f8fafc;color:#94a3b8;font-size:0.9rem\">Bài viết liên quan 2</div>" +
+            return $"<section data-nc-part=\"wrapper\" style=\"margin-top:48px;padding-top:32px;border-top:1px solid #e2e8f0;\">" +
+                   $"<h3 data-nc-part=\"title\" style=\"margin:0 0 20px;font-size:1.3rem;font-weight:600;color:var(--color-brand-500,#0f172a)\">{WebUtility.HtmlEncode(title)} (mẫu)</h3>" +
+                   $"<div data-nc-part=\"list\" style=\"{shared.ContainerStyle(MinCardWidth, 20)}\">" +
+                   "<div data-nc-part=\"card\" style=\"border:1px dashed #cbd5e1;border-radius:12px;padding:16px;background:#f8fafc;color:#94a3b8;font-size:0.9rem\">Bài viết liên quan 1</div>" +
+                   "<div data-nc-part=\"card\" style=\"border:1px dashed #cbd5e1;border-radius:12px;padding:16px;background:#f8fafc;color:#94a3b8;font-size:0.9rem\">Bài viết liên quan 2</div>" +
                    "</div></section>";
         }
 
@@ -117,43 +117,43 @@ public sealed class RelatedPostsBlock : IDynamicBlock
             return shared.EmptyState("<!-- related-posts: no matching posts -->");
 
         var sb = new StringBuilder();
-        sb.Append("<section style=\"margin-top:48px;padding-top:32px;border-top:1px solid var(--color-subtle, #e2e8f0);\">");
+        sb.Append("<section data-nc-part=\"wrapper\" style=\"margin-top:48px;padding-top:32px;border-top:1px solid var(--color-subtle, #e2e8f0);\">");
 
         if (!string.IsNullOrWhiteSpace(title))
         {
-            sb.Append($"<h3 style=\"margin:0 0 24px;font-family:var(--font-display);font-size:1.35rem;font-weight:600;color:var(--color-brand-500,#0f172a)\">");
+            sb.Append($"<h3 data-nc-part=\"title\" style=\"margin:0 0 24px;font-family:var(--font-display);font-size:1.35rem;font-weight:600;color:var(--color-brand-500,#0f172a)\">");
             sb.Append(WebUtility.HtmlEncode(title));
             sb.Append("</h3>");
         }
 
-        sb.Append($"<div style=\"{shared.ContainerStyle(MinCardWidth, 20)}\">");
+        sb.Append($"<div data-nc-part=\"list\" style=\"{shared.ContainerStyle(MinCardWidth, 20)}\">");
         for (var i = 0; i < posts.Count; i++)
         {
             var p = posts[i];
             var url = $"/{WebUtility.HtmlEncode(p.CategorySlug)}/{WebUtility.HtmlEncode(p.Slug)}";
             var encTitle = WebUtility.HtmlEncode(p.Title);
 
-            sb.Append($"<a href=\"{url}\" style=\"text-decoration:none;color:inherit;display:block{shared.ItemExtraStyle(MinCardWidth, i == 0)}\">");
-            sb.Append("<div style=\"border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;padding:14px;background:#fff;height:100%;box-sizing:border-box\">");
+            sb.Append($"<a data-nc-part=\"card\" href=\"{url}\" style=\"text-decoration:none;color:inherit;display:block{shared.ItemExtraStyle(MinCardWidth, i == 0)}\">");
+            sb.Append("<div data-nc-part=\"card-body\" style=\"border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;padding:14px;background:#fff;height:100%;box-sizing:border-box\">");
 
             if (!string.IsNullOrEmpty(p.ImageUrl))
             {
-                sb.Append($"<img src=\"{WebUtility.HtmlEncode(p.ImageUrl)}\" alt=\"{encTitle}\" loading=\"lazy\" ");
+                sb.Append($"<img data-nc-part=\"image\" src=\"{WebUtility.HtmlEncode(p.ImageUrl)}\" alt=\"{encTitle}\" loading=\"lazy\" ");
                 sb.Append("style=\"width:100%;height:160px;object-fit:cover;border-radius:8px;margin-bottom:12px;display:block\">");
             }
 
             if (shared.ShowDate)
             {
-                sb.Append("<div style=\"font-size:.75rem;color:#94a3b8;margin-bottom:6px\">");
+                sb.Append("<div data-nc-part=\"date\" style=\"font-size:.75rem;color:#94a3b8;margin-bottom:6px\">");
                 sb.Append(p.PublishedAt.ToString("dd.MM.yyyy"));
                 sb.Append("</div>");
             }
 
-            sb.Append($"<h4 style=\"margin:0 0 6px;font-size:1rem;font-weight:600;line-height:1.4;color:#0f172a\">{encTitle}</h4>");
+            sb.Append($"<h4 data-nc-part=\"item-title\" style=\"margin:0 0 6px;font-size:1rem;font-weight:600;line-height:1.4;color:#0f172a\">{encTitle}</h4>");
 
             if (shared.ShowExcerpt && !string.IsNullOrEmpty(p.Excerpt))
             {
-                sb.Append($"<p style=\"margin:0;font-size:.85rem;color:#64748b;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden\">");
+                sb.Append($"<p data-nc-part=\"excerpt\" style=\"margin:0;font-size:.85rem;color:#64748b;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden\">");
                 sb.Append(WebUtility.HtmlEncode(p.Excerpt));
                 sb.Append("</p>");
             }

@@ -94,8 +94,8 @@ public sealed class ProductPriceBlock : IDynamicBlock
         // Khi không có RouteContext
         if (context.Route is null)
         {
-            return $"<div style=\"{style}\">290.000 ₫" +
-                   (showCompareAt ? $" <span style=\"{compareStyle}\">350.000 ₫</span>" : "") +
+            return $"<div data-nc-part=\"price\" style=\"{style}\">290.000 ₫" +
+                   (showCompareAt ? $" <span data-nc-part=\"price-compare\" style=\"{compareStyle}\">350.000 ₫</span>" : "") +
                    "</div>";
         }
 
@@ -112,19 +112,19 @@ public sealed class ProductPriceBlock : IDynamicBlock
 
         if (p.Price <= 0 && (!p.SalePrice.HasValue || p.SalePrice.Value <= 0))
         {
-            return $"<div style=\"{style}\">Liên hệ</div>";
+            return $"<div data-nc-part=\"price\" style=\"{style}\">Liên hệ</div>";
         }
 
         // Có giá khuyến mãi và nhỏ hơn giá gốc
         if (showCompareAt && p.SalePrice.HasValue && p.SalePrice.Value > 0 && p.SalePrice.Value < p.Price)
         {
-            return $"<div style=\"{style}\">{Price(p.SalePrice.Value)}" +
-                   $" <span style=\"{compareStyle}\">{Price(p.Price)}</span>" +
+            return $"<div data-nc-part=\"price\" style=\"{style}\">{Price(p.SalePrice.Value)}" +
+                   $" <span data-nc-part=\"price-compare\" style=\"{compareStyle}\">{Price(p.Price)}</span>" +
                    "</div>";
         }
 
         var displayPrice = (p.SalePrice.HasValue && p.SalePrice.Value > 0) ? p.SalePrice.Value : p.Price;
-        return $"<div style=\"{style}\">{Price(displayPrice)}</div>";
+        return $"<div data-nc-part=\"price\" style=\"{style}\">{Price(displayPrice)}</div>";
     }
 }
 

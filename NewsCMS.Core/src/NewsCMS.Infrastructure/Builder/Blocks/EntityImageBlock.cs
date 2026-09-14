@@ -115,10 +115,10 @@ public sealed class EntityImageBlock : IDynamicBlock
         // Placeholder khi không có RouteContext
         if (context.Route is null)
         {
-            return $"<div style=\"border-radius:{radiusStyle};overflow:hidden;background:#f1f5f9;height:280px;display:flex;align-items:center;justify-content:center;color:#94a3b8;margin-bottom:24px;border:1px dashed #cbd5e1\">" +
-                   "<div style=\"text-align:center\">" +
-                   "<svg style=\"width:40px;height:40px;margin:0 auto 8px;display:block;opacity:0.6\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/><circle cx=\"8.5\" cy=\"8.5\" r=\"1.5\"/><polyline points=\"21 15 16 10 5 21\"/></svg>" +
-                   "<span style=\"font-size:0.9rem\">(Ảnh đại diện bài viết / sản phẩm mẫu)</span></div></div>";
+            return $"<div data-nc-part=\"wrapper\" style=\"border-radius:{radiusStyle};overflow:hidden;background:#f1f5f9;height:280px;display:flex;align-items:center;justify-content:center;color:#94a3b8;margin-bottom:24px;border:1px dashed #cbd5e1\">" +
+                   "<div data-nc-part=\"placeholder-inner\" style=\"text-align:center\">" +
+                   "<svg data-nc-part=\"placeholder-icon\" style=\"width:40px;height:40px;margin:0 auto 8px;display:block;opacity:0.6\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/><circle cx=\"8.5\" cy=\"8.5\" r=\"1.5\"/><polyline points=\"21 15 16 10 5 21\"/></svg>" +
+                   "<span data-nc-part=\"placeholder-text\" style=\"font-size:0.9rem\">(Ảnh đại diện bài viết / sản phẩm mẫu)</span></div></div>";
         }
 
         var detail = await _contentTypes.LoadDetailAsync(context.Route.RouteType, context.Route.EntityId, ct);
@@ -128,8 +128,8 @@ public sealed class EntityImageBlock : IDynamicBlock
 
         var alt = detail?.ImageAlt ?? detail?.Title ?? context.Route.Slug;
 
-        return $"<div style=\"border-radius:{radiusStyle};overflow:hidden;background:rgba(228,226,221,1);margin-bottom:28px;{maxHeightStyle}\">" +
-               $"<img src=\"{WebUtility.HtmlEncode(imageUrl)}\" alt=\"{WebUtility.HtmlEncode(alt)}\" loading=\"lazy\" " +
+        return $"<div data-nc-part=\"wrapper\" style=\"border-radius:{radiusStyle};overflow:hidden;background:rgba(228,226,221,1);margin-bottom:28px;{maxHeightStyle}\">" +
+               $"<img data-nc-part=\"image\" src=\"{WebUtility.HtmlEncode(imageUrl)}\" alt=\"{WebUtility.HtmlEncode(alt)}\" loading=\"lazy\" " +
                $"style=\"width:100%;height:auto;aspect-ratio:{ratioStyle};object-fit:{fitStyle};display:block\"></div>";
     }
 }

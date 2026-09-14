@@ -62,16 +62,16 @@ public sealed class BannerSliderBlock : IDynamicBlock
         if (banners.Count == 0) return shared.EmptyState("<!-- banner-slider: no banners -->");
 
         var sb = new StringBuilder();
-        sb.Append("<div style=\"overflow:hidden;border-radius:12px\">");
-        sb.Append("<div style=\"display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch\">");
+        sb.Append("<div data-nc-part=\"wrapper\" style=\"overflow:hidden;border-radius:12px\">");
+        sb.Append("<div data-nc-part=\"track\" style=\"display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch\">");
         foreach (var b in banners)
         {
-            var img = $"<img src=\"{System.Net.WebUtility.HtmlEncode(b.ImageUrl)}\" alt=\"{System.Net.WebUtility.HtmlEncode(b.Title)}\" loading=\"lazy\"" +
+            var img = $"<img data-nc-part=\"image\" src=\"{System.Net.WebUtility.HtmlEncode(b.ImageUrl)}\" alt=\"{System.Net.WebUtility.HtmlEncode(b.Title)}\" loading=\"lazy\"" +
                       $" style=\"width:100%;min-width:100%;height:{height}px;object-fit:cover;scroll-snap-align:start;display:block\">";
             if (!string.IsNullOrEmpty(b.Url))
-                sb.Append($"<a href=\"{System.Net.WebUtility.HtmlEncode(b.Url)}\" style=\"flex:0 0 100%\">{img}</a>");
+                sb.Append($"<a data-nc-part=\"slide\" href=\"{System.Net.WebUtility.HtmlEncode(b.Url)}\" style=\"flex:0 0 100%\">{img}</a>");
             else
-                sb.Append($"<div style=\"flex:0 0 100%\">{img}</div>");
+                sb.Append($"<div data-nc-part=\"slide\" style=\"flex:0 0 100%\">{img}</div>");
         }
         sb.Append("</div></div>");
         return sb.ToString();

@@ -74,15 +74,15 @@ public sealed class CategoryListBlock : IDynamicBlock
             : $"list-style:none;padding:0;margin:0;{shared.ContainerStyle(200, 12)}";
 
         var sb = new StringBuilder();
-        sb.Append($"<ul style=\"{containerStyle}\">");
+        sb.Append($"<ul data-nc-part=\"list\" style=\"{containerStyle}\">");
         foreach (var c in categories)
         {
             var count = showCount && c.ChildCount > 0
-                ? $" <span style=\"color:#94a3b8;font-size:.8em\">({c.ChildCount})</span>"
+                ? $" <span data-nc-part=\"count\" style=\"color:#94a3b8;font-size:.8em\">({c.ChildCount})</span>"
                 : "";
-            sb.Append("<li style=\"break-inside:avoid\">");
-            sb.Append($"<a href=\"/{System.Net.WebUtility.HtmlEncode(c.Slug)}\" style=\"display:block;padding:8px 16px;border:1px solid #e2e8f0;border-radius:8px;text-decoration:none;color:#0f172a;font-weight:600;background:#f8fafc\">");
-            sb.Append(System.Net.WebUtility.HtmlEncode(c.Name));
+            sb.Append("<li data-nc-part=\"item\" style=\"break-inside:avoid\">");
+            sb.Append($"<a data-nc-part=\"link\" href=\"/{System.Net.WebUtility.HtmlEncode(c.Slug)}\" style=\"display:block;padding:8px 16px;border:1px solid #e2e8f0;border-radius:8px;text-decoration:none;color:#0f172a;font-weight:600;background:#f8fafc\">");
+            sb.Append($"<span data-nc-part=\"name\">{System.Net.WebUtility.HtmlEncode(c.Name)}</span>");
             sb.Append(count);
             sb.Append("</a></li>");
         }

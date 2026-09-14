@@ -49,11 +49,11 @@ public sealed class BreadcrumbBlock : IDynamicBlock
         // Parse path thành segments để build breadcrumb
         var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (segments.Length == 0)
-            return "<nav aria-label=\"Breadcrumb\"><ol style=\"list-style:none;padding:0;margin:0;display:flex;gap:8px;font-size:.9rem;\"><li><a href=\"/\" style=\"color:#0d7c66;text-decoration:none;\">Trang chủ</a></li></ol></nav>";
+            return "<nav data-nc-part=\"wrapper\" aria-label=\"Breadcrumb\"><ol data-nc-part=\"list\" style=\"list-style:none;padding:0;margin:0;display:flex;gap:8px;font-size:.9rem;\"><li data-nc-part=\"item\"><a data-nc-part=\"link\" href=\"/\" style=\"color:#0d7c66;text-decoration:none;\">Trang chủ</a></li></ol></nav>";
 
         var sb = new StringBuilder();
-        sb.Append("<nav aria-label=\"Breadcrumb\"><ol style=\"list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:8px;font-size:.9rem;\">");
-        sb.Append("<li><a href=\"/\" style=\"color:#0d7c66;text-decoration:none;\">Trang chủ</a></li>");
+        sb.Append("<nav data-nc-part=\"wrapper\" aria-label=\"Breadcrumb\"><ol data-nc-part=\"list\" style=\"list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:8px;font-size:.9rem;\">");
+        sb.Append("<li data-nc-part=\"item\"><a data-nc-part=\"link\" href=\"/\" style=\"color:#0d7c66;text-decoration:none;\">Trang chủ</a></li>");
 
         var currentPath = "";
         for (int i = 0; i < segments.Length; i++)
@@ -61,7 +61,7 @@ public sealed class BreadcrumbBlock : IDynamicBlock
             currentPath += "/" + segments[i];
             var isLast = i == segments.Length - 1;
 
-            sb.Append("<li style=\"color:#94a3b8;\">/</li>");
+            sb.Append("<li data-nc-part=\"separator\" style=\"color:#94a3b8;\">/</li>");
 
             // Tra tên hiển thị từ SiteRoute → entity
             var route = await _db.SiteRoutes.AsNoTracking()
@@ -95,9 +95,9 @@ public sealed class BreadcrumbBlock : IDynamicBlock
             }
 
             if (isLast)
-                sb.Append($"<li aria-current=\"page\" style=\"color:#334155;font-weight:600;\">{System.Net.WebUtility.HtmlEncode(label)}</li>");
+                sb.Append($"<li data-nc-part=\"item\" aria-current=\"page\" style=\"color:#334155;font-weight:600;\">{System.Net.WebUtility.HtmlEncode(label)}</li>");
             else
-                sb.Append($"<li><a href=\"{System.Net.WebUtility.HtmlEncode(currentPath)}\" style=\"color:#0d7c66;text-decoration:none;\">{System.Net.WebUtility.HtmlEncode(label)}</a></li>");
+                sb.Append($"<li data-nc-part=\"item\"><a data-nc-part=\"link\" href=\"{System.Net.WebUtility.HtmlEncode(currentPath)}\" style=\"color:#0d7c66;text-decoration:none;\">{System.Net.WebUtility.HtmlEncode(label)}</a></li>");
         }
 
         sb.Append("</ol></nav>");

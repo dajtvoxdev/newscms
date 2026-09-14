@@ -121,7 +121,7 @@ internal sealed class SharedBlockProps
     public string EmptyState(string fallbackComment)
     {
         if (string.IsNullOrWhiteSpace(EmptyText)) return fallbackComment;
-        return "<div style=\"padding:32px 20px;text-align:center;color:var(--color-muted,#94a3b8);" +
+        return "<div data-nc-part=\"empty\" style=\"padding:32px 20px;text-align:center;color:var(--color-muted,#94a3b8);" +
                "font-family:var(--font-body,system-ui,sans-serif);font-size:.95rem\">" +
                WebUtility.HtmlEncode(EmptyText) + "</div>";
     }

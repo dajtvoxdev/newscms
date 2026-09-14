@@ -67,7 +67,7 @@ public sealed class PostListBlock : IDynamicBlock, IBlockMatchCounter
         if (posts.Count == 0) return shared.EmptyState("<!-- post-list: no posts -->");
 
         var sb = new StringBuilder();
-        sb.Append($"<div style=\"{shared.ContainerStyle(MinCardWidth, 24)};padding:24px 0\">");
+        sb.Append($"<div data-nc-part=\"list\" style=\"{shared.ContainerStyle(MinCardWidth, 24)};padding:24px 0\">");
         for (var i = 0; i < posts.Count; i++) AppendCard(sb, posts[i], shared, i == 0);
         sb.Append("</div>");
         return sb.ToString();
@@ -85,30 +85,30 @@ public sealed class PostListBlock : IDynamicBlock, IBlockMatchCounter
         var big = shared.IsFeaturedLayout && isFirst;
         var imgHeight = big ? 320 : 180;
 
-        sb.Append($"<a href=\"{url}\" style=\"text-decoration:none;color:inherit;display:block{shared.ItemExtraStyle(MinCardWidth, isFirst)}\">");
-        sb.Append("<div style=\"border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;padding:16px;background:#fff\">");
+        sb.Append($"<a data-nc-part=\"card\" href=\"{url}\" style=\"text-decoration:none;color:inherit;display:block{shared.ItemExtraStyle(MinCardWidth, isFirst)}\">");
+        sb.Append("<div data-nc-part=\"card-body\" style=\"border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;padding:16px;background:#fff\">");
 
         if (!string.IsNullOrEmpty(p.ImageUrl))
         {
             var size = p.Width is > 0 && p.Height is > 0 ? $" width=\"{p.Width}\" height=\"{p.Height}\"" : "";
-            sb.Append($"<img src=\"{Enc(p.ImageUrl)}\" alt=\"{Enc(p.Title)}\"{size} loading=\"lazy\"");
+            sb.Append($"<img data-nc-part=\"image\" src=\"{Enc(p.ImageUrl)}\" alt=\"{Enc(p.Title)}\"{size} loading=\"lazy\"");
             sb.Append($" style=\"width:100%;height:{imgHeight}px;object-fit:cover;border-radius:8px;margin-bottom:12px;display:block\">");
         }
 
         if (shared.ShowDate)
         {
-            sb.Append("<div style=\"font-size:.75rem;color:#94a3b8;margin-bottom:6px\">");
+            sb.Append("<div data-nc-part=\"date\" style=\"font-size:.75rem;color:#94a3b8;margin-bottom:6px\">");
             sb.Append(p.PublishedAt.ToString("dd.MM.yyyy"));
             sb.Append("</div>");
         }
 
-        sb.Append($"<h3 style=\"margin:0 0 8px;font-size:{(big ? "1.4rem" : "1.1rem")};font-weight:700;color:#0f172a\">");
+        sb.Append($"<h3 data-nc-part=\"title\" style=\"margin:0 0 8px;font-size:{(big ? "1.4rem" : "1.1rem")};font-weight:700;color:#0f172a\">");
         sb.Append(Enc(p.Title));
         sb.Append("</h3>");
 
         if (shared.ShowExcerpt && !string.IsNullOrEmpty(p.Excerpt))
         {
-            sb.Append("<p style=\"margin:0;color:#64748b;font-size:.9rem;line-height:1.5\">");
+            sb.Append("<p data-nc-part=\"excerpt\" style=\"margin:0;color:#64748b;font-size:.9rem;line-height:1.5\">");
             sb.Append(Enc(Truncate(p.Excerpt, big ? 220 : 120)));
             sb.Append("</p>");
         }

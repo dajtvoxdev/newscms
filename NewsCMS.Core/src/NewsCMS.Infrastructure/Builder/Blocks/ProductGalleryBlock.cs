@@ -85,13 +85,13 @@ public sealed class ProductGalleryBlock : IDynamicBlock
         // Khi không có RouteContext
         if (context.Route is null)
         {
-            return $"<div style=\"margin-bottom:24px\">" +
-                   $"<div style=\"border-radius:{radius};overflow:hidden;background:#f1f5f9;height:320px;display:flex;align-items:center;justify-content:center;color:#94a3b8;border:1px dashed #cbd5e1;margin-bottom:12px\">" +
-                   "<span>(Ảnh sản phẩm mẫu)</span></div>" +
-                   "<div style=\"display:flex;gap:8px\">" +
-                   "<div style=\"width:60px;height:60px;background:#e2e8f0;border-radius:6px\"></div>" +
-                   "<div style=\"width:60px;height:60px;background:#e2e8f0;border-radius:6px\"></div>" +
-                   "<div style=\"width:60px;height:60px;background:#e2e8f0;border-radius:6px\"></div>" +
+            return $"<div data-nc-part=\"gallery\" style=\"margin-bottom:24px\">" +
+                   $"<div data-nc-part=\"main\" style=\"border-radius:{radius};overflow:hidden;background:#f1f5f9;height:320px;display:flex;align-items:center;justify-content:center;color:#94a3b8;border:1px dashed #cbd5e1;margin-bottom:12px\">" +
+                   "<span data-nc-part=\"placeholder-text\">(Ảnh sản phẩm mẫu)</span></div>" +
+                   "<div data-nc-part=\"thumbs\" style=\"display:flex;gap:8px\">" +
+                   "<div data-nc-part=\"thumb\" style=\"width:60px;height:60px;background:#e2e8f0;border-radius:6px\"></div>" +
+                   "<div data-nc-part=\"thumb\" style=\"width:60px;height:60px;background:#e2e8f0;border-radius:6px\"></div>" +
+                   "<div data-nc-part=\"thumb\" style=\"width:60px;height:60px;background:#e2e8f0;border-radius:6px\"></div>" +
                    "</div></div>";
         }
 
@@ -142,28 +142,28 @@ public sealed class ProductGalleryBlock : IDynamicBlock
             : $" data-nc-js=\"{WebUtility.HtmlEncode(galleryJs)}\"";
 
         var sb = new StringBuilder();
-        sb.Append($"<div class=\"nc-product-gallery\"{jsAttr} style=\"margin-bottom:24px\">");
+        sb.Append($"<div data-nc-part=\"gallery\" class=\"nc-product-gallery\"{jsAttr} style=\"margin-bottom:24px\">");
 
         if (preset == "grid")
         {
-            sb.Append($"<div style=\"display:grid;grid-template-columns:repeat({columns}, minmax(0, 1fr));gap:{gap}px;\">");
+            sb.Append($"<div data-nc-part=\"grid\" style=\"display:grid;grid-template-columns:repeat({columns}, minmax(0, 1fr));gap:{gap}px;\">");
             for (var i = 0; i < allImages.Count; i++)
             {
                 var imgUrl = WebUtility.HtmlEncode(allImages[i]);
-                sb.Append($"<div style=\"border-radius:{radius};overflow:hidden;background:rgba(228,226,221,1);\">");
-                sb.Append($"<img src=\"{imgUrl}\" alt=\"{productName} - ảnh {i + 1}\" loading=\"lazy\" style=\"width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;display:block\">");
+                sb.Append($"<div data-nc-part=\"item\" style=\"border-radius:{radius};overflow:hidden;background:rgba(228,226,221,1);\">");
+                sb.Append($"<img data-nc-part=\"image\" src=\"{imgUrl}\" alt=\"{productName} - ảnh {i + 1}\" loading=\"lazy\" style=\"width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;display:block\">");
                 sb.Append("</div>");
             }
             sb.Append("</div>");
         }
         else if (preset == "stacked")
         {
-            sb.Append($"<div style=\"display:flex;flex-direction:column;gap:{gap}px;\">");
+            sb.Append($"<div data-nc-part=\"stack\" style=\"display:flex;flex-direction:column;gap:{gap}px;\">");
             for (var i = 0; i < allImages.Count; i++)
             {
                 var imgUrl = WebUtility.HtmlEncode(allImages[i]);
-                sb.Append($"<div style=\"border-radius:{radius};overflow:hidden;background:rgba(228,226,221,1);\">");
-                sb.Append($"<img src=\"{imgUrl}\" alt=\"{productName} - ảnh {i + 1}\" loading=\"lazy\" style=\"width:100%;height:auto;display:block\">");
+                sb.Append($"<div data-nc-part=\"item\" style=\"border-radius:{radius};overflow:hidden;background:rgba(228,226,221,1);\">");
+                sb.Append($"<img data-nc-part=\"image\" src=\"{imgUrl}\" alt=\"{productName} - ảnh {i + 1}\" loading=\"lazy\" style=\"width:100%;height:auto;display:block\">");
                 sb.Append("</div>");
             }
             sb.Append("</div>");
@@ -171,13 +171,13 @@ public sealed class ProductGalleryBlock : IDynamicBlock
         else // thumbnails
         {
             var firstUrl = WebUtility.HtmlEncode(allImages[0]);
-            sb.Append($"<div style=\"border-radius:{radius};overflow:hidden;background:rgba(228,226,221,1);margin-bottom:12px;\">");
-            sb.Append($"<img id=\"{galleryUid}-main\" src=\"{firstUrl}\" alt=\"{productName}\" style=\"width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;display:block\">");
+            sb.Append($"<div data-nc-part=\"main\" style=\"border-radius:{radius};overflow:hidden;background:rgba(228,226,221,1);margin-bottom:12px;\">");
+            sb.Append($"<img data-nc-part=\"image\" id=\"{galleryUid}-main\" src=\"{firstUrl}\" alt=\"{productName}\" style=\"width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;display:block\">");
             sb.Append("</div>");
 
             if (allImages.Count > 1)
             {
-                sb.Append("<div style=\"display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;\">");
+                sb.Append("<div data-nc-part=\"thumbs\" style=\"display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;\">");
                 for (var i = 0; i < allImages.Count; i++)
                 {
                     var imgUrl = WebUtility.HtmlEncode(allImages[i]);
@@ -186,9 +186,9 @@ public sealed class ProductGalleryBlock : IDynamicBlock
                     // KHÔNG dùng onclick="...": theme Universal gắn CSP script-src 'nonce-…' chặn inline
                     // event handler — click đổi ảnh im lặng không chạy. JS đi qua data-nc-js thay thế
                     // (BlockCodeExtractor bóc, PageRenderer inject bằng nonce nên CSP cho qua).
-                    sb.Append($"<button type=\"button\" data-gal-thumb=\"{imgUrl}\" " +
+                    sb.Append($"<button data-nc-part=\"thumb\" type=\"button\" data-gal-thumb=\"{imgUrl}\" " +
                               $"style=\"flex-shrink:0;padding:0;background:none;border:{border};border-radius:8px;overflow:hidden;cursor:pointer;width:64px;height:64px;\">");
-                    sb.Append($"<img src=\"{imgUrl}\" alt=\"thumb {i + 1}\" loading=\"lazy\" style=\"width:100%;height:100%;object-fit:cover;display:block\">");
+                    sb.Append($"<img data-nc-part=\"thumb-image\" src=\"{imgUrl}\" alt=\"thumb {i + 1}\" loading=\"lazy\" style=\"width:100%;height:100%;object-fit:cover;display:block\">");
                     sb.Append("</button>");
                 }
                 sb.Append("</div>");

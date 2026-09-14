@@ -81,21 +81,21 @@ public sealed class PdfFlipbookBlock : IDynamicBlock
         sb.Append($"<link rel=\"stylesheet\" href=\"{Versioned(LibCssPath)}\">");
         sb.Append($"<link rel=\"stylesheet\" href=\"{Versioned(CssPath)}\">");
 
-        sb.Append($"<section class=\"chu-flip\" data-chu-flipbook data-src=\"{Enc(src)}\" data-ratio=\"{ratioText}\"");
+        sb.Append($"<section data-nc-part=\"wrapper\" class=\"chu-flip\" data-chu-flipbook data-src=\"{Enc(src)}\" data-ratio=\"{ratioText}\"");
         sb.Append($" data-small=\"{manifest.SmallWidth}\" data-full=\"{manifest.FullWidth}\"");
         sb.Append($" style=\"--chu-flip-ratio:{ratioText}\" tabindex=\"0\" role=\"region\" aria-label=\"{Enc(title)}\">");
 
         if (!string.IsNullOrWhiteSpace(eyebrow) || !string.IsNullOrWhiteSpace(intro))
         {
-            sb.Append("<div class=\"chu-flip__head\" style=\"text-align:center;margin:0 0 28px\">");
+            sb.Append("<div data-nc-part=\"head\" class=\"chu-flip__head\" style=\"text-align:center;margin:0 0 28px\">");
             if (!string.IsNullOrWhiteSpace(eyebrow))
-                sb.Append($"<p style=\"margin:0 0 10px;font-size:.75rem;letter-spacing:.22em;text-transform:uppercase;color:var(--color-accent-500)\">{Enc(eyebrow)}</p>");
+                sb.Append($"<p data-nc-part=\"eyebrow\" style=\"margin:0 0 10px;font-size:.75rem;letter-spacing:.22em;text-transform:uppercase;color:var(--color-accent-500)\">{Enc(eyebrow)}</p>");
             if (!string.IsNullOrWhiteSpace(intro))
-                sb.Append($"<p style=\"margin:0 auto;max-width:640px;line-height:1.8;color:var(--color-muted)\">{Enc(intro)}</p>");
+                sb.Append($"<p data-nc-part=\"intro\" style=\"margin:0 auto;max-width:640px;line-height:1.8;color:var(--color-muted)\">{Enc(intro)}</p>");
             sb.Append("</div>");
         }
 
-        sb.Append("<div class=\"chu-flip__viewport\" data-flip-viewport><div class=\"chu-flip__book\" data-flip-book>");
+        sb.Append("<div data-nc-part=\"viewport\" class=\"chu-flip__viewport\" data-flip-viewport><div data-nc-part=\"book\" class=\"chu-flip__book\" data-flip-book>");
         for (var i = 1; i <= manifest.PageCount; i++)
         {
             var pageAlt = Enc($"{title} – trang {i}");
@@ -103,35 +103,35 @@ public sealed class PdfFlipbookBlock : IDynamicBlock
             {
                 var small = $"{src}/small/{i:00}.{manifest.Ext}";
                 var full = $"{src}/full/{i:00}.{manifest.Ext}";
-                sb.Append($"<div class=\"chu-flip__page is-ready\" data-page=\"{i}\">");
-                sb.Append($"<img class=\"is-loaded\" data-loaded=\"1\" src=\"{Enc(small)}\"");
+                sb.Append($"<div data-nc-part=\"page\" class=\"chu-flip__page is-ready\" data-page=\"{i}\">");
+                sb.Append($"<img data-nc-part=\"page-image\" class=\"is-loaded\" data-loaded=\"1\" src=\"{Enc(small)}\"");
                 sb.Append($" srcset=\"{Enc(small)} {manifest.SmallWidth}w, {Enc(full)} {manifest.FullWidth}w\"");
                 sb.Append(" sizes=\"(max-width: 767px) 92vw, 46vw\"");
                 sb.Append($" width=\"{manifest.Width}\" height=\"{manifest.Height}\" alt=\"{pageAlt}\" fetchpriority=\"high\" decoding=\"async\"></div>");
             }
             else
             {
-                sb.Append($"<div class=\"chu-flip__page\" data-page=\"{i}\">");
-                sb.Append($"<img alt=\"{pageAlt}\" width=\"{manifest.Width}\" height=\"{manifest.Height}\" decoding=\"async\"></div>");
+                sb.Append($"<div data-nc-part=\"page\" class=\"chu-flip__page\" data-page=\"{i}\">");
+                sb.Append($"<img data-nc-part=\"page-image\" alt=\"{pageAlt}\" width=\"{manifest.Width}\" height=\"{manifest.Height}\" decoding=\"async\"></div>");
             }
         }
         sb.Append("</div>");
 
         // Gợi ý lật sách: nháy ở mép ngoài trang bìa, tự tắt sau lần lật đầu tiên.
-        sb.Append($"<div class=\"chu-flip__nudge\" data-flip-nudge aria-hidden=\"true\">{IconSwipe}</div>");
+        sb.Append($"<div data-nc-part=\"nudge\" class=\"chu-flip__nudge\" data-flip-nudge aria-hidden=\"true\">{IconSwipe}</div>");
         sb.Append("</div>");
 
         if (showControls)
         {
-        sb.Append("<div class=\"chu-flip__bar\">");
-        sb.Append($"<button type=\"button\" class=\"chu-flip__btn chu-flip__btn--icon\" data-flip-prev aria-label=\"Trang trước\">{IconPrev}</button>");
-        sb.Append($"<span class=\"chu-flip__counter\" data-flip-counter aria-live=\"polite\">1 / {manifest.PageCount}</span>");
-        sb.Append($"<button type=\"button\" class=\"chu-flip__btn chu-flip__btn--icon\" data-flip-next aria-label=\"Trang sau\">{IconNext}</button>");
-        sb.Append($"<button type=\"button\" class=\"chu-flip__btn\" data-flip-fullscreen aria-pressed=\"false\">{IconExpand}Toàn màn hình</button>");
+        sb.Append("<div data-nc-part=\"bar\" class=\"chu-flip__bar\">");
+        sb.Append($"<button data-nc-part=\"prev\" type=\"button\" class=\"chu-flip__btn chu-flip__btn--icon\" data-flip-prev aria-label=\"Trang trước\">{IconPrev}</button>");
+        sb.Append($"<span data-nc-part=\"counter\" class=\"chu-flip__counter\" data-flip-counter aria-live=\"polite\">1 / {manifest.PageCount}</span>");
+        sb.Append($"<button data-nc-part=\"next\" type=\"button\" class=\"chu-flip__btn chu-flip__btn--icon\" data-flip-next aria-label=\"Trang sau\">{IconNext}</button>");
+        sb.Append($"<button data-nc-part=\"fullscreen\" type=\"button\" class=\"chu-flip__btn\" data-flip-fullscreen aria-pressed=\"false\">{IconExpand}Toàn màn hình</button>");
         if (!string.IsNullOrWhiteSpace(downloadUrl))
-            sb.Append($"<a class=\"chu-flip__btn\" href=\"{Enc(downloadUrl)}\" download>{IconDownload}{Enc(downloadLabel)}</a>");
+            sb.Append($"<a data-nc-part=\"download\" class=\"chu-flip__btn\" href=\"{Enc(downloadUrl)}\" download>{IconDownload}{Enc(downloadLabel)}</a>");
         sb.Append("</div>");
-        sb.Append("<p class=\"chu-flip__hint\">Kéo mép trang hoặc dùng phím ← → để lật.</p>");
+        sb.Append("<p data-nc-part=\"hint\" class=\"chu-flip__hint\">Kéo mép trang hoặc dùng phím ← → để lật.</p>");
         }
 
         if (!string.IsNullOrWhiteSpace(downloadUrl))

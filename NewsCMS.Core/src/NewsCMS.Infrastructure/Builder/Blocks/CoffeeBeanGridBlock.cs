@@ -74,7 +74,7 @@ public sealed class CoffeeBeanGridBlock : IDynamicBlock, IBlockMatchCounter
         if (beans.Count == 0) return shared.EmptyState("<!-- coffee-bean-grid: no beans -->");
 
         var sb = new StringBuilder();
-        sb.Append($"<div style=\"{shared.ContainerStyle(MinCardWidth, 24)}\">");
+        sb.Append($"<div data-nc-part=\"list\" style=\"{shared.ContainerStyle(MinCardWidth, 24)}\">");
         for (var i = 0; i < beans.Count; i++) AppendCard(sb, beans[i], shared, i == 0);
         sb.Append("</div>");
         return sb.ToString();

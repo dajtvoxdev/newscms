@@ -64,7 +64,7 @@ public sealed class ProductStockBlock : IDynamicBlock
         // Khi không có RouteContext
         if (context.Route is null)
         {
-            return $"<div style=\"margin:0 0 24px;font-weight:600;color:var(--color-brand-500,#0d7c66);text-align:{align}\">" +
+            return $"<div data-nc-part=\"stock\" style=\"margin:0 0 24px;font-weight:600;color:var(--color-brand-500,#0d7c66);text-align:{align}\">" +
                    $"{(showQuantity ? "Còn 12 sản phẩm" : WebUtility.HtmlEncode(inStockText))} (mẫu)</div>";
         }
 
@@ -82,7 +82,7 @@ public sealed class ProductStockBlock : IDynamicBlock
         // Nếu sản phẩm không quản lý tồn kho → coi như luôn còn hàng
         if (!p.IsTrackingStock)
         {
-            return $"<div style=\"margin:0 0 24px;font-weight:600;color:var(--color-brand-500,#0d7c66);text-align:{align}\">" +
+            return $"<div data-nc-part=\"stock\" style=\"margin:0 0 24px;font-weight:600;color:var(--color-brand-500,#0d7c66);text-align:{align}\">" +
                    $"{WebUtility.HtmlEncode(inStockText)}</div>";
         }
 
@@ -92,8 +92,9 @@ public sealed class ProductStockBlock : IDynamicBlock
             : outOfStockText;
 
         var color = inStock ? "var(--color-brand-500,#0d7c66)" : "var(--color-muted,#94a3b8)";
+        var stateAttr = inStock ? "" : " data-nc-state=\"out\"";
 
-        return $"<div style=\"margin:0 0 24px;font-weight:600;color:{color};text-align:{align}\">" +
+        return $"<div data-nc-part=\"stock\"{stateAttr} style=\"margin:0 0 24px;font-weight:600;color:{color};text-align:{align}\">" +
                $"{WebUtility.HtmlEncode(text)}</div>";
     }
 }

@@ -90,7 +90,7 @@ public sealed class NewsGridBlock : IDynamicBlock, IBlockMatchCounter
         if (posts.Count == 0) return shared.EmptyState("<!-- news-grid: no posts -->");
 
         var sb = new StringBuilder();
-        sb.Append($"<div style=\"{shared.ContainerStyle(minCardWidth)}\">");
+        sb.Append($"<div data-nc-part=\"list\" style=\"{shared.ContainerStyle(minCardWidth)}\">");
         for (var i = 0; i < posts.Count; i++)
             AppendCard(sb, posts[i], ctaLabel, shared, minCardWidth, i == 0);
         sb.Append("</div>");
@@ -120,7 +120,7 @@ public sealed class NewsGridBlock : IDynamicBlock, IBlockMatchCounter
             sb.Append("</a>");
         }
 
-        sb.Append("<div style=\"padding:20px;display:flex;flex-direction:column;flex:1\">");
+        sb.Append("<div data-nc-part=\"card-body\" style=\"padding:20px;display:flex;flex-direction:column;flex:1\">");
 
         // Nhãn chuyên mục · ngày · tác giả — mỗi phần bật/tắt qua trait dùng chung.
         if (shared.ShowDate || shared.ShowAuthor)

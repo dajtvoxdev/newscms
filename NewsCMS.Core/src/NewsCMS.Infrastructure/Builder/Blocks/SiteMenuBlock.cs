@@ -105,7 +105,7 @@ public sealed class SiteMenuBlock : IDynamicBlock
             : $"display:flex;flex-wrap:wrap;align-items:center;gap:{gap}px";
         var transform = upper ? ";text-transform:uppercase;letter-spacing:.08em" : "";
 
-        sb.Append($"<nav class=\"nc-menu\" style=\"{flow}{transform}\">");
+        sb.Append($"<nav data-nc-part=\"wrapper\" class=\"nc-menu\" style=\"{flow}{transform}\">");
         foreach (var item in roots)
         {
             var kids = depth > 1 && childrenByParent.TryGetValue(item.Id, out var list) ? list : null;
@@ -116,9 +116,9 @@ public sealed class SiteMenuBlock : IDynamicBlock
                 continue;
             }
 
-            sb.Append("<div class=\"nc-menu-group\" style=\"display:flex;flex-direction:column;gap:8px;align-items:flex-start\">");
+            sb.Append("<div data-nc-part=\"group\" class=\"nc-menu-group\" style=\"display:flex;flex-direction:column;gap:8px;align-items:flex-start\">");
             AppendLink(sb, item.Title, item.Url, item.Target);
-            sb.Append($"<div class=\"nc-menu-sub\" style=\"display:flex;flex-direction:column;gap:{Math.Max(4, gap / 2)}px;align-items:flex-start;font-size:.92em;opacity:.85\">");
+            sb.Append($"<div data-nc-part=\"submenu\" class=\"nc-menu-sub\" style=\"display:flex;flex-direction:column;gap:{Math.Max(4, gap / 2)}px;align-items:flex-start;font-size:.92em;opacity:.85\">");
             foreach (var kid in kids) AppendLink(sb, kid.Title, kid.Url, kid.Target);
             sb.Append("</div></div>");
         }
@@ -134,7 +134,7 @@ public sealed class SiteMenuBlock : IDynamicBlock
     {
         var href = string.IsNullOrWhiteSpace(url) ? "#" : url;
         var rel = target == "_blank" ? " target=\"_blank\" rel=\"noopener\"" : "";
-        sb.Append($"<a class=\"nc-menu-link\" href=\"{WebUtility.HtmlEncode(href)}\"{rel} ")
+        sb.Append($"<a data-nc-part=\"link\" class=\"nc-menu-link\" href=\"{WebUtility.HtmlEncode(href)}\"{rel} ")
           .Append("style=\"color:inherit;text-decoration:none;white-space:nowrap\">")
           .Append(WebUtility.HtmlEncode(title))
           .Append("</a>");
