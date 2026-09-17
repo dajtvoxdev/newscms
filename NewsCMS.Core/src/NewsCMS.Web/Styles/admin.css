@@ -39,6 +39,16 @@
     @apply inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200;
   }
 
+  /* Nút "Áp dụng" từng phần trong khung trợ lý AI. Là nút thật chứ không phải
+     chữ có gạch chân, để người dùng thấy ngay đây là chỗ bấm được. */
+  .ai-apply-btn {
+    @apply inline-flex shrink-0 items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-200;
+  }
+
+  .ai-apply-btn.is-done {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-700;
+  }
+
   .admin-btn-danger {
     @apply inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-200;
   }
@@ -101,6 +111,51 @@
     vertical-align: -0.125em;
     flex-shrink: 0;
   }
+
+  /* Thanh cuộn mảnh cho khung trò chuyện AI. Thanh cuộn mặc định của trình duyệt
+     to và sáng, nằm cạnh bong bóng chat trông rất nặng nề. */
+  .ai-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  .ai-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .ai-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .ai-scroll::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 9999px;
+  }
+
+  .ai-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+  }
+
+  /* Khung xem trước nội dung AI trả về. Không có mấy quy tắc này thì HTML ngữ
+     nghĩa hiện ra thành một khối chữ dài, mất hết cấu trúc heading/danh sách. */
+  .ai-rich {
+    @apply text-sm leading-relaxed text-slate-700;
+  }
+
+  .ai-rich > :first-child { margin-top: 0; }
+  .ai-rich > :last-child { margin-bottom: 0; }
+
+  .ai-rich p { @apply mb-2.5; }
+  .ai-rich h1 { @apply mb-2 mt-5 text-lg font-bold text-slate-900; }
+  .ai-rich h2 { @apply mb-2 mt-5 text-base font-bold text-slate-900; }
+  .ai-rich h3 { @apply mb-1.5 mt-4 text-sm font-bold text-slate-900; }
+  .ai-rich ul { @apply mb-2.5 list-disc space-y-1 pl-5; }
+  .ai-rich ol { @apply mb-2.5 list-decimal space-y-1 pl-5; }
+  .ai-rich strong { @apply font-semibold text-slate-900; }
+  .ai-rich a { @apply text-indigo-600 underline; }
+  .ai-rich blockquote { @apply my-3 border-l-4 border-indigo-200 pl-3 italic text-slate-600; }
+  .ai-rich img { @apply my-3 max-w-full rounded-lg; }
 }
 
 @media (min-width: 120rem) {
