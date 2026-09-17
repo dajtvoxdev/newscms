@@ -127,8 +127,30 @@ public class ContentSanitizer
         sanitizer.AllowedTags.Add("figure");
         sanitizer.AllowedTags.Add("figcaption");
         sanitizer.AllowedTags.Add("iframe");   // chỉ cho embed YouTube/Vimeo hoặc PDF local
+
+        // Video/audio upload từ editor. Mặc định của HtmlSanitizer KHÔNG có video,
+        // audio, source trong AllowedTags — và vì đây là thẻ chứa nội dung nên khi bị
+        // loại, nó xoá luôn cả cây con (kể cả chữ dự phòng "Trình duyệt không hỗ trợ
+        // phát video"). Kết quả: video biến mất sạch ngay lúc lưu bài, không dấu vết.
+        sanitizer.AllowedTags.Add("video");
+        sanitizer.AllowedTags.Add("audio");
+        sanitizer.AllowedTags.Add("source");
+        sanitizer.AllowedTags.Add("track");
+
         sanitizer.AllowedAttributes.Add("class");
         sanitizer.AllowedAttributes.Add("id");
+        // Thuộc tính của trình phát video/audio — cũng không có trong mặc định, thiếu
+        // controls thì trình phát không có nút bấm, thiếu poster thì mất ảnh bìa.
+        sanitizer.AllowedAttributes.Add("controls");
+        sanitizer.AllowedAttributes.Add("poster");
+        sanitizer.AllowedAttributes.Add("preload");
+        sanitizer.AllowedAttributes.Add("playsinline");   // iOS: không tự chiếm toàn màn hình
+        sanitizer.AllowedAttributes.Add("muted");
+        sanitizer.AllowedAttributes.Add("loop");
+        // Thuộc tính của <track> (phụ đề)
+        sanitizer.AllowedAttributes.Add("kind");
+        sanitizer.AllowedAttributes.Add("srclang");
+        sanitizer.AllowedAttributes.Add("label");
         // HtmlSanitizer 8.x requires AllowedAttributes to be set BEFORE adding data-* pattern.
         // Add specific data attributes used by builder dynamic blocks explicitly.
         sanitizer.AllowedAttributes.Add("data-nc-block");

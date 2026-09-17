@@ -61,4 +61,54 @@ public sealed class ContentSanitizerTests
         // khối nhúng phải khoá sau Builder.Code.Manage — nó đi vòng qua bộ lọc này.
         Assert.DoesNotContain("<script", _s.SanitizeBuilder("<div><script>init()</script></div>"));
     }
+
+    [Fact]
+    public void Sanitize_KeepsVideoUploadedFromEditor()
+    {
+        // Đúng markup _TinyMce.cshtml sinh ra khi upload video từ máy. Thiếu bất kỳ
+        // phần nào dưới đây thì video biến mất lúc lưu bài — đã xảy ra thật.
+        var html = _s.Sanitize(
+            "<figure class=\"cms-media-preview\">"
+            + "<video controls preload=\"metadata\" poster=\"/uploads/poster.jpg\" "
+            + "style=\"max-width:100%;height:auto;border-radius:12px;\">"
+            + "<source src=\"/uploads/clip.mp4\" type=\"video/mp4\">"
+            + "Trình duyệt không hỗ trợ phát video."
+            + "</video></figure>");
+
+        Assert.Contains("<video", html);
+        Assert.Contains("<source", html);
+        Assert.Contains("controls", html);
+        Assert.Contains("/uploads/clip.mp4", html);
+        Assert.Contains("type=\"video/mp4\"", html);
+        Assert.Contains("poster=\"/uploads/poster.jpg\"", html);
+        Assert.Contains("preload", html);
+    }
+
+    [Fact]
+    public void Sanitize_KeepsAudioUploadedFromEditor()
+    {
+        var html = _s.Sanitize(
+            "<figure class=\"cms-media-preview\">"
+            + "<audio controls preload=\"metadata\" style=\"width:100%;\">"
+            + "<source src=\"/uploads/track.mp3\" type=\"audio/mpeg\">"
+            + "</audio></figure>");
+
+        Assert.Contains("<audio", html);
+        Assert.Contains("<source", html);
+        Assert.Contains("controls", html);
+        Assert.Contains("/uploads/track.mp3", html);
+    }
+
+    [Fact]
+    public void Sanitize_VanChanScriptTrongTheVideo()
+    {
+        // Nới whitelist cho video không được mở đường cho XSS qua thẻ con.
+        var html = _s.Sanitize(
+            "<video controls><source src=\"/uploads/clip.mp4\" onerror=\"evil()\">"
+            + "<script>alert(1)</script></video>");
+
+        Assert.Contains("<video", html);
+        Assert.DoesNotContain("<script", html);
+        Assert.DoesNotContain("onerror", html);
+    }
 }
