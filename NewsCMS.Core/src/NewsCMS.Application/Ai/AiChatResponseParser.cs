@@ -35,7 +35,11 @@ public static class AiChatResponseParser
 
                 try
                 {
-                    using var doc = System.Text.Json.JsonDocument.Parse(json[open..(close + 1)]);
+                    // Model hay xuống dòng THẬT bên trong giá trị chuỗi thay vì
+                    // escape thành \n — JSON cấm ký tự điều khiển thô trong chuỗi
+                    // nên phải vá trước khi parse, nếu không mất cả 3 phần.
+                    var candidate = EscapeRawControlChars(json[open..(close + 1)]);
+                    using var doc = System.Text.Json.JsonDocument.Parse(candidate);
                     var root = doc.RootElement;
 
                     string Read(string name)
@@ -83,19 +87,86 @@ public static class AiChatResponseParser
     }
 
     /// <summary>
-    /// Bỏ vỏ ```json ... ``` nếu model tự bọc. Tìm dấu ``` đầu tiên rồi lấy từ
-    /// xuống dòng sau nó tới dấu ``` cuối cùng.
+    /// Bỏ vỏ ```json ... ``` nếu model tự bọc. Chỉ nhận khi dấu ``` nằm ở ĐẦU
+    /// phản hồi: thân bài có thể chứa ``` (ví dụ khối code mẫu), cắt theo dấu ```
+    /// bất kỳ sẽ làm mất phần lớn nội dung.
     /// </summary>
     private static string StripCodeFence(string json)
     {
-        var fenceStart = json.IndexOf("```", StringComparison.Ordinal);
-        if (fenceStart < 0) return json;
+        if (!json.StartsWith("```", StringComparison.Ordinal)) return json;
 
-        var afterFence = json.IndexOf('\n', fenceStart);
+        var afterFence = json.IndexOf('\n');
+        if (afterFence < 0) return json;
+
         var fenceEnd = json.LastIndexOf("```", StringComparison.Ordinal);
-        if (afterFence > 0 && fenceEnd > afterFence)
-            return json[(afterFence + 1)..fenceEnd].Trim();
+        if (fenceEnd <= afterFence) return json;
 
-        return json;
+        return json[(afterFence + 1)..fenceEnd].Trim();
+    }
+
+    /// <summary>
+    /// Escape các ký tự điều khiển thô nằm BÊN TRONG chuỗi JSON. Model thường trả
+    /// về thân bài với newline thật, mà JSON (RFC 8259) không cho phép ký tự
+    /// &lt; 0x20 chưa escape trong chuỗi — không vá thì parse ném lỗi và mất trắng.
+    /// </summary>
+    private static string EscapeRawControlChars(string json)
+    {
+        // Đếm trước: phần lớn phản hồi không dính lỗi này, khỏi cấp phát chuỗi mới.
+        var needsFix = false;
+        foreach (var ch in json)
+        {
+            if (ch is '\n' or '\r' or '\t') { needsFix = true; break; }
+        }
+        if (!needsFix) return json;
+
+        var sb = new System.Text.StringBuilder(json.Length + 16);
+        var inString = false;
+        var escaped = false;
+
+        foreach (var ch in json)
+        {
+            if (escaped)
+            {
+                sb.Append(ch);
+                escaped = false;
+                continue;
+            }
+
+            if (ch == '\\')
+            {
+                sb.Append(ch);
+                escaped = true;
+                continue;
+            }
+
+            if (ch == '"')
+            {
+                inString = !inString;
+                sb.Append(ch);
+                continue;
+            }
+
+            if (inString)
+            {
+                switch (ch)
+                {
+                    case '\n': sb.Append("\\n"); continue;
+                    case '\r': sb.Append("\\r"); continue;
+                    case '\t': sb.Append("\\t"); continue;
+                    case '\b': sb.Append("\\b"); continue;
+                    case '\f': sb.Append("\\f"); continue;
+                }
+
+                if (ch < 0x20)
+                {
+                    sb.Append("\\u").Append(((int)ch).ToString("x4"));
+                    continue;
+                }
+            }
+
+            sb.Append(ch);
+        }
+
+        return sb.ToString();
     }
 }

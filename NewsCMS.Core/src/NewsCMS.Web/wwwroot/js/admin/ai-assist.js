@@ -161,48 +161,50 @@
 
         const modal = document.createElement('dialog');
         modal.id = 'ai-chat-modal';
-        modal.className = 'relative w-full max-w-5xl rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-black/50';
+        modal.className = 'relative w-full max-w-6xl rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-slate-900/60 backdrop:backdrop-blur-sm';
         modal.innerHTML = `
             <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
                 <div class="flex items-start gap-3">
-                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">${ICON_SPARKLES}</span>
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">${ICON_SPARKLES}</span>
                     <div>
-                        <h2 class="text-lg font-bold text-slate-950">Trợ lý soạn nội dung</h2>
+                        <h2 class="text-base font-bold text-slate-950">Trợ lý soạn nội dung</h2>
                         <p class="mt-0.5 text-sm text-slate-500">Mô tả điều bạn muốn, trao đổi tới khi ưng ý rồi áp dụng vào từng phần.</p>
                     </div>
                 </div>
                 <button type="button" data-ai-close aria-label="Đóng"
-                        class="inline-flex rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+                        class="inline-flex shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
                     ${svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>')}
                 </button>
             </div>
 
-            <div class="grid max-h-[70vh] grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div class="grid max-h-[70vh] grid-cols-1 overflow-hidden lg:grid-cols-2">
                 <!-- Cột trái: hội thoại -->
-                <div class="flex min-h-0 flex-col border-b border-slate-200 lg:border-b-0 lg:border-r">
-                    <div id="ai-chat-log" class="min-h-0 flex-1 space-y-3 overflow-y-auto bg-slate-50 px-5 py-4"></div>
-                    <div class="border-t border-slate-200 bg-white px-5 py-3">
-                        <div id="ai-chat-error" class="mb-2 hidden rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"></div>
+                <div class="flex min-h-0 flex-col border-b border-slate-200 bg-slate-50 lg:border-b-0 lg:border-r">
+                    <div id="ai-chat-log" class="ai-scroll min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4"></div>
+                    <div class="border-t border-slate-200 bg-white px-5 py-3.5">
+                        <div id="ai-chat-error" class="mb-2.5 hidden rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"></div>
                         <div class="flex items-end gap-2">
                             <textarea id="ai-chat-input" rows="2" placeholder="Ví dụ: Viết bài giới thiệu cà phê rang mộc, giọng gần gũi…"
                                       class="admin-input resize-none text-sm"></textarea>
-                            <button type="button" id="ai-chat-send" class="admin-btn-primary shrink-0 inline-flex items-center gap-2">
+                            <button type="button" id="ai-chat-send" class="admin-btn-primary shrink-0 gap-2 px-3.5">
                                 <span class="inline-flex h-4 w-4 items-center justify-center">${ICON_SEND}</span>
                                 <span id="ai-chat-send-label">Gửi</span>
                             </button>
                         </div>
-                        <p class="mt-2 text-xs text-slate-400">Enter để gửi · Shift + Enter xuống dòng</p>
-                        <label class="mt-2 flex items-center gap-2 text-xs text-slate-600">
-                            <input type="checkbox" id="ai-chat-use-site-context" checked
-                                   class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                            <span>Dùng thông tin &amp; nội dung của site làm ngữ cảnh</span>
-                        </label>
+                        <div class="mt-2.5 flex items-center justify-between gap-3">
+                            <label class="flex items-center gap-2 text-xs text-slate-600">
+                                <input type="checkbox" id="ai-chat-use-site-context" checked
+                                       class="h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                <span>Dùng thông tin &amp; nội dung của site làm ngữ cảnh</span>
+                            </label>
+                            <span class="hidden shrink-0 text-xs text-slate-400 sm:inline">Enter để gửi</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Cột phải: 3 phần kết quả -->
-                <div class="flex min-h-0 flex-col">
-                    <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+                <div class="flex min-h-0 flex-col bg-white">
+                    <div class="ai-scroll min-h-0 flex-1 overflow-y-auto px-5 py-4">
                         <div id="ai-result-empty" class="flex h-full flex-col items-center justify-center gap-2 py-12 text-center">
                             <span class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">${ICON_SPARKLES}</span>
                             <p class="text-sm font-semibold text-slate-600">Chưa có bản nháp nào</p>
@@ -210,32 +212,32 @@
                         </div>
 
                         <div id="ai-result-fields" class="hidden space-y-4">
-                            <div data-ai-field-block="title">
-                                <div class="mb-1.5 flex items-center justify-between gap-2">
+                            <div data-ai-field-block="title" class="rounded-xl border border-slate-200 p-3">
+                                <div class="mb-2 flex items-center justify-between gap-2">
                                     <span class="admin-label mb-0">${escapeHtml(labels.title)}</span>
-                                    <button type="button" data-ai-apply="title" class="text-xs font-bold text-indigo-600 transition hover:text-indigo-800">Áp dụng</button>
+                                    <button type="button" data-ai-apply="title" class="ai-apply-btn">Áp dụng</button>
                                 </div>
-                                <textarea data-ai-out="title" rows="2" class="admin-input text-sm"></textarea>
+                                <textarea data-ai-out="title" rows="2" class="admin-input resize-none text-sm"></textarea>
                             </div>
 
-                            <div data-ai-field-block="excerpt">
-                                <div class="mb-1.5 flex items-center justify-between gap-2">
+                            <div data-ai-field-block="excerpt" class="rounded-xl border border-slate-200 p-3">
+                                <div class="mb-2 flex items-center justify-between gap-2">
                                     <span class="admin-label mb-0">${escapeHtml(labels.excerpt)}</span>
-                                    <button type="button" data-ai-apply="excerpt" class="text-xs font-bold text-indigo-600 transition hover:text-indigo-800">Áp dụng</button>
+                                    <button type="button" data-ai-apply="excerpt" class="ai-apply-btn">Áp dụng</button>
                                 </div>
-                                <textarea data-ai-out="excerpt" rows="3" class="admin-input text-sm"></textarea>
+                                <textarea data-ai-out="excerpt" rows="3" class="admin-input resize-none text-sm"></textarea>
                             </div>
 
-                            <div data-ai-field-block="body">
-                                <div class="mb-1.5 flex items-center justify-between gap-2">
+                            <div data-ai-field-block="body" class="rounded-xl border border-slate-200 p-3">
+                                <div class="mb-2 flex items-center justify-between gap-2">
                                     <span class="admin-label mb-0">${escapeHtml(labels.body)}</span>
-                                    <button type="button" data-ai-apply="body" class="text-xs font-bold text-indigo-600 transition hover:text-indigo-800">Áp dụng</button>
+                                    <button type="button" data-ai-apply="body" class="ai-apply-btn">Áp dụng</button>
                                 </div>
                                 <div data-ai-preview="body"
-                                     class="max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed text-slate-800"></div>
-                                <details class="mt-2">
-                                    <summary class="cursor-pointer text-xs font-semibold text-slate-500">Sửa HTML trước khi áp dụng</summary>
-                                    <textarea data-ai-out="body" rows="8" spellcheck="false" class="admin-input mt-2 font-mono text-xs"></textarea>
+                                     class="ai-rich ai-scroll max-h-64 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3"></div>
+                                <details class="mt-2.5">
+                                    <summary class="cursor-pointer select-none text-xs font-semibold text-slate-500 transition hover:text-slate-700">Sửa HTML trước khi áp dụng</summary>
+                                    <textarea data-ai-out="body" rows="8" spellcheck="false" class="admin-input mt-2 resize-none font-mono text-xs"></textarea>
                                 </details>
                             </div>
                         </div>
@@ -294,8 +296,8 @@
 
             const bubble = document.createElement('div');
             bubble.className = role === 'user'
-                ? 'max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-indigo-600 px-3.5 py-2 text-sm text-white'
-                : 'max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-700';
+                ? 'max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-indigo-600 px-3.5 py-2.5 text-sm leading-relaxed text-white shadow-sm'
+                : 'max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-slate-700 shadow-sm';
             bubble.textContent = text;
 
             wrap.appendChild(bubble);
@@ -307,8 +309,8 @@
         function addThinking() {
             const wrap = document.createElement('div');
             wrap.className = 'flex justify-start';
-            wrap.innerHTML = '<div class="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-500">'
-                + '<span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-indigo-100 border-t-indigo-600"></span>'
+            wrap.innerHTML = '<div class="flex items-center gap-2.5 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-500 shadow-sm">'
+                + '<span class="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-indigo-100 border-t-indigo-600"></span>'
                 + '<span>Đang soạn… <span data-ai-elapsed></span></span></div>';
             log.appendChild(wrap);
             log.scrollTop = log.scrollHeight;
@@ -418,8 +420,15 @@
                 const value = out[field].value;
                 if (!value) return;
                 opts.onApply?.({ field: field, value: value });
-                btn.textContent = 'Đã áp dụng ✓';
-                setTimeout(function () { btn.textContent = 'Áp dụng'; }, 1500);
+
+                // Đổi trạng thái bằng class chứ không đổi độ rộng chữ: nút "Áp dụng"
+                // và "Đã áp dụng" khác số ký tự nên đổi text làm nút nhảy cỡ.
+                btn.classList.add('is-done');
+                btn.innerHTML = 'Đã áp dụng';
+                setTimeout(function () {
+                    btn.classList.remove('is-done');
+                    btn.innerHTML = 'Áp dụng';
+                }, 1600);
             });
         });
 

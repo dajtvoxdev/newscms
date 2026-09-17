@@ -147,4 +147,34 @@ public class AiChatResponseParserTests
         Assert.True(structured);
         Assert.Equal("T", result.Title);
     }
+
+    [Fact]
+    public void Parse_XuongDongThatTrongChuoiJson_VanTachDuoc()
+    {
+        // Đúng dạng đã gặp thật: model trả body với newline THẬT thay vì \n, mà
+        // JSON cấm ký tự điều khiển thô trong chuỗi. Không vá thì mất cả 3 phần.
+        var raw = "{\"reply\": \"Đã xong\", \"title\": \"Tiêu đề\", \"excerpt\": \"Tóm tắt\", \"body\": \"\n\n<p>Đoạn một</p>\n<p>Đoạn hai</p>\n\"}";
+
+        var (result, structured) = AiChatResponseParser.Parse(raw, isProduct: false);
+
+        Assert.True(structured);
+        Assert.Equal("Tiêu đề", result.Title);
+        Assert.Contains("Đoạn một", result.Body);
+        Assert.Contains("Đoạn hai", result.Body);
+    }
+
+    [Fact]
+    public void Parse_CodeFenceNamTrongThanBai_KhongCatNham()
+    {
+        // Thân bài có khối code ``` — chỉ được bóc vỏ khi ``` nằm ở ĐẦU phản hồi.
+        var raw = """
+            {"title":"T","excerpt":"E","body":"<p>Xem mẫu:</p><pre>```js\nvar a=1;\n```</pre>"}
+            """;
+
+        var (result, structured) = AiChatResponseParser.Parse(raw, isProduct: false);
+
+        Assert.True(structured);
+        Assert.Equal("T", result.Title);
+        Assert.Contains("var a=1;", result.Body);
+    }
 }
