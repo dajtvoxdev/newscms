@@ -223,6 +223,23 @@ public static class DbSeeder
             db.AiSkills.AddRange(
                 new AiSkill
                 {
+                    Key = AiTaskKeys.ArticleChat,
+                    Name = "Trợ lý soạn bài",
+                    Description = "Trò chuyện để soạn tiêu đề, tóm tắt và nội dung",
+                    Kind = AiSkillKind.Prompt,
+                    IsActive = true,
+                    SortOrder = 0,
+                    SystemPrompt = "Bạn là biên tập viên người Việt soạn nội dung cho website. "
+                        + "Trao đổi thân thiện, hỏi lại khi yêu cầu còn mơ hồ, và chủ động đề xuất hướng triển khai. "
+                        + "Khi người dùng yêu cầu chỉnh sửa, chỉ đổi đúng phần được nói tới và giữ nguyên phần còn lại.",
+                    UserPromptTemplate = null,
+                    AllowStyled = true,
+                    Targets = "post.title,post.excerpt,post.body,product.name,product.short,product.description",
+                    Temperature = 0.7,
+                    MaxTokens = 4000
+                },
+                new AiSkill
+                {
                     Key = AiTaskKeys.GenerateBody,
                     Name = "Tự động tạo nội dung",
                     Description = "Viết toàn bộ nội dung bài từ tiêu đề",
@@ -293,6 +310,30 @@ public static class DbSeeder
         {
             generateBodySkill.Name = "Tự động tạo nội dung";
             generateBodySkill.Description = "Viết toàn bộ nội dung bài từ tiêu đề";
+            await db.SaveChangesAsync();
+        }
+
+        // Khối seed phía trên chỉ chạy khi DB chưa có prompt skill nào, nên DB cũ
+        // thiếu skill trò chuyện. IgnoreQueryFilters để không hồi sinh skill mà
+        // quản trị viên đã cố ý xoá mềm.
+        if (!await db.AiSkills.IgnoreQueryFilters().AnyAsync(x => x.Key == AiTaskKeys.ArticleChat))
+        {
+            db.AiSkills.Add(new AiSkill
+            {
+                Key = AiTaskKeys.ArticleChat,
+                Name = "Trợ lý soạn bài",
+                Description = "Trò chuyện để soạn tiêu đề, tóm tắt và nội dung",
+                Kind = AiSkillKind.Prompt,
+                IsActive = true,
+                SortOrder = 0,
+                SystemPrompt = "Bạn là biên tập viên người Việt soạn nội dung cho website. "
+                    + "Trao đổi thân thiện, hỏi lại khi yêu cầu còn mơ hồ, và chủ động đề xuất hướng triển khai. "
+                    + "Khi người dùng yêu cầu chỉnh sửa, chỉ đổi đúng phần được nói tới và giữ nguyên phần còn lại.",
+                AllowStyled = true,
+                Targets = "post.title,post.excerpt,post.body,product.name,product.short,product.description",
+                Temperature = 0.7,
+                MaxTokens = 4000
+            });
             await db.SaveChangesAsync();
         }
 

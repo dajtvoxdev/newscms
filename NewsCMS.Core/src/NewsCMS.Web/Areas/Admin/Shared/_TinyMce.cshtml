@@ -487,16 +487,19 @@
                 });
 
                 // ---------- Trợ lý AI ----------
-                // Đăng ký ĐỒNG BỘ ngay trong setup (trước khi toolbar render) nên icon
-                // luôn hiện. Bản cũ đăng ký nút bên trong .then() của fetch skill, và
-                // ai-assist.js cũng đăng ký trùng tên nút — bản chạy sau (không icon)
-                // ghi đè bản có icon, đó là lý do nút AI trống trơn.
+                // Một nút duy nhất mở khung trò chuyện (ai-assist.js). Đăng ký ĐỒNG
+                // BỘ ngay trong setup (trước khi toolbar render) nên icon luôn hiện;
+                // bản cũ đăng ký nút bên trong .then() của fetch skill, và ai-assist.js
+                // cũng đăng ký trùng tên nút — bản chạy sau (không icon) ghi đè bản có
+                // icon, đó là lý do nút AI từng trống trơn.
                 //
                 // Các trang nạp ai-assist.js SAU partial này, nên chỉ tra
                 // window.AiAssist lúc người dùng bấm, không phải lúc setup.
                 const aiTarget = editor.getElement()?.dataset?.aiTarget;
                 if (aiTarget) {
-                    const AI_ICON_PREFIX = 'nc-ai-';
+                    const AI_TITLE_SELECTOR = '@Model.AiTitleSelector';
+                    const AI_EXCERPT_SELECTOR = '@Model.AiExcerptSelector';
+                    const AI_CONTENT_TYPE = '@Model.AiContentType';
 
                     editor.ui.registry.addIcon('nc-ai',
                         '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
@@ -504,53 +507,69 @@
                         + '<path d="M5 3v3"/><path d="M3.5 4.5h3"/><path d="M18 16v3"/><path d="M16.5 17.5h3"/>'
                         + '</svg>');
 
-                    const runAiSkill = function (skill) {
-                        // Modal AI lấy focus khỏi iframe làm mất vùng chọn; không đánh
-                        // dấu lại thì nội dung sinh ra rơi lên đầu bài viết.
-                        const bookmark = editor.selection.getBookmark(2, true);
-                        const titleEl = document.querySelector('input[name*="Title"], input[name*="Name"], input[id*="title"], input[id*="name"]');
+                    // Ô ngoài editor (tiêu đề, tóm tắt) do trang render nên tra theo
+                    // selector truyền vào; bỏ trống thì coi như trang không có ô đó.
+                    const findField = function (selector) {
+                        if (!selector) return null;
+                        try { return document.querySelector(selector); } catch (e) { return null; }
+                    };
 
-                        window.AiAssist.run(skill, {
-                            title: titleEl ? titleEl.value : '',
-                            content: editor.getContent({ format: 'text' }),
-                            selection: editor.selection.getContent({ format: 'text' }),
-                            language: 'vi'
-                        }, function (result) {
-                            editor.focus();
-                            try { editor.selection.moveToBookmark(bookmark); } catch (e) { /* vị trí cũ đã mất */ }
-                            editor.insertContent(result);
+                    // Ghi giá trị vào ô ngoài editor + phát sự kiện để các script
+                    // khác của trang (sinh slug, đếm ký tự…) cập nhật theo.
+                    const writeField = function (el, value) {
+                        if (!el) return;
+                        el.value = value;
+                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                        el.dispatchEvent(new Event('change', { bubbles: true }));
+                    };
+
+                    const openAiChat = function () {
+                        const AI = window.AiAssist;
+                        if (!AI) {
+                            window.toast?.error('Trợ lý AI chưa sẵn sàng trên trang này.');
+                            return;
+                        }
+
+                        // Khung chat nằm ngoài iframe editor nên vùng chọn bị mất khi
+                        // nó mở — đánh dấu lại để nội dung chèn đúng chỗ con trỏ.
+                        const bookmark = editor.selection.getBookmark(2, true);
+
+                        AI.openChat({
+                            contentType: AI_CONTENT_TYPE,
+                            getContext: function () {
+                                return {
+                                    title: findField(AI_TITLE_SELECTOR)?.value || '',
+                                    excerpt: findField(AI_EXCERPT_SELECTOR)?.value || '',
+                                    body: editor.getContent({ format: 'text' })
+                                };
+                            },
+                            onApply: function (payload) {
+                                if (payload.field === 'body') {
+                                    editor.focus();
+                                    try { editor.selection.moveToBookmark(bookmark); } catch (e) { /* vị trí cũ đã mất */ }
+                                    // setContent thay cả bài: đúng ý người dùng khi bấm
+                                    // "Áp dụng" ở phần Nội dung — họ muốn lấy bản AI viết.
+                                    editor.setContent(payload.value || '');
+                                    editor.undoManager.add();
+                                } else if (payload.field === 'title') {
+                                    writeField(findField(AI_TITLE_SELECTOR), payload.value);
+                                } else if (payload.field === 'excerpt') {
+                                    writeField(findField(AI_EXCERPT_SELECTOR), payload.value);
+                                }
+                            }
                         });
                     };
 
-                    const disabledItem = function (text) {
-                        return [{ type: 'menuitem', text: text, enabled: false, onAction: function () { } }];
-                    };
-
-                    editor.ui.registry.addMenuButton('aiAssist', {
+                    editor.ui.registry.addButton('aiAssist', {
                         icon: 'nc-ai',
-                        text: 'AI',
-                        tooltip: 'Trợ lý AI — tự động tạo nội dung',
-                        fetch: function (callback) {
-                            const AI = window.AiAssist;
-                            if (!AI) { callback(disabledItem('Trợ lý AI chưa sẵn sàng')); return; }
+                        tooltip: 'Trợ lý AI — soạn nội dung',
+                        onAction: openAiChat
+                    });
 
-                            AI.loadSkills(aiTarget).then(function (skills) {
-                                if (!skills.length) { callback(disabledItem('Chưa có kỹ năng AI nào khả dụng')); return; }
-
-                                callback(skills.map(function (skill) {
-                                    // Icon đăng ký ngay trước callback — menu render sau
-                                    // đó nên vẫn tra được tên icon.
-                                    const iconName = AI_ICON_PREFIX + skill.key;
-                                    editor.ui.registry.addIcon(iconName, AI.iconFor(skill.key));
-                                    return {
-                                        type: 'menuitem',
-                                        text: skill.name,
-                                        icon: iconName,
-                                        onAction: function () { runAiSkill(skill); }
-                                    };
-                                }));
-                            });
-                        }
+                    editor.ui.registry.addMenuItem('aiAssist', {
+                        icon: 'nc-ai',
+                        text: 'Trợ lý AI — soạn nội dung',
+                        onAction: openAiChat
                     });
                 }
 
@@ -681,13 +700,18 @@
                 // width/height là bắt buộc: TinyMCE nhét thẳng chuỗi SVG vào một
                 // flex container không ràng buộc kích thước, thiếu hai thuộc tính
                 // này thì icon co về 0x0 — nút vẫn bấm được nhưng trông như trống.
+                // LƯU Ý: Oxide CSS có quy tắc `.tox-tbtn svg { fill: currentColor }`.
+                // CSS thắng presentation attribute, nên fill="none" đặt ở thẻ <svg>
+                // bị đè -> path hở của đám mây tự khép kín thành mảng đặc (cục mực
+                // như trong ảnh). Chống bằng inline style trên TỪNG path, vì inline
+                // style thắng mọi quy tắc stylesheet.
                 editor.ui.registry.addIcon('nc-media-library',
                     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
                     // Đám mây + mũi tên xuống (Lucide cloud-download): đọc là "lấy
                     // file từ nơi đã lưu". Mây trơn dễ nhầm với "upload lên cloud",
                     // xung đột ngữ nghĩa với các nút "Tải ... từ máy" kế bên.
-                    + '<path d="M12 13v8"/><path d="m8 17 4 4 4-4"/>'
-                    + '<path d="M20.42 11.61A6 6 0 0 0 15 4h-.35A6.364 6.364 0 0 0 3.3 7.385 4.146 4.146 0 0 0 4 15.5"/>'
+                    + '<path style="fill:none" d="M12 13v8"/><path style="fill:none" d="m8 17 4 4 4-4"/>'
+                    + '<path style="fill:none" d="M20.42 11.61A6 6 0 0 0 15 4h-.35A6.364 6.364 0 0 0 3.3 7.385 4.146 4.146 0 0 0 4 15.5"/>'
                     + '</svg>');
 
                 const openMediaLibrary = function () {

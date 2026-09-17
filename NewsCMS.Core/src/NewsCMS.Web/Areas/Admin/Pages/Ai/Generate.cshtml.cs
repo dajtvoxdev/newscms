@@ -42,4 +42,34 @@ public class GenerateModel : PageModel
             return new JsonResult(new { error = "Lỗi máy chủ khi tạo nội dung." }) { StatusCode = 500 };
         }
     }
+
+    /// <summary>
+    /// Trò chuyện soạn bài nhiều lượt — gọi bằng /Admin/Ai/Generate?handler=Chat.
+    /// Trả về 3 phần riêng để client cho người dùng apply từng phần vào form.
+    /// </summary>
+    public async Task<IActionResult> OnPostChatAsync([FromBody] AiChatRequest request)
+    {
+        try
+        {
+            var result = await _completionService.ChatAsync(request);
+            if (!result.Succeeded)
+                return new JsonResult(new { error = result.Error }) { StatusCode = 400 };
+
+            var value = result.Value!;
+            // Body là HTML do AI sinh, sanitize trước khi trả về — cùng lý do như
+            // OnPostAsync: client đổ thẳng vào innerHTML của khung xem trước.
+            return new JsonResult(new
+            {
+                reply = value.AssistantText,
+                title = value.Title,
+                excerpt = value.Excerpt,
+                body = _contentSanitizer.Sanitize(value.Body)
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "AI chat failed for content type {ContentType}", request.ContentType);
+            return new JsonResult(new { error = "Lỗi máy chủ khi tạo nội dung." }) { StatusCode = 500 };
+        }
+    }
 }

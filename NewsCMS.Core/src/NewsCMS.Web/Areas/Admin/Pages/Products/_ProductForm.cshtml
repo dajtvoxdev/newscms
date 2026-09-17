@@ -1,4 +1,4 @@
-@using NewsCMS.Domain.Enums
+﻿@using NewsCMS.Domain.Enums
 @using NewsCMS.Web.Areas.Admin.Shared
 @model NewsCMS.Web.Areas.Admin.Pages.Products.ProductFormViewModel
 @{
@@ -54,7 +54,7 @@
                 <div class="mt-5 space-y-5">
                     <label class="block space-y-2">
                         <span class="admin-label">Mô tả ngắn</span>
-                        <textarea asp-for="Input.ShortDescription" rows="2" maxlength="500" class="admin-input"
+                        <textarea asp-for="Input.ShortDescription" id="product-short" rows="2" maxlength="500" class="admin-input"
                                   placeholder="Một dòng tóm tắt — ví dụ nguồn gốc hạt: Ethiopia Blend Liberica" data-ai-field="product.short"></textarea>
                         <span class="block text-xs text-slate-500">Dùng làm dòng phụ dưới tên sản phẩm trên trang khách.</span>
                     </label>

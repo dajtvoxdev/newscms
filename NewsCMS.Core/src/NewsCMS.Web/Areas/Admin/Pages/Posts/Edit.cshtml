@@ -1,4 +1,4 @@
-@page "{id:guid}"
+﻿@page "{id:guid}"
 @model EditModel
 @{
     ViewData["Title"] = "Sửa bài viết";
@@ -53,7 +53,7 @@
                     </label>
                     <label class="block space-y-2">
                         <span class="admin-label">Tóm tắt</span>
-                        <textarea asp-for="Input.Excerpt" class="admin-input" rows="3" maxlength="500" data-ai-field="post.excerpt"></textarea>
+                        <textarea asp-for="Input.Excerpt" id="post-excerpt" class="admin-input" rows="3" maxlength="500" data-ai-field="post.excerpt"></textarea>
                     </label>
                     <label class="block space-y-2">
                         <span class="admin-label">Nội dung</span>
@@ -112,7 +112,7 @@
 </form>
 
 @section Scripts {
-    <partial name="~/Areas/Admin/Shared/_TinyMce.cshtml" model='new TinyMceOptions { Selector = "#post-content", Height = 600 }' />
+    <partial name="~/Areas/Admin/Shared/_TinyMce.cshtml" model='new TinyMceOptions { Selector = "#post-content", Height = 600, AiContentType = "post", AiTitleSelector = "#post-title", AiExcerptSelector = "#post-excerpt" }' />
     <script>
         const $title = document.getElementById('post-title');
         const $slug = document.getElementById('post-slug');

@@ -1,4 +1,4 @@
-@page "{id:guid}"
+﻿@page "{id:guid}"
 @using NewsCMS.Web.Areas.Admin.Shared
 @model EditModel
 @{
@@ -35,7 +35,7 @@
          }' />
 
 @section Scripts {
-    <partial name="~/Areas/Admin/Shared/_TinyMce.cshtml" model='new TinyMceOptions { Selector = "#product-description", Height = 420 }' />
+    <partial name="~/Areas/Admin/Shared/_TinyMce.cshtml" model='new TinyMceOptions { Selector = "#product-description", Height = 420, AiContentType = "product", AiTitleSelector = "#product-name", AiExcerptSelector = "#product-short" }' />
     <script src="~/js/admin/product-form.js" asp-append-version="true"></script>
     <script src="~/js/admin/ai-assist.js" asp-append-version="true"></script>
 }
