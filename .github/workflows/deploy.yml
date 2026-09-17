@@ -40,7 +40,7 @@ on:
   # mọi thay đổi ở đây phải merge về master mới có hiệu lực.
   #
   # branches lọc theo head_branch của run CI, nên:
-  #   - push vào master  -> CI chạy, KHÔNG deploy (master là nhánh phát triển);
+  #   - push vào master  -> không có run CI nào (ci.yml đã bỏ master) -> không deploy;
   #   - push/merge vào prod/chukafe -> CI xanh -> deploy lên VPS;
   #   - pull request     -> head_branch là branch nguồn -> không deploy.
   workflow_run:
