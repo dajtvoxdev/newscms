@@ -224,8 +224,8 @@ public static class DbSeeder
                 new AiSkill
                 {
                     Key = AiTaskKeys.GenerateBody,
-                    Name = "Sinh thân bài",
-                    Description = "Tạo nội dung chi tiết cho bài viết",
+                    Name = "Tự động tạo nội dung",
+                    Description = "Viết toàn bộ nội dung bài từ tiêu đề",
                     Kind = AiSkillKind.Prompt,
                     IsActive = true,
                     SortOrder = 1,
@@ -282,6 +282,17 @@ public static class DbSeeder
                     MaxTokens = 4000
                 }
             );
+            await db.SaveChangesAsync();
+        }
+
+        // DB đã seed từ trước không chạy lại khối trên, nên đổi tên riêng cho khớp
+        // nhãn mới trên thanh công cụ editor. Chỉ đụng bản ghi còn giữ nguyên tên
+        // seed cũ — quản trị viên tự đặt tên khác thì giữ nguyên.
+        var generateBodySkill = await db.AiSkills.FirstOrDefaultAsync(x => x.Key == AiTaskKeys.GenerateBody);
+        if (generateBodySkill is { Name: "Sinh thân bài" })
+        {
+            generateBodySkill.Name = "Tự động tạo nội dung";
+            generateBodySkill.Description = "Viết toàn bộ nội dung bài từ tiêu đề";
             await db.SaveChangesAsync();
         }
 

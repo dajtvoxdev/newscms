@@ -124,9 +124,23 @@ public sealed class AiConnectionService : IAiConnectionService
         var entity = await _db.AiConnections.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (entity is null) return Result.Failure("Không tìm thấy kết nối.");
 
+        string apiKey;
         try
         {
-            var apiKey = _protector.Unprotect(entity.ApiKeyEncrypted);
+            if (string.IsNullOrEmpty(entity.ApiKeyEncrypted))
+                return Result.Failure("Kết nối chưa có API key. Hãy nhập API key rồi lưu lại.");
+            apiKey = _protector.Unprotect(entity.ApiKeyEncrypted);
+        }
+        catch (Exception)
+        {
+            // Key ring DataProtection đổi (restore DB từ máy khác, xoá thư mục App_Data/keys…)
+            // thì bản mã cũ không giải mã lại được — nói thẳng cách xử lý thay vì ném
+            // thông báo "The payload was invalid" khó hiểu ra màn hình admin.
+            return Result.Failure("Không giải mã được API key (key ring đã đổi). Hãy nhập lại API key rồi lưu.");
+        }
+
+        try
+        {
             var messages = new List<(string, string)> { ("user", "ping") };
             var result = await _chatClient.CompleteAsync(
                 entity.BaseUrl, apiKey, entity.DefaultModel,

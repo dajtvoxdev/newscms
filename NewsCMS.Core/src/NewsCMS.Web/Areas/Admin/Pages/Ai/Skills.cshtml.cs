@@ -22,6 +22,8 @@ public class SkillsModel : PageModel
         {
             key = s.Key,
             name = s.Name,
+            // Mô tả hiển thị dưới tên skill trong modal/dropdown AI ở client.
+            description = s.Description,
             allowStyled = s.AllowStyled
         });
 

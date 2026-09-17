@@ -115,7 +115,7 @@
     }
 
     // ---------- Đường cũ: XHR 1 request ----------
-    function uploadFileXhr(file, folderId, onDone, onError, xhr, card) {
+    function uploadFileXhr(file, folderId, onDone, onError, xhr, card, onProgress) {
         const fd = new FormData();
         fd.append('file', file);
         if (folderId) fd.append('folderId', folderId);
@@ -134,6 +134,7 @@
                 const pct = Math.round((e.loaded / e.total) * 100);
                 bar.style.width = pct + '%';
                 status.textContent = pct + '%';
+                if (onProgress) onProgress(pct);
             }
         });
 
@@ -181,7 +182,7 @@
     }
 
     // ---------- Đường mới: tus resumable ----------
-    function uploadFileTus(file, folderId, onDone, onError, card) {
+    function uploadFileTus(file, folderId, onDone, onError, card, onProgress) {
         const bar = card.querySelector('.uc-bar');
         const status = card.querySelector('.uc-status');
         const cancelBtn = card.querySelector('.uc-cancel');
@@ -199,6 +200,7 @@
             const pct = bytesTotal ? Math.round(bytesUploaded / bytesTotal * 100) : 0;
             bar.style.width = pct + '%';
             status.textContent = pct + '%' + formatSpeed(speed);
+            if (onProgress) onProgress(pct);
         };
 
         const failCard = function (msg) {
@@ -270,6 +272,7 @@
                 bar.style.width = '100%';
                 bar.classList.add('uc-bar-done');
                 status.textContent = 'Đang xử lý…';
+                if (onProgress) onProgress(100, 'processing');
                 // tus URL dạng .../{id} — id cuối chính là TusFileId trong session table.
                 const tusId = (upload.url || '').split('/').filter(Boolean).pop();
                 if (tusId) {
@@ -322,17 +325,22 @@
             const item = queue.shift();
             activeCount++;
             if (item.useTus) {
-                uploadFileTus(item.file, item.folderId, item.onDone, item.onError, item.card);
+                uploadFileTus(item.file, item.folderId, item.onDone, item.onError, item.card, item.onProgress);
             } else {
-                uploadFileXhr(item.file, item.folderId, item.onDone, item.onError, item.xhr, item.card);
+                uploadFileXhr(item.file, item.folderId, item.onDone, item.onError, item.xhr, item.card, item.onProgress);
             }
         }
     }
 
     const uploadManager = {
-        enqueue(file, { folderId = null, onDone = null, onError = null } = {}) {
+        enqueue(file, { folderId = null, onDone = null, onError = null, onProgress = null } = {}) {
             const c = getContainer();
-            if (!c) return;
+            if (!c) {
+                // Trang thiếu partial _UploadTracker — báo lỗi thay vì nuốt lặng,
+                // nếu không caller đang await promise sẽ treo vĩnh viễn.
+                if (onError) onError('Không khởi tạo được trình quản lý tải lên.');
+                return;
+            }
 
             const useTus = file.size > TUS_THRESHOLD && typeof window.tus !== 'undefined' && window.tus.Upload;
 
@@ -342,10 +350,10 @@
             c.appendChild(card);
 
             if (useTus) {
-                queue.push({ file, folderId, onDone, onError, useTus: true, card });
+                queue.push({ file, folderId, onDone, onError, onProgress, useTus: true, card });
             } else {
                 const xhr = new XMLHttpRequest();
-                queue.push({ file, folderId, onDone, onError, useTus: false, xhr, card });
+                queue.push({ file, folderId, onDone, onError, onProgress, useTus: false, xhr, card });
             }
             processQueue();
         }

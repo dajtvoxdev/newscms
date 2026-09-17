@@ -53,7 +53,27 @@
             });
         }
 
+        // Ưu tiên đẩy qua uploadManager (partial _UploadTracker) để file tải lên từ
+        // editor cũng hiện thẻ tiến độ ở góc dưới trái như trang Media, dùng chung
+        // hàng đợi + giới hạn 3 file song song. Trang nào không có tracker thì rơi
+        // về đường upload nội bộ bên dưới.
         function uploadFile(file, progress) {
+            if (window.uploadManager && document.getElementById('upload-tracker')) {
+                return new Promise(function (resolve, reject) {
+                    window.uploadManager.enqueue(file, {
+                        onProgress: function (pct, phase) { if (progress) progress(pct, phase); },
+                        onDone: function (result) {
+                            if (result && typeof result.location === 'string') resolve(result);
+                            else reject('Phản hồi upload không hợp lệ');
+                        },
+                        onError: function (message) { reject(message || 'Upload thất bại'); }
+                    });
+                });
+            }
+            return uploadFileDirect(file, progress);
+        }
+
+        function uploadFileDirect(file, progress) {
             // File lớn (> 32MB) đi đường tus resumable — chunk + retry + resume,
             // không bị cắt bởi giới hạn body Cloudflare. Kết quả thật nằm ở handler
             // TusStatus (server còn tạo Media row + poster sau khi nhận đủ byte).
@@ -221,6 +241,60 @@
             return /\.pdf(?:$|[?#])/i.test(url || '');
         }
 
+        // Ảnh dán từ clipboard đến dưới dạng Blob (không có .name); uploadManager và
+        // FormData đều cần tên file nên bọc lại thành File trước khi đẩy đi.
+        function ensureNamedFile(blob, fallbackName) {
+            if (blob && blob.name) return blob;
+            try {
+                return new File([blob], fallbackName || 'clipboard.png', {
+                    type: blob.type || 'application/octet-stream'
+                });
+            } catch (e) {
+                return blob;
+            }
+        }
+
+        // ---------- Chỗ giữ "đang tải lên" ngay trong vùng soạn thảo ----------
+        // Người dùng thấy vòng quay + phần trăm tại đúng vị trí con trỏ, thay vì
+        // editor đứng im cho tới khi file lên xong. Node bị gỡ lúc serialize
+        // (sự kiện PreProcess) nên bấm Lưu giữa chừng không lưu nhầm rác.
+        function createUploadPlaceholder(editor, fileName) {
+            const id = 'nc-upload-' + Math.random().toString(36).slice(2);
+            editor.insertContent(
+                '<div class="cms-upload-ph" id="' + id + '" contenteditable="false">'
+                + '<span class="cms-upload-spinner"></span>'
+                + '<span class="cms-upload-name">' + escapeHtml(fileName || 'Tệp') + '</span>'
+                + '<span class="cms-upload-pct">Đang tải lên…</span>'
+                + '</div>'
+            );
+
+            const node = function () { return editor.dom.get(id); };
+
+            return {
+                progress: function (pct, phase) {
+                    const el = node();
+                    if (!el) return;
+                    const label = el.querySelector('.cms-upload-pct');
+                    if (!label) return;
+                    label.textContent = phase === 'processing'
+                        ? 'Đang xử lý trên máy chủ…'
+                        : 'Đang tải lên… ' + Math.max(0, Math.min(100, Math.round(pct || 0))) + '%';
+                },
+                replaceWith: function (html) {
+                    const el = node();
+                    // Người dùng có thể đã xoá chỗ giữ trong lúc chờ — khi đó chèn ở con trỏ.
+                    if (!el) { editor.insertContent(html); return; }
+                    editor.undoManager.transact(function () {
+                        editor.dom.setOuterHTML(el, html);
+                    });
+                },
+                remove: function () {
+                    const el = node();
+                    if (el) editor.dom.remove(el);
+                }
+            };
+        }
+
         function documentHtml(file) {
             const url = file.location;
             const name = escapeHtml(file.fileName || 'Tài liệu');
@@ -276,6 +350,23 @@
                     + '</figure>';
             }
             return '<p><a href="' + safeUrl + '" target="_blank" rel="noopener">' + name + '</a></p>';
+        }
+
+        // Dựng HTML cho 1 item chọn từ thư viện media (MediaListItemDto, camelCase).
+        // Dùng lại đúng mediaHtml/documentHtml của luồng upload để ảnh/video chèn từ
+        // thư viện và chèn từ máy cho ra markup y hệt nhau.
+        function libraryItemHtml(item) {
+            const url = item.filePath || '';
+            const kind = (item.kind || '').toLowerCase();
+            const name = item.title || item.fileName || '';
+
+            if (kind === 'image') {
+                return '<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(item.altText || name) + '">';
+            }
+            if (kind === 'video' || kind === 'audio') {
+                return mediaHtml({ location: url, fileName: item.fileName, posterUrl: item.posterUrl }, item.fileName);
+            }
+            return documentHtml({ location: url, fileName: name });
         }
 
         // ---------- Social media embed parsing ----------
@@ -336,7 +427,7 @@
             height: @Model.Height,
             menubar: 'file edit view insert format tools table',
             plugins: 'preview searchreplace autolink autosave save directionality code visualblocks visualchars fullscreen image link media codesample table charmap pagebreak nonbreaking anchor insertdatetime advlist lists wordcount quickbars emoticons',
-            toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link uploadImage uploadMedia embedSocial uploadDocument ai_generate_body ai_summarize | table codesample | removeformat | preview fullscreen code',
+            toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link uploadImage uploadMedia uploadDocument mediaLibrary embedSocial aiAssist | table codesample | removeformat | preview fullscreen code',
             toolbar_mode: 'wrap',
             contextmenu: 'link image table',
             branding: false,
@@ -357,7 +448,7 @@
             images_upload_url: uploadUrl,
             images_upload_credentials: true,
             images_reuse_filename: true,
-            content_style: 'body{font-family:Inter,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.6;}img{max-width:100%;height:auto;}.cms-document-preview{margin:1.25rem 0;padding:1rem;border:1px solid #e2e8f0;border-radius:16px;background:#f8fafc}.cms-document-preview iframe{width:100%;min-height:520px;border:1px solid #cbd5e1;border-radius:12px;background:white}.cms-document-preview figcaption{margin-top:.75rem;font-size:14px;font-weight:600}',
+            content_style: 'body{font-family:Inter,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.6;}img{max-width:100%;height:auto;}.cms-document-preview{margin:1.25rem 0;padding:1rem;border:1px solid #e2e8f0;border-radius:16px;background:#f8fafc}.cms-document-preview iframe{width:100%;min-height:520px;border:1px solid #cbd5e1;border-radius:12px;background:white}.cms-document-preview figcaption{margin-top:.75rem;font-size:14px;font-weight:600}.cms-upload-ph{display:flex;align-items:center;gap:10px;margin:1rem 0;padding:12px 16px;border:1px dashed #c7d2fe;border-radius:12px;background:#eef2ff;color:#4338ca;font-size:14px;line-height:1.3;user-select:none}.cms-upload-ph .cms-upload-spinner{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid #c7d2fe;border-top-color:#4f46e5;animation:cms-upload-spin .7s linear infinite}.cms-upload-ph .cms-upload-name{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:600}.cms-upload-ph .cms-upload-pct{flex:none;font-weight:500;color:#6366f1;font-variant-numeric:tabular-nums}@@keyframes cms-upload-spin{to{transform:rotate(360deg)}}',
             table_default_attributes: { class: 'table' },
             codesample_languages: [
                 { text: 'C#', value: 'csharp' },
@@ -372,6 +463,8 @@
                 const accept = meta.filetype === 'image' ? 'image/*' : documentTypes;
                 chooseFile(accept).then(function (file) {
                     if (!file) return;
+                    // Hộp thoại Chèn ảnh/tệp của TinyMCE có sẵn vòng quay riêng khi
+                    // đang chờ callback, nên ở đây chỉ cần thẻ tiến độ góc dưới.
                     uploadFile(file).then(function (json) {
                         callback(json.location, { title: json.fileName || file.name, alt: json.fileName || file.name });
                     }).catch(function (message) {
@@ -380,67 +473,118 @@
                 });
             },
             images_upload_handler: function (blobInfo, progress) {
-                return uploadFile(blobInfo.blob(), progress).then(function (json) { return json.location; });
+                const file = ensureNamedFile(blobInfo.blob(), blobInfo.filename());
+                return uploadFile(file, progress).then(function (json) { return json.location; });
             },
             setup: function (editor) {
-                // AI Assist buttons
+                // Chỗ giữ "đang tải lên" chỉ là UI tạm — gỡ khỏi bản serialize để
+                // nội dung lưu xuống DB không dính div rác khi người dùng bấm Lưu
+                // lúc file còn đang tải.
+                editor.on('PreProcess', function (e) {
+                    editor.dom.select('.cms-upload-ph', e.node).forEach(function (el) {
+                        editor.dom.remove(el);
+                    });
+                });
+
+                // ---------- Trợ lý AI ----------
+                // Đăng ký ĐỒNG BỘ ngay trong setup (trước khi toolbar render) nên icon
+                // luôn hiện. Bản cũ đăng ký nút bên trong .then() của fetch skill, và
+                // ai-assist.js cũng đăng ký trùng tên nút — bản chạy sau (không icon)
+                // ghi đè bản có icon, đó là lý do nút AI trống trơn.
+                //
+                // Các trang nạp ai-assist.js SAU partial này, nên chỉ tra
+                // window.AiAssist lúc người dùng bấm, không phải lúc setup.
                 const aiTarget = editor.getElement()?.dataset?.aiTarget;
-                if (aiTarget && window.AiAssist) {
-                    window.AiAssist.loadSkills(aiTarget).then(function(skills) {
-                        editor.ui.registry.addIcon('nc-robot', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>');
-                        skills.forEach(function(skill) {
-                            editor.ui.registry.addButton('ai_' + skill.key, {
-                                icon: 'nc-robot',
-                                tooltip: 'AI: ' + skill.name,
-                                onAction: function() {
-                                    const selection = editor.selection.getContent({ format: 'text' });
-                                    const fullContent = editor.getContent({ format: 'text' });
-                                    const titleEl = document.querySelector('input[name*="Title"], input[name*="Name"], input[id*="title"], input[id*="name"]');
-                                    const title = titleEl ? titleEl.value : '';
-                                    window.AiAssist.run(skill.key, skill.allowStyled, {
-                                        title: title,
-                                        content: fullContent,
-                                        selection: selection,
-                                        language: 'vi'
-                                    }, function(result) {
-                                        editor.insertContent(result);
-                                    });
-                                }
-                            });
+                if (aiTarget) {
+                    const AI_ICON_PREFIX = 'nc-ai-';
+
+                    editor.ui.registry.addIcon('nc-ai',
+                        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+                        + '<path d="m12 3-1.9 5.8L4.3 10.7l5.8 1.9L12 18.4l1.9-5.8 5.8-1.9-5.8-1.9Z"/>'
+                        + '<path d="M5 3v3"/><path d="M3.5 4.5h3"/><path d="M18 16v3"/><path d="M16.5 17.5h3"/>'
+                        + '</svg>');
+
+                    const runAiSkill = function (skill) {
+                        // Modal AI lấy focus khỏi iframe làm mất vùng chọn; không đánh
+                        // dấu lại thì nội dung sinh ra rơi lên đầu bài viết.
+                        const bookmark = editor.selection.getBookmark(2, true);
+                        const titleEl = document.querySelector('input[name*="Title"], input[name*="Name"], input[id*="title"], input[id*="name"]');
+
+                        window.AiAssist.run(skill, {
+                            title: titleEl ? titleEl.value : '',
+                            content: editor.getContent({ format: 'text' }),
+                            selection: editor.selection.getContent({ format: 'text' }),
+                            language: 'vi'
+                        }, function (result) {
+                            editor.focus();
+                            try { editor.selection.moveToBookmark(bookmark); } catch (e) { /* vị trí cũ đã mất */ }
+                            editor.insertContent(result);
                         });
+                    };
+
+                    const disabledItem = function (text) {
+                        return [{ type: 'menuitem', text: text, enabled: false, onAction: function () { } }];
+                    };
+
+                    editor.ui.registry.addMenuButton('aiAssist', {
+                        icon: 'nc-ai',
+                        text: 'AI',
+                        tooltip: 'Trợ lý AI — tự động tạo nội dung',
+                        fetch: function (callback) {
+                            const AI = window.AiAssist;
+                            if (!AI) { callback(disabledItem('Trợ lý AI chưa sẵn sàng')); return; }
+
+                            AI.loadSkills(aiTarget).then(function (skills) {
+                                if (!skills.length) { callback(disabledItem('Chưa có kỹ năng AI nào khả dụng')); return; }
+
+                                callback(skills.map(function (skill) {
+                                    // Icon đăng ký ngay trước callback — menu render sau
+                                    // đó nên vẫn tra được tên icon.
+                                    const iconName = AI_ICON_PREFIX + skill.key;
+                                    editor.ui.registry.addIcon(iconName, AI.iconFor(skill.key));
+                                    return {
+                                        type: 'menuitem',
+                                        text: skill.name,
+                                        icon: iconName,
+                                        onAction: function () { runAiSkill(skill); }
+                                    };
+                                }));
+                            });
+                        }
                     });
                 }
 
-                const insertUploadedImage = function () {
-                    chooseFile('image/*').then(function (file) {
+                // Chọn file từ máy -> chèn chỗ giữ có vòng quay -> upload (thẻ tiến độ
+                // góc dưới trái) -> thay chỗ giữ bằng nội dung thật.
+                const insertFromUpload = function (accept, buildHtml) {
+                    chooseFile(accept).then(function (file) {
                         if (!file) return;
-                        uploadFile(file).then(function (json) {
-                            editor.insertContent('<img src="' + escapeHtml(json.location) + '" alt="' + escapeHtml(json.fileName || file.name) + '">');
+                        editor.focus();
+                        const placeholder = createUploadPlaceholder(editor, file.name);
+                        uploadFile(file, placeholder.progress).then(function (json) {
+                            placeholder.replaceWith(buildHtml(json, file));
                         }).catch(function (message) {
+                            placeholder.remove();
                             window.toast?.error(message);
                         });
+                    });
+                };
+
+                const insertUploadedImage = function () {
+                    insertFromUpload('image/*', function (json, file) {
+                        return '<img src="' + escapeHtml(json.location) + '" alt="' + escapeHtml(json.fileName || file.name) + '">';
                     });
                 };
 
                 const insertUploadedDocument = function () {
-                    chooseFile(documentTypes).then(function (file) {
-                        if (!file) return;
-                        uploadFile(file).then(function (json) {
-                            editor.insertContent(documentHtml(json));
-                        }).catch(function (message) {
-                            window.toast?.error(message);
-                        });
+                    insertFromUpload(documentTypes, function (json) {
+                        return documentHtml(json);
                     });
                 };
 
                 const insertUploadedMedia = function () {
-                    chooseFile(mediaTypes).then(function (file) {
-                        if (!file) return;
-                        uploadFile(file).then(function (json) {
-                            editor.insertContent(mediaHtml(json, file.name));
-                        }).catch(function (message) {
-                            window.toast?.error(message);
-                        });
+                    insertFromUpload(mediaTypes, function (json, file) {
+                        return mediaHtml(json, file.name);
                     });
                 };
 
@@ -531,6 +675,44 @@
                     icon: 'new-document',
                     text: 'Tải tài liệu từ máy',
                     onAction: insertUploadedDocument
+                });
+
+                // ---------- Chèn lại file đã có trong thư viện media ----------
+                editor.ui.registry.addIcon('nc-media-library',
+                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+                    + '<path d="M2 7V5a2 2 0 0 1 2-2h2"/><path d="M22 7V5a2 2 0 0 0-2-2h-2"/>'
+                    + '<rect width="16" height="13" x="4" y="8" rx="2"/>'
+                    + '<circle cx="9" cy="12" r="1.4"/><path d="m4.5 19 4.2-4.2a1.6 1.6 0 0 1 2.2 0L16 19"/>'
+                    + '</svg>');
+
+                const openMediaLibrary = function () {
+                    if (!window.mediaLibraryModal?.openPicker) {
+                        window.toast?.error('Thư viện media chưa sẵn sàng trên trang này.');
+                        return;
+                    }
+                    // Modal nằm ngoài iframe editor nên vùng chọn bị mất khi nó mở —
+                    // đánh dấu lại để file chèn đúng chỗ con trỏ đang đứng.
+                    const bookmark = editor.selection.getBookmark(2, true);
+                    window.mediaLibraryModal.openPicker({
+                        title: 'Chèn từ thư viện media',
+                        onSelect: function (item) {
+                            editor.focus();
+                            try { editor.selection.moveToBookmark(bookmark); } catch (e) { /* vị trí cũ đã mất */ }
+                            editor.insertContent(libraryItemHtml(item));
+                        }
+                    });
+                };
+
+                editor.ui.registry.addButton('mediaLibrary', {
+                    icon: 'nc-media-library',
+                    tooltip: 'Chèn từ thư viện media (file đã tải lên)',
+                    onAction: openMediaLibrary
+                });
+
+                editor.ui.registry.addMenuItem('mediaLibrary', {
+                    icon: 'nc-media-library',
+                    text: 'Chèn từ thư viện media',
+                    onAction: openMediaLibrary
                 });
 
                 // Re-host externally pasted images on our server.
