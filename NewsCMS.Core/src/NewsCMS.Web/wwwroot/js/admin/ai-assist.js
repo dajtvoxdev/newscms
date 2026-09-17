@@ -161,7 +161,7 @@
 
         const modal = document.createElement('dialog');
         modal.id = 'ai-chat-modal';
-        modal.className = 'w-full max-w-5xl rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-black/50';
+        modal.className = 'relative w-full max-w-5xl rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-black/50';
         modal.innerHTML = `
             <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
                 <div class="flex items-start gap-3">
@@ -192,6 +192,11 @@
                             </button>
                         </div>
                         <p class="mt-2 text-xs text-slate-400">Enter để gửi · Shift + Enter xuống dòng</p>
+                        <label class="mt-2 flex items-center gap-2 text-xs text-slate-600">
+                            <input type="checkbox" id="ai-chat-use-site-context" checked
+                                   class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                            <span>Dùng thông tin &amp; nội dung của site làm ngữ cảnh</span>
+                        </label>
                     </div>
                 </div>
 
@@ -237,6 +242,7 @@
                     </div>
 
                     <div class="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3">
+                        <button type="button" id="ai-show-context" class="mr-auto hidden text-xs font-semibold text-slate-500 underline-offset-2 transition hover:text-slate-800 hover:underline">AI đang thấy gì?</button>
                         <button type="button" data-ai-close class="admin-btn-secondary">Đóng</button>
                         <button type="button" id="ai-apply-all" class="admin-btn-primary hidden">Áp dụng tất cả</button>
                     </div>
@@ -254,11 +260,15 @@
         const resultEmpty = modal.querySelector('#ai-result-empty');
         const resultFields = modal.querySelector('#ai-result-fields');
         const applyAllBtn = modal.querySelector('#ai-apply-all');
+        const useContextBox = modal.querySelector('#ai-chat-use-site-context');
+        const showContextBtn = modal.querySelector('#ai-show-context');
 
         /** Lịch sử gửi lên server: [{ role, content }] */
         const history = [];
         /** Bản nháp AI vừa trả về, người dùng có thể sửa trước khi apply. */
         let draft = null;
+        /** Khối ngữ cảnh site lần gửi gần nhất, để hiện khi bấm "AI đang thấy gì?". */
+        let lastSiteContext = '';
 
         const out = {
             title: modal.querySelector('[data-ai-out="title"]'),
@@ -366,10 +376,16 @@
                     messages: history,
                     currentTitle: out.title.value || ctx.title || '',
                     currentExcerpt: out.excerpt.value || ctx.excerpt || '',
-                    currentBody: out.body.value || ctx.body || ''
+                    currentBody: out.body.value || ctx.body || '',
+                    includeSiteContext: useContextBox.checked
                 });
 
                 stopThinking();
+                lastSiteContext = data.siteContext || '';
+                // Chỉ hiện nút khi thực sự có ngữ cảnh để xem — site chưa có nội
+                // dung nào thì nút này mở ra khung rỗng, gây hoang mang.
+                showContextBtn.classList.toggle('hidden', !lastSiteContext);
+
                 const reply = data.reply || 'Đã cập nhật bản nháp.';
                 addBubble('assistant', reply);
                 history.push({ role: 'assistant', content: reply });
@@ -405,6 +421,26 @@
                 btn.textContent = 'Đã áp dụng ✓';
                 setTimeout(function () { btn.textContent = 'Áp dụng'; }, 1500);
             });
+        });
+
+        showContextBtn.addEventListener('click', function () {
+            const existing = modal.querySelector('#ai-context-panel');
+            if (existing) { existing.remove(); return; }
+
+            const panel = document.createElement('div');
+            panel.id = 'ai-context-panel';
+            panel.className = 'absolute inset-x-6 bottom-20 top-24 z-10 overflow-y-auto rounded-2xl border border-slate-300 bg-white p-4 shadow-2xl';
+            panel.innerHTML = '<div class="mb-2 flex items-center justify-between gap-3">'
+                + '<span class="text-sm font-bold text-slate-800">Ngữ cảnh đã gửi kèm cho AI</span>'
+                + '<button type="button" class="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100">Đóng</button>'
+                + '</div>'
+                + '<pre class="whitespace-pre-wrap font-mono text-xs leading-relaxed text-slate-700"></pre>';
+            // textContent chứ không innerHTML: đây là nội dung bài viết của người
+            // dùng, đổ vào innerHTML là tự mở đường XSS trong trang admin.
+            panel.querySelector('pre').textContent = lastSiteContext;
+            panel.querySelector('button').addEventListener('click', function () { panel.remove(); });
+
+            modal.appendChild(panel);
         });
 
         applyAllBtn.addEventListener('click', function () {

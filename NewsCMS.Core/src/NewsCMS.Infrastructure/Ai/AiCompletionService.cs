@@ -14,15 +14,17 @@ public sealed class AiCompletionService : IAiCompletionService
     private readonly AppDbContext _db;
     private readonly IAiChatClient _chatClient;
     private readonly IAiToolRegistry _toolRegistry;
+    private readonly ISiteContextBuilder _siteContext;
     private readonly IDataProtector _protector;
     private readonly ILogger<AiCompletionService> _logger;
 
     public AiCompletionService(AppDbContext db, IAiChatClient chatClient, IAiToolRegistry toolRegistry,
-        IDataProtectionProvider dp, ILogger<AiCompletionService> logger)
+        ISiteContextBuilder siteContext, IDataProtectionProvider dp, ILogger<AiCompletionService> logger)
     {
         _db = db;
         _chatClient = chatClient;
         _toolRegistry = toolRegistry;
+        _siteContext = siteContext;
         _protector = dp.CreateProtector("NewsCMS.Ai.ApiKey");
         _logger = logger;
     }
@@ -150,6 +152,24 @@ public sealed class AiCompletionService : IAiCompletionService
             ? DefaultChatSystemPrompt
             : skill!.SystemPrompt!;
 
+        // Ngữ cảnh site đứng TRƯỚC hợp đồng JSON: nó là dữ liệu tham khảo, còn
+        // hợp đồng định dạng phải là thứ model đọc cuối cùng trước khi trả lời.
+        var siteContext = string.Empty;
+        if (request.IncludeSiteContext)
+        {
+            try
+            {
+                siteContext = SiteContextFormatter.Format(await _siteContext.BuildAsync(ct));
+                if (siteContext.Length > 0) systemPrompt += "\n\n" + siteContext;
+            }
+            catch (Exception ex)
+            {
+                // Ngữ cảnh là phần làm nội dung hay hơn, không phải điều kiện để
+                // chạy được — hỏng thì vẫn viết tiếp, chỉ ghi log để còn truy.
+                _logger.LogWarning(ex, "Không dựng được ngữ cảnh site cho phiên chat AI.");
+            }
+        }
+
         // Hợp đồng JSON nối ở đây chứ không nằm trong DB: quản trị viên sửa
         // SystemPrompt trong màn Kỹ năng AI cũng không làm vỡ bộ tách kết quả.
         systemPrompt += "\n\nBẮT BUỘC: mỗi lần trả lời chỉ xuất MỘT đối tượng JSON, không kèm chữ nào ngoài JSON, "
@@ -195,7 +215,7 @@ public sealed class AiCompletionService : IAiCompletionService
         if (!result.Succeeded)
             return Result<AiChatResult>.Failure(result.Error ?? "Lỗi không xác định.");
 
-        return Result<AiChatResult>.Success(ParseChatResult(result.Value!, isProduct));
+        return Result<AiChatResult>.Success(ParseChatResult(result.Value!, isProduct) with { SiteContext = siteContext });
     }
 
     /// <summary>Uỷ quyền cho AiChatResponseParser (thuần, có unit test).</summary>

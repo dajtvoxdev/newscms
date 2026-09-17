@@ -63,7 +63,9 @@ public class GenerateModel : PageModel
                 reply = value.AssistantText,
                 title = value.Title,
                 excerpt = value.Excerpt,
-                body = _contentSanitizer.Sanitize(value.Body)
+                body = _contentSanitizer.Sanitize(value.Body),
+                // Ngữ cảnh đã gửi kèm, để khung chat hiện được "AI đang thấy gì".
+                siteContext = value.SiteContext
             });
         }
         catch (Exception ex)

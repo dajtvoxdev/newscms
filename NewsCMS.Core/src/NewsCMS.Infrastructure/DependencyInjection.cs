@@ -219,6 +219,7 @@ public static class DependencyInjection
         services.AddScoped<IAiConnectionService, AiConnectionService>();
         services.AddScoped<IAiSkillService, AiSkillService>();
         services.AddScoped<IAiCompletionService, AiCompletionService>();
+        services.AddScoped<ISiteContextBuilder, SiteContextBuilder>();
         services.AddScoped<IAiChatClient, OpenAiChatClient>();
         services.AddScoped<IAiToolRegistry, AiToolRegistry>();
         services.AddScoped<IAiTool, FirecrawlSearchTool>();
