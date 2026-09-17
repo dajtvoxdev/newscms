@@ -24,19 +24,29 @@ name: Deploy
 # Rollback chỉ là trỏ symlink về release trước + restart.
 #
 # KHI NÀO CHẠY:
-#   - Tự động: sau khi workflow "CI" chạy XONG và PASS trên master/main
-#     (push code -> CI build+test -> CI xanh -> Deploy). CI đỏ thì không deploy.
-#   - Thủ công: workflow_dispatch (có checkbox bỏ qua migration).
-#   - Tag v*: deploy ngay, KHÔNG qua CI.
+#   - Tự động: sau khi workflow "CI" chạy XONG và PASS trên prod/chukafe
+#     (merge master -> prod/chukafe -> CI build+test -> CI xanh -> Deploy).
+#     CI đỏ thì không deploy. Push vào master KHÔNG deploy.
+#   - Thủ công: workflow_dispatch (có checkbox bỏ qua migration). Nhớ chọn
+#     branch prod/chukafe trong hộp "Use workflow from", vì dispatch deploy
+#     đúng HEAD của branch được chọn — để mặc định master là deploy nhầm
+#     code chưa lên production.
+#   - Tag v*: deploy ngay, KHÔNG qua CI (tag trỏ commit nào thì deploy commit đó).
 
 on:
-  # workflow_run yêu cầu file workflow này nằm trên default branch (master).
-  # branches ở đây lọc theo head_branch của run CI, nên CI của pull request
-  # (head_branch = branch nguồn) không kích hoạt deploy.
+  # workflow_run yêu cầu file workflow này nằm trên default branch (master):
+  # GitHub luôn đọc bản deploy.yml của default branch, KHÔNG phải bản nằm trên
+  # prod/chukafe. Sửa file này chỉ ở nhánh prod thì trigger không đổi chút nào —
+  # mọi thay đổi ở đây phải merge về master mới có hiệu lực.
+  #
+  # branches lọc theo head_branch của run CI, nên:
+  #   - push vào master  -> CI chạy, KHÔNG deploy (master là nhánh phát triển);
+  #   - push/merge vào prod/chukafe -> CI xanh -> deploy lên VPS;
+  #   - pull request     -> head_branch là branch nguồn -> không deploy.
   workflow_run:
     workflows: ['CI']
     types: [completed]
-    branches: [master, main]
+    branches: [prod/chukafe]
   workflow_dispatch:
     inputs:
       run_migrations:

@@ -1,10 +1,12 @@
 name: CI
 
 on:
+  # prod/chukafe là branch production: Deploy nghe kết quả CI của branch này,
+  # nên CI bắt buộc phải chạy ở đây, nếu không chuỗi push -> CI -> Deploy đứt.
   push:
-    branches: [main, master]
+    branches: [main, master, 'prod/*']
   pull_request:
-    branches: [main, master]
+    branches: [main, master, 'prod/*']
   workflow_dispatch:
 
 env:
