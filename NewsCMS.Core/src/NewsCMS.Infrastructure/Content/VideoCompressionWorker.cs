@@ -70,7 +70,9 @@ public sealed class VideoCompressionWorker : BackgroundService
         var compression = scope.ServiceProvider.GetRequiredService<IVideoCompressionService>();
         var result = await compression.CompressAsync(mediaId, ct);
         if (!result.Succeeded)
-            _logger.LogDebug("Video compression skipped/failure for Media {MediaId}: {Error}", mediaId, result.Error);
+            // LogInformation (không phải Debug): skip/fail là chuyện người vận hành cần thấy —
+            // để Debug thì "video không được nén" hoàn toàn im lặng, đúng cái bẫy vừa gặp.
+            _logger.LogInformation("Nén video bỏ qua/thất bại cho Media {MediaId}: {Error}", mediaId, result.Error);
     }
 
     /// <summary>
@@ -93,7 +95,10 @@ public sealed class VideoCompressionWorker : BackgroundService
             var minSizeMb = cfg.GetValue<int?>("Storage:VideoCompression:MinSizeMb") ?? 20;
             var threshold = minSizeMb * 2L * 1024L * 1024L;
 
-            var ids = await db.Medias.AsNoTracking()
+            // IgnoreQueryFilters: worker chạy ngoài HTTP request nên CurrentSiteId = Guid.Empty,
+            // global filter SiteId làm query khớp 0 dòng (bug "sweep im lặng, không nén gì").
+            // Nén là tác vụ hệ thống nên quét MỌI site — đúng như TusCleanupWorker đang làm.
+            var ids = await db.Medias.IgnoreQueryFilters().AsNoTracking()
                 .Where(m => m.Kind == "video"
                     && m.StorageKey.EndsWith(".mp4")
                     && !m.IsDeleted

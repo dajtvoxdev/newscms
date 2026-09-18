@@ -56,7 +56,12 @@ public sealed class VideoCompressionService : IVideoCompressionService
         if (string.IsNullOrWhiteSpace(ffmpegPath))
             return Result.Failure("ffmpeg chưa được cấu hình.");
 
-        var media = await _db.Medias.FirstOrDefaultAsync(m => m.Id == mediaId, ct);
+        // IgnoreQueryFilters: service chạy từ BackgroundService (ngoài HTTP request) nên
+        // AppDbContext.CurrentSiteId = Guid.Empty — global filter SiteId sẽ khớp 0 dòng và
+        // media LUÔN "không tồn tại". Nén video là tác vụ hệ thống theo mediaId nội bộ
+        // (không phải input người dùng), nên bỏ filter là đúng — cùng cách TusCleanupWorker làm.
+        var media = await _db.Medias.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(m => m.Id == mediaId, ct);
         if (media is null) return Result.Failure("Media không tồn tại (có thể đã bị xoá trước khi job chạy).");
 
         // Chỉ nén video .mp4 — xem lý do ở doc-comment class. Nếu media đã bị đổi loại/xoá giữa
@@ -76,9 +81,10 @@ public sealed class VideoCompressionService : IVideoCompressionService
         if (originalSize < minSizeMb * 1024L * 1024L)
             return Result.Failure("File nhỏ hơn ngưỡng nén — bỏ qua, không đáng nén.");
 
-        var crf = _cfg.GetValue<int?>("Storage:VideoCompression:Crf") ?? 26;
+        var crf = _cfg.GetValue<int?>("Storage:VideoCompression:Crf") ?? 28;
         var preset = _cfg["Storage:VideoCompression:Preset"] ?? "veryfast";
-        var timeoutMinutes = _cfg.GetValue<int?>("Storage:VideoCompression:TimeoutMinutes") ?? 20;
+        var maxHeight = _cfg.GetValue<int?>("Storage:VideoCompression:MaxHeight") ?? 1080;
+        var timeoutMinutes = _cfg.GetValue<int?>("Storage:VideoCompression:TimeoutMinutes") ?? 30;
 
         var tmpDir = Path.Combine(_env.ContentRootPath, "App_Data", "tmp");
         Directory.CreateDirectory(tmpDir);
@@ -86,7 +92,7 @@ public sealed class VideoCompressionService : IVideoCompressionService
 
         try
         {
-            var ok = await RunFfmpegAsync(ffmpegPath, sourcePath, tmpOutput, crf, preset,
+            var ok = await RunFfmpegAsync(ffmpegPath, sourcePath, tmpOutput, crf, preset, maxHeight,
                 TimeSpan.FromMinutes(timeoutMinutes), ct);
 
             if (!ok || !File.Exists(tmpOutput))
@@ -139,22 +145,36 @@ public sealed class VideoCompressionService : IVideoCompressionService
     }
 
     private async Task<bool> RunFfmpegAsync(
-        string ffmpegPath, string input, string output, int crf, string preset,
+        string ffmpegPath, string input, string output, int crf, string preset, int maxHeight,
         TimeSpan timeout, CancellationToken ct)
     {
-        // Cố ý KHÔNG đổi độ phân giải (chỉ re-encode bitrate qua CRF) — video quay từ điện thoại
-        // thường ĐÃ đủ độ phân giải hợp lý (1080p/4K), vấn đề thực sự là bitrate quá cao so với
-        // độ phân giải đó (vd 2 phút/500MB ≈ 33Mbps — cao gấp 5-10 lần mức web cần). CRF-based
-        // encode giữ nguyên kích thước khung hình nhưng nén hiệu quả hơn nhiều so với bitrate quay
-        // gốc, thường giảm 80-95% dung lượng mà không cần đụng đến resolution (tránh rủi ro tính
-        // sai chiều cho video dọc/ngang nếu thêm bộ lọc scale).
+        // Mục tiêu KHÔNG chỉ là giảm dung lượng mà còn là TƯƠNG THÍCH THIẾT BỊ DI ĐỘNG.
+        // Video quay từ iPhone mặc định là HEVC/H.265 (thường Main 10 = 10-bit) — Chrome và
+        // Firefox trên Android KHÔNG giải mã được HEVC, nên video "không xem được trên mobile"
+        // dù server trả đúng 206 Range. libx264 + yuv420p xuất H.264 8-bit 4:2:0 — chuẩn mọi
+        // trình duyệt/thiết bị đều phát được.
+        //
+        // scale=...:force_original_aspect_ratio=decrease:force_divisible_by=2 — hạ trần về
+        // maxHeight (mặc định 1080p) GIỮ ĐÚNG tỉ lệ (video dọc 9:16 không bị bóp méo), và
+        // force_divisible_by=2 đảm bảo cạnh luôn chẵn (H.264 4:2:0 bắt buộc). Video nhỏ hơn
+        // trần được giữ nguyên kích thước (decrease chỉ thu nhỏ, không phóng to).
+        //
+        // -profile:v high -level 4.0: mức cao nhất mà gần như mọi thiết bị (kể cả máy cũ) giải
+        // mã được phần cứng; level 4.0 đủ cho 1080p30.
         //
         // +faststart: dời "moov atom" (bảng chỉ mục) lên đầu file — THIẾU cờ này thì trình duyệt
         // phải tải gần hết file mới phát được / tua (seek) sẽ hỏng, phá luôn lợi ích của HTTP
         // Range mà StaticFiles đã hỗ trợ sẵn cho streaming.
+        // scale: cần set CẢ width lẫn height thì force_original_aspect_ratio mới có tác dụng —
+        // để một vế "-2" thì ffmpeg tự tính và SẼ PHÓNG TO video nhỏ lên đúng maxHeight (không
+        // mong muốn). Khung 16:9 (maxHeight*16/9 x maxHeight) + decrease = video luôn nằm TRONG
+        // khung, giữ đúng tỉ lệ: ngang 4K → 1920x1080, dọc 9:16 → 608x1080, video nhỏ hơn giữ
+        // nguyên. force_divisible_by=2 đảm bảo cạnh chẵn (H.264 4:2:0 bắt buộc).
+        var boxWidth = (maxHeight * 16 / 9) & ~1; // làm chẵn
         var args = $"-y -hide_banner -loglevel error -i \"{input}\" " +
-                   $"-c:v libx264 -crf {crf} -preset {preset} -c:a aac -b:a 128k " +
-                   $"-movflags +faststart \"{output}\"";
+                   $"-vf \"scale={boxWidth}:{maxHeight}:force_original_aspect_ratio=decrease:force_divisible_by=2\" " +
+                   $"-c:v libx264 -crf {crf} -preset {preset} -profile:v high -level 4.0 -pix_fmt yuv420p " +
+                   $"-c:a aac -b:a 128k -movflags +faststart \"{output}\"";
 
         using var process = new Process
         {
