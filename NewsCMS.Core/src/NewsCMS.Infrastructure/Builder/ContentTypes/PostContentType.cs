@@ -139,6 +139,14 @@ public sealed class PostContentType : IContentType
         sb.Append(detail.Body ?? string.Empty);
         sb.Append("</div>");
 
+        // Fallback này là đường render DUY NHẤT cho site Universal chưa có PostTemplate
+        // (vd chu-kafe): EntityContentBlock chỉ chạy khi template tồn tại. Video/audio chèn
+        // từ TinyMCE chỉ được full-width + skin Plyr nếu nhúng ở đây — cùng chuỗi byte với
+        // EntityContentBlock qua PlyrAssets.ForBody để mọi đường render lệch nhau không tái diễn
+        // bug "trang chi tiết không thấy Plyr". Script inline được PageRenderer.StampInlineScriptNonce
+        // gắn nonce CSP per-request khi ráp trang.
+        sb.Append(PlyrAssets.ForBody(detail.Body));
+
         sb.Append("</article>");
         return Task.FromResult<string?>(sb.ToString());
     }

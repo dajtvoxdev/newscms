@@ -176,6 +176,12 @@ public sealed class ProductContentType : IContentType
         sb.Append(detail.Body ?? string.Empty);
         sb.Append("</div>");
 
+        // Fallback mô tả sản phẩm cho site Universal chưa có ProductTemplate — cùng lý do
+        // như PostContentType: dùng chung PlyrAssets.ForBody để video/audio luôn có skin Plyr
+        // bất kể đi đường render nào. Script inline được PageRenderer.StampInlineScriptNonce
+        // gắn nonce CSP per-request khi ráp trang.
+        sb.Append(PlyrAssets.ForBody(detail.Body));
+
         sb.Append("</div></div></article>");
         return Task.FromResult<string?>(sb.ToString());
     }

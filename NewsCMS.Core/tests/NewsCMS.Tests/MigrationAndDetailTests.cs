@@ -385,5 +385,45 @@ public sealed class MigrationAndDetailTests
         Assert.Contains("Kỹ thuật cupping chuẩn SCA.", legacyResult.Html);
         Assert.Contains("Kỹ thuật cupping chuẩn SCA.", templateResult.Html);
     }
+
+    [Fact]
+    public async Task LegacyFallback_BaiCoVideo_NhungPlyrDayDu()
+    {
+        // Regression cho bug "/tin-tuc/test-video không thấy Plyr": site Universal chưa có
+        // PostTemplate (vd chu-kafe) render body qua PostContentType.RenderFallbackHtmlAsync,
+        // KHÔNG qua EntityContentBlock — nên Plyr phải được nhúng ở fallback, không chỉ ở block.
+        using var fx = new BuilderRenderFixture("legacy-fallback-video");
+        var renderer = fx.NewPageRenderer();
+
+        var cat = fx.AddCategory("Tin tức", "tin-tuc");
+        var body = "<p>Xem video:</p><video controls preload=\"metadata\" playsinline "
+                 + "style=\"width:100%;height:auto;max-width:100%;border-radius:12px;\">"
+                 + "<source src=\"/uploads/videos/2026/09/clip.mp4\" type=\"video/mp4\"></video>";
+        var post = fx.AddPost("Bài có video", "bai-co-video", cat.Id, body);
+        await fx.Db.SaveChangesAsync();
+
+        var rendered = await renderer.RenderPostAsync(post.Id, "vi", "/tin-tuc/bai-co-video");
+        Assert.NotNull(rendered);
+        Assert.Contains("<video", rendered!.Html);
+        Assert.Contains(".nc-post-body video", rendered.Html);
+        Assert.Contains("/lib/plyr/plyr.css", rendered.Html);
+        Assert.Contains("/lib/plyr/plyr.polyfilled.min.js", rendered.Html);
+        Assert.Contains("new Plyr(", rendered.Html);
+    }
+
+    [Fact]
+    public async Task LegacyFallback_BaiKhongVideo_KhongNhungPlyrThua()
+    {
+        using var fx = new BuilderRenderFixture("legacy-fallback-novideo");
+        var renderer = fx.NewPageRenderer();
+
+        var cat = fx.AddCategory("Tin tức", "tin-tuc");
+        var post = fx.AddPost("Bài chữ", "bai-chu", cat.Id, "<p>Chỉ có chữ, không media.</p>");
+        await fx.Db.SaveChangesAsync();
+
+        var rendered = await renderer.RenderPostAsync(post.Id, "vi", "/tin-tuc/bai-chu");
+        Assert.NotNull(rendered);
+        Assert.DoesNotContain("plyr", rendered!.Html, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
