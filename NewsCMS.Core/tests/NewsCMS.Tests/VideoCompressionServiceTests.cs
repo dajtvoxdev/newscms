@@ -133,4 +133,34 @@ public sealed class VideoCompressionServiceTests
         Assert.False(result.Succeeded);
         Assert.Contains("ngưỡng", result.Error);
     }
+
+    [Fact]
+    public async Task TimThayMedia_KhiSiteIdKhacGuidEmpty()
+    {
+        // Regression: production từng không nén được video nào vì Media có SiteId THẬT còn
+        // AppDbContext.CurrentSiteId = Guid.Empty (service chạy ngoài HTTP request) — global
+        // query filter SiteId khớp 0 dòng nên CompressAsync luôn báo "Media không tồn tại".
+        // Test cũ không bắt được vì để mặc định SiteId = Guid.Empty ở CẢ HAI vế nên khớp nhầm.
+        var (svc, db, root) = Create();
+
+        var dir = Path.Combine(root, "videos", "2026", "09");
+        Directory.CreateDirectory(dir);
+        await File.WriteAllBytesAsync(Path.Combine(dir, "real.mp4"), new byte[1024]);
+
+        var media = new Media
+        {
+            SiteId = Guid.NewGuid(),   // site thật, KHÁC Guid.Empty
+            FileName = "real.mp4", StorageKey = "videos/2026/09/real.mp4",
+            FilePath = "/uploads/videos/2026/09/real.mp4",
+            MimeType = "video/mp4", Kind = "video", Size = 1024
+        };
+        db.Medias.Add(media);
+        await db.SaveChangesAsync();
+
+        var result = await svc.CompressAsync(media.Id);
+
+        // Không được fail ở bước tra media — phải đi tiếp tới check ngưỡng dung lượng.
+        Assert.Contains("ngưỡng", result.Error);
+        Assert.DoesNotContain("không tồn tại", result.Error);
+    }
 }
