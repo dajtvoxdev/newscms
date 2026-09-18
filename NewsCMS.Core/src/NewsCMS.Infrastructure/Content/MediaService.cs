@@ -26,6 +26,7 @@ public sealed class MediaService : IMediaService
     private readonly IConfiguration _cfg;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ICurrentSite _currentSite;
+    private readonly IVideoCompressionQueue? _compressionQueue;
 
     public MediaService(
         AppDbContext db,
@@ -33,7 +34,8 @@ public sealed class MediaService : IMediaService
         ILogger<MediaService> logger,
         IConfiguration cfg,
         IHttpContextAccessor httpContextAccessor,
-        ICurrentSite currentSite)
+        ICurrentSite currentSite,
+        IVideoCompressionQueue? compressionQueue = null)
     {
         _db = db;
         _storage = storage;
@@ -41,6 +43,7 @@ public sealed class MediaService : IMediaService
         _cfg = cfg;
         _httpContextAccessor = httpContextAccessor;
         _currentSite = currentSite;
+        _compressionQueue = compressionQueue;
     }
 
     public async Task<PagedList<MediaListItemDto>> SearchAsync(string? keyword, MediaKind? kind, Guid? folderId, bool includeDeleted, int page, int pageSize, CancellationToken ct)
@@ -218,6 +221,21 @@ public sealed class MediaService : IMediaService
 
         _logger.LogInformation("Media uploaded: {FileName} ({Kind}) → {Key}", fileName, kind, key);
         await WriteAuditLogAsync("Upload", "Media", media.Id.ToString(), fileName);
+
+        // Video .mp4 lớn → đẩy vào hàng đợi nén nền bằng ffmpeg (giảm 80-95% dung lượng cho
+        // video quay thẳng từ điện thoại). Không chặn request: worker xử lý tuần tự sau, URL
+        // giữ nguyên nên bài viết chèn trước hay sau đều không vỡ. Lỗi enqueue không làm hỏng
+        // upload — chỉ có nghĩa video đó giữ nguyên kích thước gốc.
+        if (kind == MediaKind.Video
+            && string.Equals(Path.GetExtension(key), ".mp4", StringComparison.OrdinalIgnoreCase)
+            && (_cfg.GetValue<bool?>("Storage:VideoCompression:Enabled") ?? true))
+        {
+            try { _compressionQueue?.Enqueue(media.Id); }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Không enqueue được job nén video cho Media {MediaId}.", media.Id);
+            }
+        }
 
         // Trả về W/H/Size SAU khi nén (nếu có) để client nhận đúng thông số file cuối.
         return Result<MediaUploadResultDto>.Success(new MediaUploadResultDto(

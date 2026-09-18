@@ -176,6 +176,9 @@ public static class DependencyInjection
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IVideoThumbnailService, VideoThumbnailService>();
+        services.AddSingleton<IVideoCompressionQueue, VideoCompressionQueue>();
+        services.AddScoped<IVideoCompressionService, VideoCompressionService>();
+        services.AddHostedService<VideoCompressionWorker>();
         services.Configure<KeoBiaTelegramOptions>(cfg.GetSection(KeoBiaTelegramOptions.SectionName));
         services.AddScoped<IKeoBiaService, KeoBiaService>();
         services.AddScoped<KeoBiaAiTools>();

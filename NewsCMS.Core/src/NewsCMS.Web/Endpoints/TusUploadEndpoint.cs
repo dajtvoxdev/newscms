@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using NewsCMS.Application.Content;
 using NewsCMS.Domain.Entities.Content;
 using NewsCMS.Domain.Entities.Identity;
+using NewsCMS.Infrastructure.Content;
 using NewsCMS.Infrastructure.Persistence;
 using NewsCMS.Shared.Constants;
 using tusdotnet.Interfaces;
@@ -223,6 +224,20 @@ public static class TusUploadEndpoint
             session.MediaId = dto.Id;
             session.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
+
+            // Video .mp4 qua tus (file lớn) cần nén nhất — đẩy vào hàng đợi nén nền,
+            // giống MediaService cho luồng upload trực tiếp. Không chặn response: nén chạy
+            // sau, URL giữ nguyên nên bài viết chèn trước hay sau đều không vỡ.
+            if (dto.Kind == "video"
+                && string.Equals(System.IO.Path.GetExtension(fileName), ".mp4", StringComparison.OrdinalIgnoreCase))
+            {
+                var cfg = sp.GetRequiredService<IConfiguration>();
+                if (cfg.GetValue<bool?>("Storage:VideoCompression:Enabled") ?? true)
+                {
+                    try { sp.GetRequiredService<IVideoCompressionQueue>().Enqueue(dto.Id); }
+                    catch (Exception ex) { logger.LogWarning(ex, "Không enqueue được job nén video cho Media {MediaId}.", dto.Id); }
+                }
+            }
 
             // Xoá file tus khỏi store: tusdotnet KHÔNG tự xoá file đã hoàn tất.
             try { await store.DeleteFileAsync(fileId, ct); }

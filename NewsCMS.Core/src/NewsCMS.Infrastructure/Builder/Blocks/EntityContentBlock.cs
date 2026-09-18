@@ -107,31 +107,11 @@ public sealed class EntityContentBlock : IDynamicBlock
         // Content đã được khử độc an toàn qua ContentSanitizer khi lưu ở admin
         var html = $"<div data-nc-part=\"wrapper\" class=\"nc-post-body\" style=\"{style}\">{detail.Body}</div>";
 
-        // entity-content là nơi DUY NHẤT trên theme Universal render nội dung bài viết/sản phẩm,
-        // nên video/audio chèn từ TinyMCE (upload local hay chọn từ thư viện) chỉ có thể được
-        // ép full-width + skin Plyr từ đây — theme HaiLuuNguoc có site.css/Post/Detail.cshtml
-        // riêng, nhưng site dùng Universal (site builder) không đi qua đường đó.
-        // Chỉ nhúng CSS/JS khi nội dung thực sự có media, tránh tải thừa cho bài không có video.
-        // Script <script> KHÔNG có src ở dưới sẽ được PageRenderer.StampInlineScriptNonce tự
-        // gắn nonce CSP khi ráp trang — không tự thêm nonce ở đây (nonce sinh per-request, không
-        // biết được tại thời điểm block này chạy).
-        if (detail.Body.Contains("<video", StringComparison.OrdinalIgnoreCase)
-            || detail.Body.Contains("<audio", StringComparison.OrdinalIgnoreCase))
-        {
-            html += "<style>.nc-post-body video,.nc-post-body audio{width:100%;height:auto;max-width:100%;border-radius:12px}</style>"
-                  + "<link rel=\"stylesheet\" href=\"/lib/plyr/plyr.css\">"
-                  + "<script src=\"/lib/plyr/plyr.polyfilled.min.js\"></script>"
-                  + "<script>(function(){"
-                  + "function boot(){"
-                  + "document.querySelectorAll('.nc-post-body video,.nc-post-body audio').forEach(function(el){"
-                  + "if(el.closest('.plyr'))return;"
-                  + "try{new Plyr(el,{iconUrl:location.origin+'/lib/plyr/plyr.svg',captions:{active:true,language:'vi',update:true},ratio:0,"
-                  + "controls:['play-large','play','progress','current-time','mute','volume','captions','settings','fullscreen']});}catch(e){}"
-                  + "});"
-                  + "}"
-                  + "if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',boot);}else{boot();}"
-                  + "})();</script>";
-        }
+        // entity-content là nơi DUY NHẤT trên theme Universal render nội dung bài viết/sản phẩm
+        // KHI template tồn tại (site chưa có PostTemplate thì đi đường PostContentType fallback).
+        // Dùng chung PlyrAssets.ForBody với fallback để mọi đường render không lệch nhau —
+        // từng có bug "trang chi tiết không thấy Plyr" vì mỗi nơi tự nhúng riêng rồi sót một nơi.
+        html += PlyrAssets.ForBody(detail.Body);
 
         return html;
     }
