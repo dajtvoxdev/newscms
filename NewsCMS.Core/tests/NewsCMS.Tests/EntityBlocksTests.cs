@@ -169,6 +169,60 @@ public sealed class EntityBlocksTests
         Assert.Contains("nc-post-body", html);
         Assert.Contains("<p>Đây là nội dung thân bài viết rất dài.</p>", html);
         Assert.Contains("max-width:820px", html);
+
+        // Bài không có video/audio — KHÔNG được tải Plyr thừa.
+        Assert.DoesNotContain("plyr", html, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Content_VoiVideo_NhungPlyrKhongNonceRieng()
+    {
+        // Theme Universal (site builder) render post body DUY NHẤT qua entity-content —
+        // khác theme HaiLuuNguoc có Post/Detail.cshtml riêng. Video/audio chèn từ TinyMCE
+        // chỉ có thể full-width + skin Plyr nếu khối này tự nhúng CSS/JS.
+        using var fx = new BuilderRenderFixture("ent-content-video");
+        var cat = fx.AddCategory("Tin tức", "tin-tuc");
+        var body = "<p>Xem video:</p><video controls preload=\"metadata\" playsinline "
+                 + "style=\"width:100%;height:auto;max-width:100%;border-radius:12px;\">"
+                 + "<source src=\"/uploads/videos/clip.mp4\" type=\"video/mp4\"></video>";
+        var post = fx.AddPost("Bài có video", "bai-co-video", cat.Id, body);
+
+        var block = new EntityContentBlock(fx.ContentTypes);
+        var route = new RouteContext(RouteType.Post, post.Id, post.Slug, "/tin-tuc/bai-co-video");
+        var ctx = new DynamicBlockContext(Guid.Empty, "vi", null, route);
+
+        var html = await block.RenderAsync(ctx);
+
+        Assert.Contains("<video", html);
+        Assert.Contains(".nc-post-body video", html); // CSS full-width scope đúng class
+        Assert.Contains("/lib/plyr/plyr.css", html);
+        Assert.Contains("/lib/plyr/plyr.polyfilled.min.js", html);
+        Assert.Contains("new Plyr(", html);
+
+        // Script src="..." KHÔNG cần nonce (script-src 'self' đã cho phép same-origin);
+        // chỉ script inline (không src) mới cần — và đây phải là thứ PageRenderer.
+        // StampInlineScriptNonce sẽ tự gắn nonce khi ráp trang, nên ở mức khối KHÔNG được
+        // tự chứa sẵn nonce="..." (nonce sinh per-request, khối không biết được).
+        Assert.DoesNotContain("nonce=", html);
+    }
+
+    [Fact]
+    public async Task Content_VoiAudio_NhungPlyr()
+    {
+        using var fx = new BuilderRenderFixture("ent-content-audio");
+        var cat = fx.AddCategory("Tin tức", "tin-tuc");
+        var body = "<audio controls preload=\"metadata\" style=\"width:100%\">"
+                 + "<source src=\"/uploads/audio/track.mp3\" type=\"audio/mpeg\"></audio>";
+        var post = fx.AddPost("Bài có audio", "bai-co-audio", cat.Id, body);
+
+        var block = new EntityContentBlock(fx.ContentTypes);
+        var route = new RouteContext(RouteType.Post, post.Id, post.Slug, "/tin-tuc/bai-co-audio");
+        var ctx = new DynamicBlockContext(Guid.Empty, "vi", null, route);
+
+        var html = await block.RenderAsync(ctx);
+
+        Assert.Contains("<audio", html);
+        Assert.Contains("/lib/plyr/plyr.polyfilled.min.js", html);
     }
 
     // ── 4. entity-meta ───────────────────────────────────────────────────────────
