@@ -177,14 +177,23 @@ staticFileTypes.Mappings[".mind"] = "application/octet-stream";
 app.UseStaticFiles(new StaticFileOptions
 {
     ContentTypeProvider = staticFileTypes,
-    // Media (/uploads/**) có tên file GUID — không bao giờ đổi nội dung nên cache
-    // bất biến 1 năm là an toàn: ảnh/video/pdf nặng load ngay từ disk cache ở các
-    // lượt sau. Chỉ scope /uploads để không đụng asset wwwroot khác (đã có
-    // asp-append-version riêng). StaticFiles vẫn tự xử lý Range request (seek video).
+    // Media (/uploads/**) có tên file GUID nên thường coi là bất biến — NHƯNG video thì KHÔNG:
+    // VideoCompressionWorker ghi đè chính file .mp4 tại cùng URL sau khi nén (549MB HEVC →
+    // 15MB H.264). Nếu khai báo immutable, trình duyệt đã cache bản gốc sẽ KHÔNG BAO GIỜ tải
+    // lại, và phục vụ mãi bytes HEVC cũ (không phát được trên Chrome/Firefox) dù server đã
+    // có bản H.264 đúng — đã xảy ra thật, người dùng "nén xong vẫn không xem được video".
+    // Video dùng no-cache (vẫn cache bytes, nhưng luôn revalidate qua ETag): file không đổi
+    // → 304 rỗng (rẻ), file vừa bị nén → 200 với bytes mới. Ảnh/pdf giữ immutable vì chỉ
+    // được tối ưu một lần ngay lúc upload, không bao giờ bị ghi đè sau đó.
+    // StaticFiles vẫn tự xử lý Range request (seek video).
     OnPrepareResponse = ctx =>
     {
-        if (ctx.Context.Request.Path.StartsWithSegments("/uploads"))
-            ctx.Context.Response.Headers.CacheControl = "public,max-age=31536000,immutable";
+        var path = ctx.Context.Request.Path;
+        if (!path.StartsWithSegments("/uploads")) return;
+
+        ctx.Context.Response.Headers.CacheControl = path.StartsWithSegments("/uploads/videos")
+            ? "public,no-cache"
+            : "public,max-age=31536000,immutable";
     }
 });
 app.UseCookiePolicy();
