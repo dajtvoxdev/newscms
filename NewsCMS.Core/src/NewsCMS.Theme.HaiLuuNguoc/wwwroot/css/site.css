@@ -1446,8 +1446,35 @@ body:has(.post-detail) {
 .post-detail h1 {font-size: clamp(52px, 8vw, 100px);line-height: 1;}
 .post-excerpt { color: var(--muted); font-size: 22px; line-height: 1.6; }
 .post-hero-image { width: 100%; border-radius: 30px; margin: 36px 0; box-shadow: var(--shadow); }
-.post-content { color: rgba(198, 243, 249,.9); font-size: 19px; line-height: 1.85; }
-.post-content a { color: var(--sun); text-decoration: underline; }
+/* Video/audio trong nội dung bài viết: full width so với .post-detail container.
+   StaticFiles đã hỗ trợ Range request → trình duyệt tua/seek được ngay. */
+.post-content video,
+.post-content audio,
+.post-content .cms-media-preview video,
+.post-content .cms-media-preview audio {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    border-radius: 12px;
+}
+.post-content video:focus,
+.post-content audio:focus { outline: none; }
+
+/* Plyr override màu cho theme tối Hải Lưu Ngược (Plyr 3.8.4 CSS vars).
+   Áp dụng trên phần tử .post-detail để không ảnh hưởng nơi khác. */
+.post-detail .plyr {
+    --plyr-color-main: #38bdf8;          /* xanh lam nhấn — nút play, progress fill, range thumb */
+    --plyr-video-background: #0a3585;    /* nền video (poster/đen) */
+    --plyr-video-controls-background: linear-gradient(rgba(0,0,0,.7), rgba(1,35,107,.88));
+    --plyr-video-control-color: #c6f3f9; /* icon màu trắng xám */
+    --plyr-video-range-track-background: #ffffff40; /* track phát lại đã xem */
+    --plyr-audio-range-thumb-active-shadow-color: #ffffff80;
+    --plyr-focus-visible-color: #38bdf8;
+    --plyr-menu-background: #0a3585;
+    --plyr-menu-color: #fff;
+    --plyr-captions-background: #000c;
+    --plyr-captions-text-color: #fff;
+}
 
 [data-reveal] {
     opacity: 0;

@@ -17,3 +17,32 @@
         @Html.Raw(Model.Content)
     </div>
 </article>
+
+@if (Model.Content.Contains("<video", StringComparison.OrdinalIgnoreCase) || Model.Content.Contains("<audio", StringComparison.OrdinalIgnoreCase))
+{
+    <!-- Plyr: UI đẹp cho <video>/<audio>. Dùng bản vendor dưới /lib/plyr để tránh phụ thuộc CDN.
+         Streaming/range được trình duyệt xử lý trực tiếp trên <source src> (StaticFiles hỗ trợ Range);
+         Plyr chỉ tùy biến controls, không can thiệp vào network. -->
+    <link rel="stylesheet" href="~/lib/plyr/plyr.css" asp-append-version="true" />
+    <script src="~/lib/plyr/plyr.polyfilled.min.js" asp-append-version="true"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var postContent = document.querySelector('.post-content');
+            if (!postContent) return;
+            // Plyr có built-in support cho phụ đề <track kind="captions" srclang="...">;
+            // captions.language: 'vi' để UI hiện bằng tiếng Việt khi có.
+            postContent.querySelectorAll('video, audio').forEach(function (media) {
+                if (media.closest('.plyr')) return; // đã init (trường hợp media nổi bật lặp)
+                try {
+                    new Plyr(media, {
+                        iconUrl: '/lib/plyr/plyr.svg', // sprite icon tự host — không phụ thuộc CDN
+                        captions: { active: true, language: 'vi', update: true },
+                        ratio: 0, // để CSS width:100% điều khiển — tránh aspect-ratio cứng
+                        controls: ['play-large', 'play', 'progress', 'current-time',
+                                   'mute', 'volume', 'captions', 'settings', 'fullscreen']
+                    });
+                } catch (e) { /* giữ native controls nếu JS lỗi */ }
+            });
+        });
+    </script>
+}
