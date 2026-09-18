@@ -89,7 +89,7 @@ public sealed class ContentSanitizerTests
     {
         var html = _s.Sanitize(
             "<figure class=\"cms-media-preview\">"
-            + "<audio controls preload=\"metadata\" style=\"width:100%;\">"
+            + "<audio controls preload=\"metadata\" style=\"width:100%\">"
             + "<source src=\"/uploads/track.mp3\" type=\"audio/mpeg\">"
             + "</audio></figure>");
 
@@ -97,6 +97,26 @@ public sealed class ContentSanitizerTests
         Assert.Contains("<source", html);
         Assert.Contains("controls", html);
         Assert.Contains("/uploads/track.mp3", html);
+    }
+
+    [Fact]
+    public void Sanitize_KeepsPlaysinlineAndFullWidthVideo()
+    {
+        // Markup mới từ _TinyMce.cshtml: thêm playsinline (iOS không force fullscreen)
+        // và width:100% trong style để video rộng toàn bộ .post-content.
+        var html = _s.Sanitize(
+            "<figure class=\"cms-media-preview\">"
+            + "<video controls preload=\"metadata\" playsinline poster=\"/uploads/poster.jpg\""
+            + " style=\"width:100%;height:auto;max-width:100%;border-radius:12px;\">"
+            + "<source src=\"/uploads/clip.mp4\" type=\"video/mp4\">"
+            + "Trình duyệt không hỗ trợ phát video."
+            + "</video></figure>");
+
+        Assert.Contains("<video", html);
+        Assert.Contains("playsinline", html);
+        Assert.Contains("controls", html);
+        Assert.Contains("max-width", html);
+        Assert.Contains("/uploads/clip.mp4", html);
     }
 
     [Fact]

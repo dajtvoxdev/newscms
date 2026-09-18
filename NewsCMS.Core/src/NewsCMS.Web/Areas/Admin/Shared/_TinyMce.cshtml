@@ -335,7 +335,7 @@
                 // thay vì màn hình đen trước khi user bấm play.
                 const posterAttr = file.posterUrl ? ' poster="' + escapeHtml(file.posterUrl) + '"' : '';
                 return '<figure class="cms-media-preview">'
-                    + '<video controls preload="metadata"' + posterAttr + ' style="max-width:100%;height:auto;border-radius:12px;">'
+                    + '<video controls preload="metadata" playsinline' + posterAttr + ' style="width:100%;height:auto;max-width:100%;border-radius:12px;">'
                     + '<source src="' + safeUrl + '"' + typeAttr + '>'
                     + 'Trình duyệt không hỗ trợ phát video.'
                     + '</video>'
