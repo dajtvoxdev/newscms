@@ -37,7 +37,8 @@
                     new Plyr(media, {
                         iconUrl: '/lib/plyr/plyr.svg', // sprite icon tự host — không phụ thuộc CDN
                         captions: { active: true, language: 'vi', update: true },
-                        ratio: 0, // để CSS width:100% điều khiển — tránh aspect-ratio cứng
+                        // KHÔNG set ratio: 0 — Plyr coi 0 là tỉ lệ và throw khi metadata video
+                        // chưa load (videoWidth=0) → control bar không dựng được → mất hết icon.
                         controls: ['play-large', 'play', 'progress', 'current-time',
                                    'mute', 'volume', 'captions', 'settings', 'fullscreen']
                     });

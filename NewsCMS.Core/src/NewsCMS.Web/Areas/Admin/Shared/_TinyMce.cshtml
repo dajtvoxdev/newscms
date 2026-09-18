@@ -383,10 +383,13 @@
         // Save, Code view, autosave) thay .plyr wrapper bằng đúng markup gốc đã chụp.
         const PLYR_EDITOR_OPTIONS = {
             // iconUrl phải là URL tuyệt đối: Plyr fetch() sprite bằng URL này từ NGAY TRONG
-            // iframe, nơi iframe TinyMCE dùng src rỗng nên location.origin JS bên trong có thể
-            // không đáng tin — build sẵn từ window ngoài rồi truyền vào là chắc chắn nhất.
-            iconUrl: location.origin + '@Url.Content("~/lib/plyr/plyr.svg")',
-            ratio: 0,
+            // iframe, nơi iframe TinyMCE là about:srcdoc (location.origin = "null", host = "")
+            // nên URL tương đối sẽ hỏng — build sẵn từ window ngoài rồi truyền vào.
+            // ?v= khớp PlyrAssets.Version: đổi URL khi cập nhật Plyr để browser không dùng
+            // sprite cũ trong cache (từng gây "player mất hết icon").
+            iconUrl: location.origin + '@Url.Content("~/lib/plyr/plyr.svg")' + '?v=384',
+            // KHÔNG set ratio: 0 — Plyr coi 0 là tỉ lệ và throw khi metadata video chưa load
+            // (videoWidth=0) → control bar không dựng được → mất hết icon. Xem PlyrAssets.ForBody.
             controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'settings', 'fullscreen']
         };
 
@@ -558,6 +561,13 @@
                 // lúc file còn đang tải.
                 editor.on('PreProcess', function (e) {
                     editor.dom.select('.cms-upload-ph', e.node).forEach(function (el) {
+                        editor.dom.remove(el);
+                    });
+                    // Plyr inline SVG sprite thành <div id="sprite-plyr"> ngay trong body editor.
+                    // Không gỡ thì TinyMCE serialize luôn vào nội dung bài → lưu DB một div rỗng,
+                    // và trang public sau đó bị chặn nạp sprite (Plyr bỏ qua khi id đã tồn tại)
+                    // → mất toàn bộ icon player. Đây là nguồn gốc bug "plyr mất icon".
+                    editor.dom.select('#sprite-plyr', e.node).forEach(function (el) {
                         editor.dom.remove(el);
                     });
                 });
