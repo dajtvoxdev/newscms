@@ -225,6 +225,47 @@ public sealed class EntityBlocksTests
         Assert.Contains("/lib/plyr/plyr.polyfilled.min.js", html);
     }
 
+    [Fact]
+    public async Task Content_VoiVideo_CoNutDoiTiLeVaSuaPosterSai()
+    {
+        using var fx = new BuilderRenderFixture("ent-content-ratio");
+        var cat = fx.AddCategory("Tin tức", "tin-tuc");
+        // poster trỏ vào chính file .mp4 — đúng dữ liệu rác TinyMCE từng lưu (xem PlyrAssets).
+        var body = "<video controls preload=\"metadata\" poster=\"/uploads/videos/clip.mp4\">"
+                 + "<source src=\"/uploads/videos/clip.mp4\" type=\"video/mp4\"></video>";
+        var post = fx.AddPost("Bài có video", "bai-co-video-ratio", cat.Id, body);
+
+        var block = new EntityContentBlock(fx.ContentTypes);
+        var route = new RouteContext(RouteType.Post, post.Id, post.Slug, "/tin-tuc/bai-co-video-ratio");
+        var ctx = new DynamicBlockContext(Guid.Empty, "vi", null, route);
+
+        var html = await block.RenderAsync(ctx);
+
+        // Nút đổi tỉ lệ + nhãn tiếng Việt cho screen reader.
+        Assert.Contains("nc-ratio-toggle", html);
+        Assert.Contains("Vừa khung", html);
+        Assert.Contains("Lấp đầy", html);
+
+        // Khung 16:9 cho chế độ lấp đầy, và khung chờ trước khi có metadata.
+        Assert.Contains("plyr--nc-fill", html);
+        Assert.Contains("plyr--nc-pending", html);
+        Assert.Contains("aspect-ratio:16/9", html);
+
+        // Video phải căn giữa khi lấp đầy — neo top:0 của Plyr làm cắt mất đáy (nơi có chữ).
+        Assert.Contains("translate(-50%,-50%)", html);
+
+        // Sửa poster sai (.mp4) và gắn #t=0.1 để trình duyệt vẽ frame đầu.
+        Assert.Contains("#t=0.1", html);
+        Assert.Contains("poster", html);
+
+        // Vẫn KHÔNG được truyền option ratio cho Plyr: ratio:0 làm Plyr throw khi chưa có metadata
+        // và mất sạch icon điều khiển (xem plyr-ratio-zero-throw). Khung 16:9 đặt bằng CSS
+        // (aspect-ratio) nên chuỗi "ratio:" vẫn xuất hiện — phải khẳng định trên ĐỐI SỐ của Plyr:
+        // iconUrl đứng ngay trước captions nghĩa là không có gì chen vào giữa.
+        Assert.Contains("iconUrl:SPRITE,captions:", html);
+        Assert.DoesNotContain("ratio:0", html);
+    }
+
     // ── 4. entity-meta ───────────────────────────────────────────────────────────
 
     [Fact]
