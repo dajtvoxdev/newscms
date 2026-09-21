@@ -254,11 +254,9 @@ public sealed class EntityBlocksTests
         // Video phải căn giữa khi lấp đầy — neo top:0 của Plyr làm cắt mất đáy (nơi có chữ).
         Assert.Contains("translate(-50%,-50%)", html);
 
-        // Chừa dải riêng cho thanh điều khiển để nó KHÔNG phủ lên dải chữ cháy sẵn ở đáy video:
-        // video thật có chữ caption ở 90-96% chiều cao khung, thanh điều khiển cao 57px phủ từ
-        // 79.6% xuống -> che hết chữ. Xem newscms-caption-bi-thanh-dieu-khien-che.
-        Assert.Contains("--nc-controls-h", html);
-        Assert.Contains("reserveControls", html);
+        // KHÔNG chừa dải riêng cho thanh điều khiển: người dùng đã từ chối vì player cao hơn
+        // video trông như "cục đen lòi ở dưới". Giữ hành vi gốc của Plyr (thanh phủ đáy video).
+        Assert.DoesNotContain("--nc-controls-h", html);
 
         // Sửa poster sai (.mp4) và gắn #t=0.1 để trình duyệt vẽ frame đầu.
         Assert.Contains("#t=0.1", html);
