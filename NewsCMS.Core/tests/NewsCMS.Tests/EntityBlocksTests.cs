@@ -258,6 +258,14 @@ public sealed class EntityBlocksTests
         // video trông như "cục đen lòi ở dưới". Giữ hành vi gốc của Plyr (thanh phủ đáy video).
         Assert.DoesNotContain("--nc-controls-h", html);
 
+        // TOÀN MÀN HÌNH: khung bị ép đúng bằng màn hình còn thẻ video giữ height:auto (inline style
+        // của nội dung bài viết) nên cao hơn khung, Plyr overflow:hidden -> CẮT mất đáy. Đo thật
+        // trên màn hình ngang 844x390: chỉ thấy 82%, mất đúng dải chữ ở đáy. Phải ép video vừa khít
+        // khung ở cả chế độ native fullscreen lẫn fallback (mobile không cho fullscreen trên <div>).
+        Assert.Contains(":fullscreen", html);
+        Assert.Contains("plyr--fullscreen-fallback", html);
+        Assert.Contains("max-height:100%!important", html);
+
         // Sửa poster sai (.mp4) và gắn #t=0.1 để trình duyệt vẽ frame đầu.
         Assert.Contains("#t=0.1", html);
         Assert.Contains("poster", html);

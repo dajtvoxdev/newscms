@@ -44,6 +44,25 @@ internal static class PlyrAssets
              // dải chữ cháy sẵn ở đáy khung biến mất. contain luôn thu vừa khung (viền đen thay vì
              // cắt) — đây là chế độ mặc định.
              + ".nc-post-body .plyr video{object-fit:contain;background:#000}"
+             // TOÀN MÀN HÌNH: Plyr để .plyr__video-wrapper{overflow:hidden}. Ở chế độ này khung bị
+             // ép đúng bằng màn hình, còn thẻ video vẫn giữ height:auto theo bề ngang nên CAO HƠN
+             // khung -> phần đáy bị cắt thẳng. Đo thật trên màn hình ngang 844x390: thẻ video
+             // 844x475 nằm trong khung 844x390, chỉ thấy 82% — mất đúng dải chữ ở đáy (và ở chế độ
+             // Lấp đầy thì mất cả trên lẫn dưới). Ép thẻ video vừa khít khung rồi để object-fit
+             // quyết định: contain = thấy đủ khung hình (viền đen hai bên), cover = phủ kín.
+             // Phải khai báo cả .plyr--fullscreen-fallback: trình duyệt mobile (iOS Safari) không
+             // cho fullscreen trên <div> nên Plyr tự chuyển sang chế độ position:fixed.
+             + ".nc-post-body .plyr--video:fullscreen video,"
+             + ".nc-post-body .plyr--video.plyr--fullscreen-fallback video{"
+             + "width:100%!important;height:100%!important;max-height:100%!important;object-fit:contain!important}"
+             + ".nc-post-body .plyr--video.plyr--nc-fill:fullscreen video,"
+             + ".nc-post-body .plyr--video.plyr--nc-fill.plyr--fullscreen-fallback video{object-fit:cover!important}"
+             // Khung 16:9 của chế độ Lấp đầy cũng phải nhường cho màn hình, nếu không khung cao hơn
+             // màn hình và thanh điều khiển bị đẩy ra ngoài tầm nhìn.
+             + ".nc-post-body .plyr--video.plyr--nc-fill:fullscreen .plyr__video-wrapper,"
+             + ".nc-post-body .plyr--video.plyr--nc-fill.plyr--fullscreen-fallback .plyr__video-wrapper{"
+             + "aspect-ratio:auto;height:100%}"
+
              // GHI CHÚ (2026-09-21): đã thử chừa một dải riêng dưới video cho thanh điều khiển để
              // nó không phủ lên dải chữ cháy sẵn ở đáy khung, nhưng người dùng từ chối: player cao
              // hơn video 57px trông như "cục đen lòi ở dưới" và làm player sai tỉ lệ so với video.
