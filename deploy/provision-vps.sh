@@ -157,6 +157,10 @@ Environment=ASPNETCORE_ENVIRONMENT=Production
 # Chỉ bind loopback: nginx là thứ duy nhất tiếp Internet.
 Environment=ASPNETCORE_URLS=http://127.0.0.1:${APP_PORT}
 
+# appsettings.json giữ đường dẫn ffmpeg kiểu Windows cho máy dev; trên Linux phải trỏ lại,
+# nếu không Process.Start ném Win32Exception và nén video/poster âm thầm tắt (đã dính 2026-09).
+Environment=Storage__FfmpegPath=/usr/bin/ffmpeg
+
 # Hardening cơ bản.
 NoNewPrivileges=true
 PrivateTmp=true
