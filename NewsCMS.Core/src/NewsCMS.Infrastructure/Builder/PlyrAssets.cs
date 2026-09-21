@@ -44,17 +44,11 @@ internal static class PlyrAssets
              // dải chữ cháy sẵn ở đáy khung biến mất. contain luôn thu vừa khung (viền đen thay vì
              // cắt) — đây là chế độ mặc định.
              + ".nc-post-body .plyr video{object-fit:contain;background:#000}"
-             // Video của khách có DẢI CHỮ CHÁY SẴN ở đáy khung. Đo trên video thật (1920x1080,
-             // letterbox 2.22:1): vạch đỏ ở 80-86% chiều cao, chữ caption trắng ở 90-96%.
-             // Thanh điều khiển Plyr cao 57px; khung video trên mobile chỉ cao 201px nên thanh
-             // phủ từ 79.6% chiều cao trở xuống -> che trọn cả vạch đỏ lẫn chữ.
-             // Đây là nguyên nhân thật của "mất phần bên dưới", KHÔNG phải cắt hình: chế độ
-             // Vừa khung cắt 0px (đo được) mà chữ vẫn mất.
-             // Chừa sẵn một dải riêng cho thanh điều khiển: thanh tuyệt đối neo bottom:0 của padding
-             // box nên nằm trong dải, còn video ở content box phía trên -> không bao giờ chồng nhau.
-             // Nền đen để dải hoà vào nền đen vốn có của dải chữ.
-             + ".nc-post-body .plyr--video{background:#000;padding-bottom:var(--nc-controls-h,52px)}"
-
+             // GHI CHÚ (2026-09-21): đã thử chừa một dải riêng dưới video cho thanh điều khiển để
+             // nó không phủ lên dải chữ cháy sẵn ở đáy khung, nhưng người dùng từ chối: player cao
+             // hơn video 57px trông như "cục đen lòi ở dưới" và làm player sai tỉ lệ so với video.
+             // Chốt: GIỮ nguyên hành vi gốc của Plyr (thanh phủ đáy video, tự ẩn khi đang phát).
+             // Đừng thêm lại padding-bottom ở đây nếu chưa hỏi người dùng.
              // "Lấp đầy": khung 16:9 + video phủ kín, CĂN GIỮA. Plyr tự đặt inline height cho video
              // (đo thật: 636px cho video dọc 9:16) và rule fixed-ratio của Plyr neo top:0 — chỉ hiện
              // phần TRÊN của video, cắt mất đúng dải chữ ở đáy. Nên phải !important để thắng inline
@@ -102,12 +96,6 @@ internal static class PlyrAssets
              + "if(b){b.innerHTML=(fill?ICON_FILL:ICON_FIT)+'<span class=\"plyr__tooltip\">'+(fill?'Lấp đầy 16:9':'Vừa khung')+'</span>';"
              + "b.setAttribute('aria-label',fill?'Đang lấp đầy 16:9 — bấm để vừa khung':'Đang vừa khung — bấm để lấp đầy 16:9');}"
              + "}"
-             + "function reserveControls(player){"
-             // Do chieu cao THAT cua thanh dieu khien thay vi hard-code: co gian theo co chu va
-             // --plyr-control-spacing, hard-code se lech tren vai kich thuoc man hinh.
-             + "var bar=player.elements.controls,box=player.elements.container;"
-             + "if(bar&&box&&bar.offsetHeight>0)box.style.setProperty('--nc-controls-h',bar.offsetHeight+'px');"
-             + "}"
              + "function addRatioButton(player){"
              + "var bar=player.elements.controls;"
              + "if(!bar||bar.querySelector('.nc-ratio-toggle'))return;"
@@ -131,7 +119,6 @@ internal static class PlyrAssets
              + "try{player=new Plyr(el,{iconUrl:SPRITE,captions:{active:true,language:'vi',update:true},"
              + "controls:['play-large','play','progress','current-time','mute','volume','captions','settings','fullscreen']});}catch(e){return;}"
              + "if(!video)return;"
-             + "reserveControls(player);"
              + "addRatioButton(player);"
              // Chưa có metadata thì giữ khung 16:9 tạm (xem CSS --nc-pending) cho khỏi giật
              // layout; có metadata rồi nhả về đúng tỉ lệ thật của video.
