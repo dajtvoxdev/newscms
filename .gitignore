@@ -9,6 +9,7 @@ obj/
 *.suo
 .vs/
 *.received.*
+TestResults/
 
 # Local build/publish scratch dirs
 .artifacts/
@@ -31,6 +32,13 @@ appsettings.Local.json
 *.pem
 *.key
 secrets.json
+
+# Biến môi trường cục bộ — spike/.env giữ FAL_KEY thật.
+# File mẫu (.env.example) vẫn được commit vì nó chỉ có tên biến, không có giá trị.
+.env
+.env.*
+!.env.example
+!.env.*.example
 
 # ─────────────────────────────────────────────────────────────
 # Node / theme asset pipeline

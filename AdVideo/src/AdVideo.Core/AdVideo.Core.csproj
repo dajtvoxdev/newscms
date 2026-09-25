@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    AdVideo.Core: tầng hợp đồng. KHÔNG tham chiếu EF Core, KHÔNG HttpClient,
+    KHÔNG package nào ngoài BCL.
+
+    Đây là lý do nó test được 100% line+branch mà không cần mock nặng: không có
+    gì để mock. Nếu thấy mình muốn thêm PackageReference vào project này thì gần
+    như chắc chắn logic đang đặt sai tầng — đẩy xuống Infrastructure.
+
+    Core cũng KHÔNG dùng ILogger. Service trả về result object có lý do, caller
+    (Worker/Api) tự log. Một class vừa tính toán vừa log là class khó test.
+  -->
+  <PropertyGroup>
+    <RootNamespace>AdVideo.Core</RootNamespace>
+  </PropertyGroup>
+
+</Project>

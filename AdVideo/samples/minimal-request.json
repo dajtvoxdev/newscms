@@ -1,0 +1,24 @@
+{
+  "brief": {
+    "product_name": "Cà phê CHU",
+    "prompt": "Cận cảnh ly cà phê phin trên bàn gỗ, ánh sáng buổi sáng, hơi nước bốc lên.",
+    "duration_seconds": 12,
+    "aspect_ratio": "9:16",
+    "language": "vi"
+  },
+  "assets": {
+    "product_images": ["https://picsum.photos/seed/advideo/1080/1350"]
+  },
+  "voice": {
+    "script": "Cà phê CHU rang mộc từ hạt Arabica Cầu Đất, thơm mùi ca cao và mật ong. Pha phin hay pha máy đều đậm vị, hậu ngọt kéo dài. Đặt hàng hôm nay để nhận ưu đãi giao tận nơi.",
+    "speed": 1.0
+  },
+  "audio": {
+    "native_sound": "off"
+  },
+  "options": {
+    "quality": "standard",
+    "has_person": false,
+    "max_cost_usd": 2.0
+  }
+}

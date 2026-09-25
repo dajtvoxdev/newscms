@@ -1,0 +1,49 @@
+# API — nhận request, đẩy job vào hàng đợi. KHÔNG dựng video, nên KHÔNG cần FFmpeg.
+#
+# Build từ thư mục AdVideo/:
+#   docker build -f Dockerfile.Api -t advideo-api .
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Chép riêng file .csproj trước rồi mới restore: lớp restore chỉ phải chạy lại khi danh sách gói
+# đổi, chứ không phải mỗi lần sửa một dòng code. Directory.Build.props phải đi cùng vì nó bật
+# TreatWarningsAsErrors — thiếu nó thì image build được trong khi CI thì không.
+COPY Directory.Build.props ./
+COPY src/AdVideo.Core/AdVideo.Core.csproj src/AdVideo.Core/
+COPY src/AdVideo.Infrastructure/AdVideo.Infrastructure.csproj src/AdVideo.Infrastructure/
+COPY src/AdVideo.Api/AdVideo.Api.csproj src/AdVideo.Api/
+
+RUN dotnet restore src/AdVideo.Api/AdVideo.Api.csproj
+
+COPY src/ src/
+
+RUN dotnet publish src/AdVideo.Api/AdVideo.Api.csproj \
+    -c Release \
+    -o /app \
+    --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+
+# curl chỉ để HEALTHCHECK gọi được /healthz. Image aspnet không có sẵn, và không có nó thì
+# docker compose không biết API đã sẵn sàng — worker sẽ khởi động trước khi migration chạy xong.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Key ring DataProtection. Phải tạo sẵn VỚI ĐÚNG CHỦ SỞ HỮU: volume của Docker khi tạo lần đầu
+# thừa hưởng quyền của thư mục có sẵn trong image, nên bỏ qua dòng này là tiến trình chạy bằng
+# user app không ghi nổi key ring và mọi API key provider trở thành rác không giải mã được.
+RUN mkdir -p /var/lib/advideo/keys && chown -R app:app /var/lib/advideo
+
+WORKDIR /app
+COPY --from=build /app ./
+
+USER app
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=10 \
+    CMD curl -fsS http://localhost:8080/healthz || exit 1
+
+ENTRYPOINT ["dotnet", "AdVideo.Api.dll"]

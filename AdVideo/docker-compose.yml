@@ -1,0 +1,122 @@
+# Môi trường dev đầy đủ: API + Worker + SQL Server + MinIO.
+#
+#   docker compose up -d --build
+#
+# Chạy bằng PROVIDER GIẢ — không cần API key, không tốn tiền. Video ra là testsrc2 ghép bằng
+# FFmpeg THẬT, nên nhãn AI, LUFS và thời lượng đều là kiểm tra thật.
+#
+# ĐÂY LÀ FILE CỦA MÁY DEV. Mật khẩu trong này là mật khẩu của container dùng xong thì xoá, không
+# phải secret. Production đọc từ biến môi trường của máy chủ — xem CONFIGURATION.md.
+
+name: advideo
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${ADVIDEO_SA_PASSWORD:-Dev_Advideo_2026!}
+      MSSQL_PID: Express
+    ports:
+      - "11433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      # API chạy migration ngay lúc khởi động, nên nó phải đợi SQL Server trả lời được một câu
+      # truy vấn — "cổng đã mở" là chưa đủ: SQL Server mở cổng trước khi dựng xong database hệ
+      # thống, và migration chạm vào đúng khoảng đó sẽ chết với một lỗi nói về login.
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' -b -o /dev/null",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.Api
+    ports:
+      - "5080:8080"
+    environment:
+      # Development bật đường tự migrate + seed lúc khởi động. Kéo theo appsettings.Development.json
+      # được nạp — file đó có đường dẫn Windows và connection string localhost, nên MỌI khoá của
+      # nó phải được đè lại ở đây. Thiếu một khoá là container chạy bằng giá trị của máy dev.
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__AdVideoDb: Server=sqlserver,1433;Database=AdVideoDb;User Id=sa;Password=${ADVIDEO_SA_PASSWORD:-Dev_Advideo_2026!};TrustServerCertificate=True;MultipleActiveResultSets=True
+      AdVideo__Storage__Provider: Minio
+      AdVideo__Storage__ServiceUrl: http://minio:9000
+      AdVideo__Storage__AccessKey: minioadmin
+      AdVideo__Storage__SecretKey: minioadmin
+      AdVideo__DataProtection__KeyRingPath: /var/lib/advideo/keys
+      AdVideo__FakeProviders__Enabled: "true"
+      AdVideo__FakeProviders__LatencyMs: "0"
+    volumes:
+      # CHUNG key ring với worker. Hai key ring riêng nghĩa là worker không giải mã nổi API key
+      # provider mà API vừa ghi vào DB.
+      - dataprotection-keys:/var/lib/advideo/keys
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.Worker
+    ports:
+      - "5081:5081"
+    environment:
+      # KHÔNG đặt Development ở đây: worker cố tình không chạy migration, và biến này chỉ tổ làm
+      # người đọc tưởng nó có chạy. Nhưng vẫn phải đè đủ khoá vì appsettings.json gốc trỏ MinIO
+      # vào localhost.
+      ConnectionStrings__AdVideoDb: Server=sqlserver,1433;Database=AdVideoDb;User Id=sa;Password=${ADVIDEO_SA_PASSWORD:-Dev_Advideo_2026!};TrustServerCertificate=True;MultipleActiveResultSets=True
+      AdVideo__Storage__Provider: Minio
+      AdVideo__Storage__ServiceUrl: http://minio:9000
+      AdVideo__Storage__AccessKey: minioadmin
+      AdVideo__Storage__SecretKey: minioadmin
+      AdVideo__DataProtection__KeyRingPath: /var/lib/advideo/keys
+      AdVideo__FakeProviders__Enabled: "true"
+      AdVideo__FakeProviders__LatencyMs: "0"
+      # Hai job cùng lúc trên một máy dev là đủ: mỗi job có thể chạy nhiều tiến trình ffmpeg.
+      AdVideo__Worker__MaxConcurrentJobs: "2"
+    volumes:
+      - dataprotection-keys:/var/lib/advideo/keys
+    depends_on:
+      # Đợi API khoẻ chứ không chỉ đợi nó khởi động: bảng của Hangfire do API dựng, và worker nối
+      # vào một schema chưa có bảng sẽ quay vòng lỗi cho tới khi may mắn trúng lúc migration xong.
+      api:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mssql-data:
+  minio-data:
+  dataprotection-keys:

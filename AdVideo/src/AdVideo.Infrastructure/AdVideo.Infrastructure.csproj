@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>AdVideo.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AdVideo.Core\AdVideo.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- DataProtection, HttpClientFactory, Options, Logging đều có trong shared framework -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="8.0.10" />
+    <!-- S3 protocol client cho MinIO. ForcePathStyle = true là BẮT BUỘC với MinIO. -->
+    <PackageReference Include="AWSSDK.S3" Version="3.7.507" />
+  </ItemGroup>
+
+</Project>

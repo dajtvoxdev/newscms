@@ -1,0 +1,1300 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>:root{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Xưởng video quảng cáo AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --bg:#F1F3F4; --surface:#FFFFFF; --surface-2:#E8ECEE; --sunk:#EDF0F1;
+  --ink:#15191C; --ink-2:#39444A; --muted:#6B7780; --line:#D2DADD; --line-2:#BCC6CA;
+  --accent:#0D6E78; --accent-ink:#0A565E; --accent-soft:#DFEDEE;
+  --amber:#8E5D0C; --amber-soft:#F6EBD6;
+  --red:#A3332A; --red-soft:#F8E2E0;
+  --green:#276542; --green-soft:#DDEDE3;
+  --shadow:0 1px 2px rgba(20,30,35,.06), 0 8px 24px -16px rgba(20,30,35,.35);
+  --bar-1:#B4B7B8; --bar-2:#C2AC55; --bar-3:#5AA3A8; --bar-4:#569A66;
+  --bar-5:#A4668E; --bar-6:#AE564B; --bar-7:#4C6394;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1214; --surface:#181D20; --surface-2:#212A2E; --sunk:#13181A;
+    --ink:#E7ECEE; --ink-2:#BAC4C9; --muted:#87979E; --line:#2C373C; --line-2:#3B484E;
+    --accent:#50BEC8; --accent-ink:#7FD6DE; --accent-soft:#103135;
+    --amber:#D9A455; --amber-soft:#31260F;
+    --red:#E38279; --red-soft:#36201D;
+    --green:#6FC192; --green-soft:#142F1F;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1214; --surface:#181D20; --surface-2:#212A2E; --sunk:#13181A;
+  --ink:#E7ECEE; --ink-2:#BAC4C9; --muted:#87979E; --line:#2C373C; --line-2:#3B484E;
+  --accent:#50BEC8; --accent-ink:#7FD6DE; --accent-soft:#103135;
+  --amber:#D9A455; --amber-soft:#31260F;
+  --red:#E38279; --red-soft:#36201D;
+  --green:#6FC192; --green-soft:#142F1F;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.9);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  font-size:16px; line-height:1.65; -webkit-font-smoothing:antialiased;
+}
+.page{max-width:1180px; margin:0 auto; padding-inline:20px; padding-block:0 72px}
+
+/* ---------- color bar motif ---------- */
+.bars{display:flex; height:5px; width:100%}
+.bars span{flex:1}
+.bars span:nth-child(1){background:var(--bar-1)}
+.bars span:nth-child(2){background:var(--bar-2)}
+.bars span:nth-child(3){background:var(--bar-3)}
+.bars span:nth-child(4){background:var(--bar-4)}
+.bars span:nth-child(5){background:var(--bar-5)}
+.bars span:nth-child(6){background:var(--bar-6)}
+.bars span:nth-child(7){background:var(--bar-7)}
+
+/* ---------- masthead ---------- */
+.mast{padding-block:44px 34px; border-bottom:1px solid var(--line)}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; font-weight:500;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin:0 0 14px
+}
+h1{
+  font-family:Archivo,"IBM Plex Sans",sans-serif; font-weight:700;
+  font-size:clamp(30px,5.2vw,50px); line-height:1.08; letter-spacing:-.02em;
+  margin:0 0 16px; text-wrap:balance; max-width:20ch;
+}
+.dek{font-size:clamp(16px,2.1vw,19px); color:var(--ink-2); max-width:62ch; margin:0}
+.meta-row{
+  display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:24px;
+  font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--muted);
+}
+.meta-row b{color:var(--ink-2); font-weight:500}
+
+/* ---------- layout ---------- */
+.shell{display:grid; grid-template-columns:1fr; gap:40px; margin-top:40px}
+@media (min-width:1040px){
+  .shell{grid-template-columns:196px minmax(0,1fr); gap:52px; align-items:start}
+  .toc{position:sticky; top:24px}
+}
+.toc{font-size:13.5px}
+.toc p{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--muted); margin:0 0 12px
+}
+.toc ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+.toc a{
+  display:flex; gap:10px; padding:5px 8px; margin-left:-8px; border-radius:4px;
+  color:var(--ink-2); text-decoration:none; line-height:1.35;
+}
+.toc a:hover{background:var(--surface-2); color:var(--ink)}
+.toc a span{font-family:"IBM Plex Mono",monospace; color:var(--muted); font-size:11.5px; padding-top:1px}
+
+main{min-width:0; display:flex; flex-direction:column; gap:56px}
+section{scroll-margin-top:20px}
+h2{
+  font-family:Archivo,sans-serif; font-weight:600; font-size:clamp(21px,3vw,27px);
+  line-height:1.2; letter-spacing:-.015em; margin:0 0 6px; text-wrap:balance;
+}
+h2 .num{
+  font-family:"IBM Plex Mono",monospace; font-size:.6em; font-weight:500;
+  color:var(--accent); margin-right:12px; letter-spacing:0;
+}
+.sub{color:var(--muted); font-size:14.5px; margin:0 0 24px; max-width:66ch}
+h3{
+  font-family:Archivo,sans-serif; font-weight:600; font-size:17px; letter-spacing:-.005em;
+  margin:32px 0 10px;
+}
+h4{font-size:14px; font-weight:600; margin:22px 0 8px; color:var(--ink-2)}
+p{margin:0 0 14px; max-width:70ch}
+ul,ol{margin:0 0 14px; padding-left:20px; max-width:70ch}
+li{margin-bottom:7px}
+li::marker{color:var(--muted)}
+a{color:var(--accent-ink); text-decoration-thickness:1px; text-underline-offset:2px}
+strong{font-weight:600}
+code{
+  font-family:"IBM Plex Mono",monospace; font-size:.87em;
+  background:var(--surface-2); padding:1.5px 5px; border-radius:3px;
+}
+
+/* ---------- callouts ---------- */
+.note{
+  border-left:3px solid var(--line-2); background:var(--surface); padding:16px 18px;
+  border-radius:0 var(--r) var(--r) 0; margin:20px 0; box-shadow:var(--shadow);
+}
+.note.alert{border-left-color:var(--red); background:var(--red-soft)}
+.note.pick{border-left-color:var(--green); background:var(--green-soft)}
+.note.warn{border-left-color:var(--amber); background:var(--amber-soft)}
+.note p:last-child{margin-bottom:0}
+.note .tag{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.13em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:7px;
+}
+.note.alert .tag{color:var(--red)}
+.note.pick .tag{color:var(--green)}
+.note.warn .tag{color:var(--amber)}
+.note:not(.alert):not(.pick):not(.warn) .tag{color:var(--muted)}
+
+/* ---------- decisions ---------- */
+.decisions{display:flex; flex-direction:column; gap:0; border-top:1px solid var(--line)}
+.dec{display:grid; grid-template-columns:auto 1fr; gap:4px 18px; padding:18px 0; border-bottom:1px solid var(--line)}
+@media (min-width:640px){.dec{grid-template-columns:56px 1fr}}
+.dec .k{
+  font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600;
+  color:var(--accent); padding-top:3px; grid-row:span 2;
+}
+.dec .t{font-family:Archivo,sans-serif; font-weight:600; font-size:16.5px; line-height:1.3}
+.dec .b{color:var(--ink-2); font-size:14.5px; margin:0}
+.dec .b em{font-style:normal; color:var(--muted)}
+
+/* ---------- pipeline ---------- */
+.pipe{display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; margin:22px 0}
+.step{display:grid; grid-template-columns:auto 1fr; gap:14px; background:var(--surface); padding:13px 16px; align-items:start}
+@media (min-width:680px){.step{grid-template-columns:34px 1fr auto; align-items:center; gap:16px}}
+.step .n{
+  font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600; color:var(--surface);
+  background:var(--ink-2); width:24px; height:24px; border-radius:50%;
+  display:grid; place-items:center; line-height:1;
+}
+.step.ext .n{background:var(--accent)}
+.step .d strong{display:block; font-size:15px; font-weight:600; line-height:1.35}
+.step .d span{font-size:13.5px; color:var(--muted); display:block; line-height:1.5}
+.step .w{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted); white-space:nowrap;
+  border:1px solid var(--line-2); padding:2px 7px; border-radius:20px; justify-self:start;
+}
+@media (max-width:679px){.step .w{grid-column:2; margin-top:6px}}
+.step.ext .w{color:var(--accent); border-color:var(--accent)}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:20px 0; border:1px solid var(--line); border-radius:var(--r); background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:600px}
+th,td{text-align:left; padding:10px 13px; border-bottom:1px solid var(--line); vertical-align:top}
+thead th{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--muted); font-weight:600; white-space:nowrap;
+  background:var(--sunk);
+}
+tbody tr:last-child td{border-bottom:none}
+td.num,th.num{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; white-space:nowrap}
+td.nm{font-weight:600}
+tr.best td{background:var(--green-soft)}
+tr.dead td{color:var(--muted)}
+tr.dead td.nm{text-decoration:line-through}
+.chip{
+  display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:10.5px;
+  padding:1px 6px; border-radius:3px; font-weight:600; letter-spacing:.03em; white-space:nowrap;
+}
+.chip.y{background:var(--green-soft); color:var(--green)}
+.chip.n{background:var(--red-soft); color:var(--red)}
+.chip.p{background:var(--amber-soft); color:var(--amber)}
+caption{caption-side:bottom; text-align:left; font-size:12px; color:var(--muted); padding:10px 13px; line-height:1.5}
+
+/* ---------- code ---------- */
+pre{
+  background:var(--sunk); border:1px solid var(--line); border-radius:var(--r);
+  padding:15px 17px; overflow-x:auto; margin:16px 0; font-size:12.5px; line-height:1.65;
+}
+pre code{background:none; padding:0; font-size:inherit; color:var(--ink-2)}
+.k{color:var(--accent-ink)}
+.s{color:var(--amber)}
+.c{color:var(--muted); font-style:italic}
+.filelabel{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted);
+  letter-spacing:.06em; margin:22px 0 -6px; display:block;
+}
+
+/* ---------- state machine ---------- */
+.states{display:flex; flex-wrap:wrap; gap:7px; align-items:center; margin:18px 0; font-family:"IBM Plex Mono",monospace; font-size:12px}
+.states i{font-style:normal; color:var(--muted)}
+.st{border:1px solid var(--line-2); padding:3px 9px; border-radius:4px; background:var(--surface); white-space:nowrap}
+.st.ok{border-color:var(--green); color:var(--green); background:var(--green-soft)}
+.st.bad{border-color:var(--red); color:var(--red); background:var(--red-soft)}
+.st.hold{border-color:var(--amber); color:var(--amber); background:var(--amber-soft)}
+
+/* ---------- risk grid ---------- */
+.risks{display:grid; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; margin:20px 0}
+.risk{background:var(--surface); padding:15px 17px}
+.risk .h{display:flex; gap:10px; align-items:baseline; margin-bottom:6px}
+.risk .lv{
+  font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  font-weight:600; padding:2px 6px; border-radius:3px;
+}
+.lv.hi{background:var(--red-soft); color:var(--red)}
+.lv.md{background:var(--amber-soft); color:var(--amber)}
+.lv.lo{background:var(--surface-2); color:var(--muted)}
+.risk .h strong{font-family:Archivo,sans-serif; font-size:15px; font-weight:600}
+.risk p{font-size:13.5px; color:var(--ink-2); margin:0}
+.risk p + p{margin-top:7px}
+.risk .fix{color:var(--ink); }
+.risk .fix b{color:var(--accent-ink); font-weight:600}
+
+/* ---------- roadmap ---------- */
+.road{display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; margin:20px 0}
+.leg{display:grid; grid-template-columns:1fr; gap:6px 18px; background:var(--surface); padding:16px 18px}
+@media (min-width:700px){.leg{grid-template-columns:112px 1fr 150px; align-items:start}}
+.leg .when{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--accent); font-weight:600}
+.leg .what strong{display:block; font-family:Archivo,sans-serif; font-size:15.5px; font-weight:600; margin-bottom:4px}
+.leg .what span{font-size:13.5px; color:var(--ink-2)}
+.leg .out{font-size:12.5px; color:var(--muted); border-left:2px solid var(--line-2); padding-left:12px}
+@media (max-width:699px){.leg .out{border-left:none; padding-left:0; border-top:1px solid var(--line); padding-top:8px}}
+
+/* ---------- questions ---------- */
+.qs{counter-reset:q; display:flex; flex-direction:column; gap:14px; margin:20px 0}
+.q{display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:start}
+.q::before{
+  counter-increment:q; content:"Q" counter(q);
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:3px; padding:2px 6px; line-height:1.3; margin-top:2px;
+}
+.q div strong{display:block; font-size:15px; font-weight:600; margin-bottom:3px}
+.q div span{font-size:13.5px; color:var(--muted)}
+
+footer{margin-top:64px; padding-top:22px; border-top:1px solid var(--line); font-size:12.5px; color:var(--muted)}
+footer a{color:var(--muted)}
+footer ul{columns:2; column-gap:32px; padding-left:18px; max-width:none}
+@media (max-width:640px){footer ul{columns:1}}
+footer li{margin-bottom:4px; break-inside:avoid}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+
+
+<style>
+@page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+@media print {
+  :root { color-scheme: light; }
+  html, body { background: #fff !important; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 10.5pt; }
+  .page { max-width: none; padding-inline: 0; padding-block: 0 0; }
+  .toc { display: none !important; }
+  .shell { display: block !important; margin-top: 20px; }
+  main { display: block !important; }
+  section { break-before: page; break-inside: auto; margin-bottom: 0; }
+  section:first-of-type { break-before: auto; }
+  h2, h3, h4 { break-after: avoid; }
+  h2 { font-size: 17pt; }
+  h3 { font-size: 12.5pt; margin-top: 20px; }
+  h4 { font-size: 11pt; }
+  p, li { orphans: 3; widows: 3; }
+  table { min-width: 0 !important; font-size: 8.6pt; }
+  th, td { padding: 5px 7px; }
+  .tw { overflow-x: visible; break-inside: auto; }
+  tr { break-inside: avoid; }
+  thead { display: table-header-group; }
+  pre { font-size: 7.8pt; white-space: pre-wrap; word-break: break-word; break-inside: avoid; }
+  .dec, .risk, .leg, .step, .q, .note { break-inside: avoid; }
+  .mast { padding-block: 0 20px; }
+  h1 { font-size: 26pt; }
+  .dek { font-size: 11.5pt; }
+  a { color: inherit; text-decoration: none; }
+  footer ul { columns: 2; font-size: 8.5pt; }
+  .bars { height: 4px; }
+}
+</style>
+</head>
+<body>
+<div class="bars aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
+<div class="page">
+
+<header class="mast">
+  <p class="eyebrow">Kế hoạch kỹ thuật · NewsCMS.Core</p>
+  <h1>Xưởng video quảng cáo AI</h1>
+  <p class="dek">Service API nhận ảnh sản phẩm, người mẫu, bối cảnh và một đoạn mô tả — trả về video quảng cáo hoàn chỉnh có voice-over tiếng Việt. Tài liệu này chốt kiến trúc, provider, hợp đồng API, chi phí và lộ trình.</p>
+  <div class="meta-row">
+    <span><b>Ngày:</b> 14/09/2026</span>
+    <span><b>Nền tảng:</b> ASP.NET Core 8 · NewsCMS.Core</span>
+    <span><b>Trạng thái:</b> Bản 9 — chốt 6 điểm treo, thêm nghĩa vụ nhãn AI</span>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="toc" aria-label="Mục lục">
+  <p>Mục lục</p>
+  <ol>
+    <li><a href="#s1"><span>01</span>Chốt nhanh</a></li>
+    <li><a href="#s2"><span>02</span>Kiến trúc</a></li>
+    <li><a href="#s3"><span>03</span>Pipeline dựng video</a></li>
+    <li><a href="#s4"><span>04</span>Chọn provider</a></li>
+    <li><a href="#s5"><span>05</span>Giọng đọc &amp; âm thanh</a></li>
+    <li><a href="#s6"><span>06</span>Kho prompt mẫu</a></li>
+    <li><a href="#s7"><span>07</span>Hợp đồng API</a></li>
+    <li><a href="#s8"><span>08</span>Mô hình dữ liệu</a></li>
+    <li><a href="#s9"><span>09</span>Chi phí &amp; credit</a></li>
+    <li><a href="#s10"><span>10</span>Rủi ro</a></li>
+    <li><a href="#s11"><span>11</span>Lộ trình</a></li>
+    <li><a href="#s12"><span>12</span>Đã chốt &amp; còn lại</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <h2><span class="num">01</span>Chốt nhanh</h2>
+  <p class="sub">Chín quyết định định hình toàn bộ phần còn lại của tài liệu. Nếu chỉ đọc một mục, đọc mục này.</p>
+
+  <div class="note alert">
+    <span class="tag">Cảnh báo thời điểm</span>
+    <p><strong>Đừng xây trên Sora.</strong> OpenAI thông báo ngày 24/03/2026 rằng Videos API và toàn bộ model <code>sora-2</code>, <code>sora-2-pro</code> sẽ bị gỡ khỏi API <strong>ngày 24/09/2026</strong> — còn đúng 10 ngày nữa — và <em>không công bố model thay thế</em>. Đây chính là lý do quyết định D2 bên dưới tồn tại.</p>
+  </div>
+
+  <div class="decisions">
+    <div class="dec">
+      <div class="k">D1</div>
+      <div class="t">Service riêng, không nhét vào NewsCMS.Web</div>
+      <p class="b"><code>AdVideo.Api</code> + <code>AdVideo.Worker</code> chạy độc lập; NewsCMS chỉ thêm một module mỏng gọi HTTP sang. Lý do: mỗi job chạy 3–15 phút, ngốn FFmpeg/CPU và gọi API mất tiền — không thể chung vòng đời với web host phục vụ request vài trăm mili-giây. <em>Đúng nguyên tắc "không sửa core" của NewsCMS.</em></p>
+    </div>
+    <div class="dec">
+      <div class="k">D2</div>
+      <div class="t">Provider là thứ có thể thay, không phải nền móng</div>
+      <p class="b">Một interface <code>IVideoProvider</code>, bốn adapter cho giai đoạn đầu — <strong>Veo, Kling, Seedance, Vidu</strong> — và khách được chọn. Cả bốn phải chạy được trong production, không để ba cái nằm im làm cảnh. Vụ Sora bị khai tử sau 6 tháng là bằng chứng thực tế, không phải giả định phòng xa. <em>Ba luật khi cho khách chọn: mục 04.</em></p>
+    </div>
+    <div class="dec">
+      <div class="k">D3</div>
+      <div class="t">Tắt <em>thoại</em> của model, không nhất thiết tắt <em>tiếng động</em></div>
+      <p class="b">Video AI sinh thoại tiếng Việt sai dấu, sai trọng âm, không dùng được cho quảng cáo — lời thoại luôn đến từ TTS riêng. Nhưng tiếng động đồng bộ theo chuyển động (rót nước, mở nắp chai, bước chân) thì model làm rất tốt và khó làm giả, nên đó là <strong>tuỳ chọn khách bật được</strong>, xem mục 07. Tách hai thứ ra còn cho lợi ích kép: sửa lời thoại không phải render lại video.</p>
+    </div>
+    <div class="dec">
+      <div class="k">D4</div>
+      <div class="t">Mọi chữ trên màn hình do FFmpeg vẽ, không do AI vẽ</div>
+      <p class="b">Không model nào viết đúng "Sữa hạt không đường — Ưu đãi đến 30/9". Tên sản phẩm, giá, CTA, phụ đề, logo đều là lớp overlay dựng bằng font thật. Đây cũng là cách duy nhất đảm bảo brand kit của khách hàng được tôn trọng 100%.</p>
+    </div>
+    <div class="dec">
+      <div class="k">D5</div>
+      <div class="t">Video dài = nhiều shot ghép lại</div>
+      <p class="b">Không model nào sinh quá 15 giây một lần gọi. Video 60 giây = 8–12 shot render song song rồi nối. Cần một lớp "đạo diễn" (LLM) biến brief thành storyboard JSON — đây là phần lõi của sản phẩm, không phải phần phụ.</p>
+    </div>
+    <div class="dec">
+      <div class="k">D6</div>
+      <div class="t">Sinh giọng đọc <em>trước</em>, rồi mới khoá thời lượng shot</div>
+      <p class="b">Đây là chi tiết dễ làm sai nhất. Câu "Mỗi buổi sáng, gia đình bạn xứng đáng có một khởi đầu trọn vẹn" đọc hết 4,8 giây — con số đó phải quyết định shot dài bao nhiêu, chứ không phải ngược lại. Đảo thứ tự này là nguyên nhân số một của video lệch tiếng.</p>
+    </div>
+    <div class="dec">
+      <div class="k">D7</div>
+      <div class="t">Kho prompt là dữ liệu, không phải code</div>
+      <p class="b">Mỗi định dạng quảng cáo là một bản ghi có cấu trúc và có version, nạp lúc chạy. Thêm định dạng mới, sửa một câu mô tả bối cảnh, hay nhân bản template cho riêng một khách — không cái nào được phép cần một lần deploy. <em>Đây cũng là nơi đặt tài sản riêng: thư viện bối cảnh Việt Nam (mục 06).</em></p>
+    </div>
+    <div class="dec">
+      <div class="k">D8</div>
+      <div class="t">Hai sổ tiền, không phải một</div>
+      <p class="b">Khách sẽ tiêu <strong>credit</strong> — đơn vị neo vào giây video, không nhúc nhích khi provider đổi giá. Mình theo dõi <strong>đô la thật</strong> trong <code>ProviderCall</code>. Tỉ lệ giữa hai sổ chính là biên lợi nhuận. <em>Phần credit hoãn lại để làm cùng gói bán; nhưng <code>ProviderCall</code> chạy từ ngày đầu — xem mục 09.</em></p>
+    </div>
+    <div class="dec">
+      <div class="k">D9</div>
+      <div class="t">Nhãn AI là một bước trong pipeline, không phải một tuỳ chọn</div>
+      <p class="b">Luật Trí tuệ nhân tạo 2025 hiệu lực từ 1/3/2026 buộc nội dung do AI tạo ra phải có dấu hiệu nhận dạng, và nghĩa vụ đó thuộc về <strong>bên triển khai</strong> — tức chính dịch vụ này, không phải khách. Nhãn hiển thị và metadata ghi trong bước compose, mặc định bật, khách không tắt được. <em>Chi tiết và cảnh báo ở rủi ro R4, mục 10.</em></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <h2><span class="num">02</span>Kiến trúc</h2>
+  <p class="sub">Ba khối tách bạch: CMS của khách hàng, service dựng video, và các nhà cung cấp AI bên ngoài.</p>
+
+  <h3>Ranh giới hệ thống</h3>
+  <ul>
+    <li><strong>NewsCMS.Web</strong> — module <code>Marketing/VideoStudio</code>: Razor Pages admin để khách hàng nhập brief, chọn ảnh từ Media, duyệt storyboard, xem kết quả. Không chứa logic dựng video, chỉ gọi <code>IAdVideoClient</code> (typed HttpClient).</li>
+    <li><strong>AdVideo.Api</strong> — ASP.NET Core 8 Minimal API. Nhận job, xác thực tenant, ước tính chi phí, đẩy vào hàng đợi, trả <code>202 Accepted</code>. Không bao giờ chờ video xong.</li>
+    <li><strong>AdVideo.Worker</strong> — Hangfire (hoặc worker service + queue). Chạy pipeline mục 03. Scale ngang theo số job; có FFmpeg cài sẵn trong image.</li>
+    <li><strong>Storage</strong> — <strong>MinIO</strong> (đã chốt, anh dựng riêng; service chỉ cấu hình endpoint + access key và đẩy lên). Dùng AWS SDK cho .NET với <code>ForcePathStyle = true</code>. <em>Không dùng <code>wwwroot/uploads</code>:</em> một video 1080p/60s nặng 30–60 MB, vài nghìn video là vỡ ổ đĩa web host và không scale được nhiều instance.</li>
+    <li><strong>Postgres/SQL Server</strong> — job state, storyboard, audit từng lần gọi provider kèm chi phí thực tế.</li>
+  </ul>
+
+  <h3>Vì sao không làm thành module thuần trong NewsCMS.Core</h3>
+  <p>Skill NewsCMS chỉ đúng hướng "background job → Infrastructure/BackgroundJobs + Hangfire" cho các việc như digest hằng ngày. Việc này khác về bản chất: tiến trình dài, phụ thuộc binary ngoài (FFmpeg), tiêu tiền thật theo từng request, và sẽ phục vụ <strong>nhiều site NewsCMS cùng lúc</strong>. Nhồi vào web host nghĩa là mỗi lần deploy CMS sẽ giết các job đang render dở.</p>
+
+  <div class="note pick">
+    <span class="tag">Đề xuất</span>
+    <p>Giai đoạn PoC (Sprint 1–2) hoàn toàn có thể chạy <code>AdVideo.Api</code> và <code>AdVideo.Worker</code> trên cùng một container cho nhanh. Nhưng hãy tách <strong>project</strong> ngay từ dòng code đầu tiên — tách process sau đó chỉ là việc đổi cấu hình.</p>
+  </div>
+
+  <h4>Bốn thứ cần chốt khi cấu hình MinIO</h4>
+  <ul>
+    <li><strong>Tách bucket theo vòng đời, không theo khách.</strong> <code>adv-uploads</code> (ảnh khách gửi lên) · <code>adv-work</code> (clip từng shot, bản dựng thử) · <code>adv-final</code> (thành phẩm) · <code>adv-voice</code> (audio mẫu clone giọng). Đường dẫn trong bucket mới chia theo tenant: <code>{tenantId}/{jobId}/shot-03.mp4</code>.</li>
+    <li><strong>Lifecycle rule ngay từ đầu, đừng để sau.</strong> <code>adv-work</code> xoá sau 7 ngày — đây là bucket phình nhanh nhất vì mỗi job đẻ ra 5–10 file trung gian. <code>adv-final</code> chuyển lớp lưu trữ lạnh sau 90 ngày.</li>
+    <li><strong>Presigned URL cho mọi thứ khách tải về</strong>, hạn 15 phút, không mở bucket public. Hai chỗ hay làm hỏng: <em>CORS</em> phải khai đúng origin của NewsCMS (thiếu là trình duyệt chặn mà không có lỗi rõ ràng), và <em>lệch giờ máy chủ</em> làm chữ ký hết hạn sớm — bật NTP trên máy MinIO.</li>
+    <li><strong>Video giao cho khách đi qua CDN hoặc reverse proxy</strong>, đừng để trình duyệt gọi thẳng MinIO — vừa lộ hạ tầng vừa không cache được.</li>
+  </ul>
+
+  <h3>Ngôn ngữ và hiệu năng</h3>
+  <p>Câu hỏi tự nhiên là "C# có đủ nhanh không, hay nên dùng Go/Rust". Câu trả lời: <strong>hiệu năng của hệ này không nằm ở ngôn ngữ</strong>. Đây là hệ điều phối I/O-bound — gần như toàn bộ thời gian của một job là ngồi chờ bên khác làm việc.</p>
+
+  <div class="tw">
+    <table>
+      <caption>Phân rã thời gian một job 30 giây, tier Chuẩn. Phần code của mình thật sự chạy chiếm chưa tới 1%.</caption>
+      <thead><tr><th>Giai đoạn</th><th class="num">Thời gian</th><th>Ai đang làm việc</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">Chờ provider render 6 shot</td><td class="num">~4 phút 20</td><td>Máy của Google / Kuaishou</td></tr>
+        <tr><td class="nm">FFmpeg ghép, mix, chuẩn hoá</td><td class="num">~40 giây</td><td>Tiến trình native, không phải code mình</td></tr>
+        <tr><td class="nm">Chờ TTS, tải file, upload storage</td><td class="num">~35 giây</td><td>Mạng</td></tr>
+        <tr class="best"><td class="nm">Code .NET thực thi</td><td class="num">&lt; 2 giây</td><td><strong>Chỗ duy nhất ngôn ngữ có ảnh hưởng</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Viết lại bằng Rust để tiết kiệm vài trăm mili-giây trên một job năm phút là tối ưu sai chỗ. Thứ quyết định "nhanh" ở đây là số job chạy song song được, mức fan-out shot trong một job, và không có chỗ nào chờ đồng bộ — cả ba đều là chuyện thiết kế, không phải chuyện ngôn ngữ.</p>
+
+  <h4>.NET là lựa chọn đúng, nhưng vì lý do khác</h4>
+  <ul>
+    <li><code>async/await</code> và <code>Task.WhenAll</code> là đúng công cụ cho fan-out nhiều shot — .NET xử lý hàng nghìn kết nối đang chờ mà không tốn thread tương ứng.</li>
+    <li>Hệ sinh thái sẵn cho đúng bài toán này: Hangfire cho job dài, Polly cho retry và circuit breaker với provider hay chết, EF Core cho phần sổ sách sau này.</li>
+    <li><strong>Lý do mạnh nhất và hay bị xem nhẹ:</strong> NewsCMS đã là .NET. Cùng ngôn ngữ nghĩa là cùng CI, cùng người maintain, cùng cách debug. Thêm một ngôn ngữ thứ hai là thêm một pipeline, một bộ dependency và một chỗ để hỏng.</li>
+  </ul>
+
+  <p>Điểm yếu duy nhất đáng nhắc: SDK chính thức của các nhà cung cấp AI thường có bản Python trước và đầy đủ hơn. Nhưng cả ba provider đều là REST thuần — viết wrapper bằng <code>HttpClient</code> là việc của một buổi chiều. <strong>Không nên tách một worker Python chỉ vì SDK</strong>, ít nhất ở giai đoạn đầu.</p>
+
+  <div class="note warn">
+    <span class="tag">Thứ thật sự giới hạn throughput</span>
+    <p>Không phải CPU, mà là <strong>rate limit của provider</strong>: mỗi tài khoản được chạy bao nhiêu request song song, và bao nhiêu phút render mỗi giờ. Con số đó quyết định kiến trúc scale nhiều hơn mọi lựa chọn ngôn ngữ — và nó phải được hỏi thẳng nhà cung cấp hoặc đo bằng thực nghiệm ngay trong Sprint 0.</p>
+  </div>
+
+  <h3>Xác thực và multi-tenant</h3>
+  <ul>
+    <li>Mỗi site NewsCMS = một tenant, có API key riêng (<code>X-AdVideo-Key</code>) và hạn mức riêng.</li>
+    <li>Webhook ký bằng HMAC-SHA256 với secret của tenant, header <code>X-AdVideo-Signature</code> + timestamp chống replay.</li>
+    <li>Mọi request tạo job bắt buộc có <code>Idempotency-Key</code> — người dùng bấm nút hai lần không được tính tiền hai lần.</li>
+    <li>Quyền trong NewsCMS theo đúng convention: <code>Marketing.AdVideo.View</code>, <code>.Create</code>, <code>.Approve</code>, <code>.Delete</code> khai báo trong <code>Permissions.cs</code> và seed qua <code>DbSeeder</code>.</li>
+  </ul>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <h2><span class="num">03</span>Pipeline dựng video</h2>
+  <p class="sub">Chín bước từ brief đến file MP4. Bước có viền xanh là bước gọi ra API bên ngoài và phát sinh chi phí.</p>
+
+  <div class="pipe">
+    <div class="step"><div class="n">1</div><div class="d"><strong>Ingest &amp; chuẩn hoá asset</strong><span>Tải ảnh về, kiểm định dạng, resize về đúng khung hình đích, tách nền sản phẩm nếu cần, chạy moderation. Từ chối sớm còn hơn hỏng ở bước 6.</span></div><div class="w">~10s</div></div>
+    <div class="step ext"><div class="n">2</div><div class="d"><strong>Đạo diễn: brief → storyboard</strong><span>LLM <strong>không viết tự do</strong> — nó nhận một <code>AdFormat</code> từ kho prompt (mục 06) rồi điền vào: mô tả hình, chuyển động camera, ảnh tham chiếu cho từng shot, lời thoại, chữ overlay, kiểu chuyển cảnh.</span></div><div class="w">~15s · LLM</div></div>
+    <div class="step"><div class="n">3</div><div class="d"><strong>Duyệt storyboard <em>(tuỳ chọn)</em></strong><span>Job dừng ở trạng thái <code>awaiting_approval</code>. Khách sửa lời thoại, đổi thứ tự shot, chỉnh mô tả. Bật mặc định cho video trên 20 giây — rẻ hơn nhiều so với render xong mới phát hiện sai.</span></div><div class="w">chờ người</div></div>
+    <div class="step ext"><div class="n">4</div><div class="d"><strong>Sinh giọng đọc tiếng Việt</strong><span>Gọi <code>/with-timestamps</code> nên nhận được <strong>mốc thời gian tới từng ký tự</strong>, không phải chỉ tổng thời lượng. Nối ngữ điệu giữa các shot bằng <code>previous_text</code> / <code>previous_request_ids</code>. Dữ liệu này nuôi cả bước 5 lẫn phụ đề ở bước 8.</span></div><div class="w">~20s · TTS</div></div>
+    <div class="step"><div class="n">5</div><div class="d"><strong>Khoá timeline</strong><span>Gán thời lượng cho từng shot theo độ dài audio thật, làm tròn lên mức model hỗ trợ (4/6/8s với Veo, 3–15s với Kling). Phần dư bù bằng hold-frame hoặc hiệu ứng Ken Burns thay vì kéo giãn video.</span></div><div class="w">~1s</div></div>
+    <div class="step ext"><div class="n">6</div><div class="d"><strong>Render shot song song</strong><span>Song song hay tuần tự là do <code>render_mode</code> của định dạng quyết định: fan-out 3–6 shot cùng lúc với video đa cảnh, nhưng nối frame tuần tự với định dạng daily (mục 06). Retry trong cùng provider; chuyển provider là chuyện của cả job — xem mục 04.</span></div><div class="w">2–10 phút · video</div></div>
+    <div class="step ext"><div class="n">7</div><div class="d"><strong>Lip-sync <em>(chỉ khi có người nói)</em></strong><span>Bỏ qua hoàn toàn với video chỉ có sản phẩm. Với shot người mẫu nói trực diện thì ghép khẩu hình theo audio đã có.</span></div><div class="w">~1 phút</div></div>
+    <div class="step"><div class="n">8</div><div class="d"><strong>Compose bằng FFmpeg</strong><span>Nối shot + chuyển cảnh, trộn voice-over với nhạc nền (ducking ‑12 dB khi có thoại) và tiếng động gốc nếu khách bật (‑18 dB, crossfade 250 ms tại mỗi chỗ cắt để tiếng nền không nhảy), chèn logo, CTA, phụ đề burn-in bằng font thật, <strong>nhãn "Nội dung do AI tạo ra" + metadata C2PA</strong> theo D9, chuẩn hoá về ‑14 LUFS.</span></div><div class="w">~40s · CPU</div></div>
+    <div class="step"><div class="n">9</div><div class="d"><strong>QC tự động &amp; giao hàng</strong><span>Kiểm: đúng thời lượng, không khung đen, audio không clip, không lệch tiếng, không NSFW, <strong>nhãn AI có mặt</strong>, và — nếu bật tiếng động gốc — chạy VAD trên track đó để chắc chắn model không lén chèn tiếng người. Đẩy lên MinIO, sinh thumbnail + .srt, bắn webhook.</span></div><div class="w">~20s</div></div>
+  </div>
+
+  <div class="note warn">
+    <span class="tag">Điểm dễ sai</span>
+    <p>Thứ tự 4 → 5 → 6 là <strong>không thể đảo</strong>. Nếu render video trước rồi mới sinh giọng đọc, anh sẽ phải hoặc cắt câu thoại cho vừa hình, hoặc tăng tốc độ đọc lên 1,2× — cả hai đều nghe ra ngay là video máy làm.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <h2><span class="num">04</span>Chọn provider sinh video</h2>
+  <p class="sub">Chốt bốn nền tảng cho giai đoạn đầu: <strong>Veo, Kling, Seedance, Vidu</strong> — khách được chọn. Runway giữ ở dạng adapter dự phòng, không làm trong Sprint 1.</p>
+
+  <div class="tw">
+    <table>
+      <caption>Giá tổng hợp từ các trang so sánh công khai tháng 7–9/2026; <strong>phải xác minh lại trên bảng giá chính thức của từng nhà cung cấp trước khi ký hợp đồng</strong>. Cột "Người thật" phản ánh chính sách nội dung, không phải khả năng kỹ thuật.</caption>
+      <thead>
+        <tr><th>Model</th><th class="num">Giá / giây</th><th>Ảnh tham chiếu</th><th>Người thật</th><th class="num">Độ dài</th><th>Vai trò đề xuất</th></tr>
+      </thead>
+      <tbody>
+        <tr class="best">
+          <td class="nm">Veo 3.1 Fast<br><span style="color:var(--muted);font-weight:400">Google · Gemini API</span></td>
+          <td class="num">$0,08 – 0,12</td>
+          <td>3 ảnh</td>
+          <td><span class="chip n">Chặn mặt</span></td>
+          <td class="num">4 / 6 / 8s</td>
+          <td><strong>Lựa chọn 1 — mặc định cho video chỉ có sản phẩm.</strong> Chất lượng ánh sáng tốt nhất trong tầm giá, có first/last frame và nối cảnh.</td>
+        </tr>
+        <tr class="best">
+          <td class="nm">Kling 3.0<br><span style="color:var(--muted);font-weight:400">Kuaishou</span></td>
+          <td class="num">$0,084 – 0,17</td>
+          <td>Image + Elements</td>
+          <td><span class="chip y">Cho phép</span></td>
+          <td class="num">3 – 15s</td>
+          <td><strong>Lựa chọn 2 — mặc định khi có người mẫu.</strong> Rẻ nhất ở 720p, độ dài linh hoạt nhất, giữ nhân vật ổn định.</td>
+        </tr>
+        <tr class="best">
+          <td class="nm">Vidu Q2 Pro<br><span style="color:var(--muted);font-weight:400">Reference-to-video</span></td>
+          <td class="num">$0,085</td>
+          <td><strong>1–7 ảnh, đa chủ thể</strong></td>
+          <td><span class="chip y">Cho phép</span></td>
+          <td class="num">1 – 10s</td>
+          <td><strong>Lựa chọn 4 — khi một khung có nhiều chủ thể phải giữ nhất quán.</strong> Model duy nhất nhận 7 ảnh chia theo chủ thể (tối đa 3 ảnh mỗi chủ thể): người mẫu + sản phẩm + bối cảnh cùng lúc.</td>
+        </tr>
+        <tr>
+          <td class="nm">Veo 3.1 Lite</td>
+          <td class="num">$0,03 – 0,08</td>
+          <td><span class="chip n">Không</span></td>
+          <td><span class="chip n">Chặn mặt</span></td>
+          <td class="num">4 – 8s</td>
+          <td>B-roll, cảnh không khí, bản nháp preview cho khách xem trước.</td>
+        </tr>
+        <tr class="best">
+          <td class="nm">Seedance 2.0<br><span style="color:var(--muted);font-weight:400">ByteDance</span></td>
+          <td class="num">$0,14 – 0,30</td>
+          <td>Multimodal ref</td>
+          <td><span class="chip y">Cho phép</span></td>
+          <td class="num">4 – 15s</td>
+          <td><strong>Lựa chọn 3 — tier cao cấp.</strong> Chuyển động phức tạp, camera đặc tả. Đắt gấp 2–3 lần nên phải gắn hạn mức riêng.</td>
+        </tr>
+        <tr>
+          <td class="nm">Runway Gen-4.5</td>
+          <td class="num">$0,05 – 0,12</td>
+          <td>Có</td>
+          <td><span class="chip y">Cho phép</span></td>
+          <td class="num">đến 10s</td>
+          <td>Dự phòng. Giữ adapter nhưng không cần dùng ngay.</td>
+        </tr>
+        <tr class="dead">
+          <td class="nm">Sora 2 / Pro</td>
+          <td class="num">$0,10 – 0,70</td>
+          <td>Có</td>
+          <td><span class="chip n">Cấm</span></td>
+          <td class="num">đến 20s</td>
+          <td><strong>Gỡ khỏi API ngày 24/09/2026.</strong> Không viết adapter.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Cho khách chọn provider: ba luật phải theo</h3>
+  <p>Câu trả lời ngắn là có — nhưng "chọn nhiều lựa chọn" chỉ hoạt động nếu ba điều dưới đây được chốt trước khi viết dòng adapter đầu tiên.</p>
+
+  <h4>Luật 1 — Provider là thuộc tính của <em>job</em>, không phải của <em>shot</em></h4>
+  <p>Mỗi model có "look" riêng: tông màu, độ tương phản, cách xử lý chuyển động, kết cấu da. Ghép một shot Veo với một shot Seedance trong cùng video là nhìn ra ngay hai đoạn dán lại. Hệ quả:</p>
+  <ul>
+    <li>Một job dùng <strong>một provider cho toàn bộ shot</strong>.</li>
+    <li>Shot lỗi → retry <strong>cùng provider</strong>, đổi seed. Không đổi model.</li>
+    <li>Provider chết hẳn → fail cả job và mời khách render lại bằng provider khác, chứ không âm thầm vá một shot bằng model khác.</li>
+  </ul>
+  <div class="note warn">
+    <span class="tag">Sửa lại bản đầu</span>
+    <p>Bản đầu của tài liệu này viết ở bước 6 rằng mỗi shot có "fallback sang provider dự phòng". Điều đó <strong>sai</strong> — nó tiết kiệm được một lần render nhưng trả giá bằng một video nhìn thấy rõ vết nối. Mục 03 đã được sửa theo Luật 1.</p>
+  </div>
+
+  <h4>Luật 2 — Tầng API phải chuẩn hoá, không được pass-through</h4>
+  <p>Ba provider không có mẫu số chung. Cần một manifest <code>ProviderCapability</code> trong code và validate ngay ở tầng API:</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Khả năng</th><th>Veo 3.1 Fast</th><th>Kling 3.0</th><th>Seedance 2.0</th><th>Vidu Q2 Pro</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">Thời lượng shot</td><td class="num">4 / 6 / 8s <span style="color:var(--muted)">(rời rạc)</span></td><td class="num">3–15s <span style="color:var(--muted)">(bước 1s)</span></td><td class="num">4–15s</td><td class="num">1–10s <span style="color:var(--muted)">(mặc định 5)</span></td></tr>
+        <tr><td class="nm">Ảnh tham chiếu</td><td>tối đa 3</td><td>image + elements</td><td>multimodal ref</td><td><strong>1–7, chia theo chủ thể</strong></td></tr>
+        <tr><td class="nm">Khung hình</td><td>16:9 · 9:16</td><td>16:9 · 9:16 · 1:1</td><td>21:9 → 9:16 <span style="color:var(--muted)">(7 tỉ lệ)</span></td><td>16:9 · 9:16 · 1:1</td></tr>
+        <tr><td class="nm">Ảnh có mặt người</td><td><span class="chip n">Từ chối</span></td><td><span class="chip y">Nhận</span></td><td><span class="chip y">Nhận</span></td><td><span class="chip y">Nhận</span></td></tr>
+        <tr class="best"><td class="nm">Điều khiển audio gốc</td><td>bật/tắt cả cụm</td><td>bật/tắt cả cụm</td><td>bật/tắt cả cụm</td><td><strong>tách được thoại / tiếng động</strong></td></tr>
+        <tr><td class="nm">Nối frame cho daily</td><td><span class="chip y">Cùng endpoint</span></td><td><span class="chip y">Cùng endpoint</span></td><td><span class="chip y">Cùng endpoint</span></td><td><span class="chip p">Endpoint khác</span></td></tr>
+        <tr><td class="nm">Giá tương đối</td><td class="num">1×</td><td class="num">~1×</td><td class="num">2–3×</td><td class="num">~1×</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Ba hệ quả cụ thể cho code:</p>
+  <ul>
+    <li>Bước khoá timeline phải làm tròn theo <strong>lưới thời lượng của provider đang chọn</strong>. Cùng một storyboard sẽ cho ra số shot khác nhau giữa Veo (lưới 2 giây) và Kling (lưới 1 giây) — đây là lý do storyboard phải sinh <em>sau</em> khi biết provider.</li>
+    <li>Khách chọn Veo nhưng có upload <code>talent</code> → trả <code>422</code> kèm lý do đọc được và gợi ý Kling, thay vì để provider từ chối rồi ném ra một lỗi khó hiểu.</li>
+    <li>Tuỳ chọn <code>audio.native_sound</code> của khách phải dịch sang từng provider, và <strong>chỉ Vidu dịch được trọn vẹn</strong>: nó có ba chế độ audio riêng (đầy đủ / chỉ thoại / chỉ tiếng động), nên đặt <code>sfx</code> là ra đúng thứ cần. Ba provider kia chỉ bật/tắt cả cụm, nên khi khách chọn <code>sfx_only</code> thì phải bật audio rồi thêm "no speech, no dialogue, no voices" vào negative prompt và kiểm lại bằng VAD ở bước 9. Mặc định của mọi provider vẫn là tắt (D3) — Vidu bật sẵn nên đây là chỗ dễ quên nhất.</li>
+  </ul>
+
+  <div class="note warn">
+    <span class="tag">Vidu có hai endpoint, đừng nhầm</span>
+    <p><strong>Reference-to-video</strong> là thứ đáng dùng Vidu: nhận tới 7 ảnh chia theo chủ thể, mỗi chủ thể tối đa 3 ảnh — người mẫu, sản phẩm và bối cảnh đều giữ được nhất quán trong cùng một khung. Không model nào trong ba cái còn lại làm được việc này.</p>
+    <p><strong>Start-end-to-video</strong> là endpoint riêng, dùng cho nối frame. Nghĩa là với định dạng daily, Vidu vẫn chạy được nhưng <em>mất đúng cái lợi thế đa chủ thể</em> vì đó là task type khác. Ba provider kia nối frame ngay trong endpoint chính. Kết luận thực dụng: <strong>Vidu cho shot tĩnh nhiều chủ thể, không phải cho daily.</strong></p>
+  </div>
+
+  <h4>Luật 3 — Đừng bắt người làm marketing biết Veo là gì</h4>
+  <p>Phơi ra hai tầng:</p>
+  <ul>
+    <li><strong>UI trong NewsCMS:</strong> khách chọn <em>tier</em> và trả lời một câu hỏi — "video có người xuất hiện không?". Hệ thống tự ánh xạ, rồi hiện tên model thật và giá ước tính trước khi khách bấm nút.</li>
+    <li><strong>API:</strong> trường <code>provider</code> tường minh cho dev và power user. Bỏ trống = hệ thống tự chọn theo bảng dưới.</li>
+  </ul>
+
+  <div class="tw">
+    <table>
+      <caption>Bảng ánh xạ này nằm trong cấu hình, không hard-code — đổi provider mặc định không được phép là một lần deploy.</caption>
+      <thead><tr><th>Tier khách chọn</th><th>Chỉ có sản phẩm</th><th>Có người mẫu</th><th class="num">Giá vốn 30s</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">Nháp</td><td>Veo 3.1 Lite · 720p</td><td>Kling 3.0 · 720p</td><td class="num">~$1,1</td></tr>
+        <tr class="best"><td class="nm">Chuẩn</td><td>Veo 3.1 Fast · 1080p</td><td>Kling 3.0 · 1080p</td><td class="num">~$3,2</td></tr>
+        <tr><td class="nm">Cao cấp</td><td>Seedance 2.0</td><td>Seedance 2.0</td><td class="num">~$11,0</td></tr>
+        <tr class="best"><td class="nm">Chuẩn · <strong>đa chủ thể</strong><br><span style="color:var(--muted);font-weight:400">brief có ≥2 chủ thể phải giữ nhất quán</span></td><td colspan="2">Vidu Q2 Pro · reference-to-video <span style="color:var(--muted)">— quy tắc này thắng lựa chọn theo tier ở hai dòng trên</span></td><td class="num">~$2,6</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Cách vào: đi thẳng hay qua aggregator</h3>
+  <p>Đề xuất <strong>dùng cả hai</strong>, và đó chính là lý do <code>IVideoProvider</code> tồn tại:</p>
+  <ul>
+    <li><strong>fal.ai</strong> làm cửa chính cho Kling, Seedance, Vidu — một API key, một kiểu queue + webhook giống nhau, chỉ tính tiền khi job thành công, lỗi server không bị tính. Đổi model chỉ là đổi chuỗi endpoint. Đánh đổi: có markup so với giá gốc.</li>
+    <li><strong>Gemini API</strong> gọi thẳng cho Veo, vì đây sẽ là model chạy nhiều nhất và chênh lệch giá tích luỹ nhanh. Lưu ý vận hành: video sinh ra <em>chỉ lưu trên server Google 2 ngày</em> — worker phải tải về storage của mình ngay khi job xong.</li>
+  </ul>
+
+  <div class="note">
+    <span class="tag">Cần làm trước khi chốt</span>
+    <p>Sprint 0 phải là một <strong>spike so sánh trên ảnh sản phẩm thật của một khách hàng thật</strong> — cùng một prompt, cùng một bộ ảnh, chạy qua cả ba — Veo / Kling / Seedance — rồi để chính người làm marketing chấm điểm. Mọi bảng giá trên mạng đều vô nghĩa nếu output không đạt gu của khách hàng Việt Nam.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <h2><span class="num">05</span>Giọng đọc &amp; âm thanh</h2>
+  <p class="sub">ElevenLabs làm nền tảng giọng cho bản thành phẩm, VieNeu-TTS tự host cho bản nháp và cho khách cần dữ liệu ở trong nước. Kho giọng mẫu có tuyển chọn, và khách tự thêm được giọng riêng.</p>
+
+  <h3>Bốn loại giọng, chỉ ba loại nên dùng</h3>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Loại</th><th>Yêu cầu</th><th>Xác minh chính chủ</th><th>Vai trò trong sản phẩm</th></tr></thead>
+      <tbody>
+        <tr class="dead">
+          <td class="nm">Default voices</td><td>có sẵn</td><td>—</td>
+          <td><strong>Hết hạn 31/12/2026.</strong> Đừng xây kho giọng mẫu trên nhóm này — sang năm là toàn bộ voice_id chết.</td>
+        </tr>
+        <tr class="best">
+          <td class="nm">Voice Library</td><td>không</td><td>—</td>
+          <td><strong>Xương sống của kho giọng mẫu.</strong> Hơn 10.000 giọng cộng đồng, thêm vào tài khoản qua API rồi lấy <code>voice_id</code> dùng vĩnh viễn.</td>
+        </tr>
+        <tr class="best">
+          <td class="nm">Instant Voice Clone</td><td>&lt; 2 phút audio</td><td><span class="chip n">Không có</span></td>
+          <td><strong>Đường cho khách tự tạo giọng.</strong> Nhanh, hầu hết gói đều có. Không xác minh chính chủ — xem rủi ro R6.</td>
+        </tr>
+        <tr class="best">
+          <td class="nm">Professional Voice Clone</td><td>nhiều audio hơn</td><td><span class="chip y">Voice-captcha</span></td>
+          <td><strong>Giọng đại diện thương hiệu chính thức.</strong> Cần gói Creator trở lên. Chất lượng cao nhất và có bằng chứng chính chủ.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Dựng kho giọng mẫu như thế nào</h4>
+  <p>Đừng phơi cả 10.000 giọng ra cho khách. Tuyển 15–20 giọng đọc tốt tiếng Việt, thêm vào tài khoản qua endpoint add-shared-voice, rồi cache <code>voice_id</code> vào bảng <code>VoiceProfile</code> của mình kèm tên thân thiện — "Nữ miền Bắc, ấm, kể chuyện" thay vì một chuỗi hash. Mỗi giọng kèm một file nghe thử 8 giây dựng sẵn bằng chính câu quảng cáo mẫu, để khách chọn bằng tai chứ không bằng mô tả.</p>
+
+  <h4>Khách tự thêm giọng</h4>
+  <p>IVC là đường mặc định: khách upload 1–2 phút ghi âm, hệ thống gọi API tạo clone, lưu <code>voice_id</code> vào <code>VoiceProfile</code> <strong>gắn với tenant</strong> — giọng của khách A không bao giờ được hiện trong danh sách của khách B. PVC dành cho khách trả tiền cho giọng đại diện thương hiệu, và điểm cộng lớn là ElevenLabs tự chạy voice-captcha xác minh người upload đúng là chủ giọng.</p>
+
+  <h3>Bốn tham số API làm thay đổi thiết kế</h3>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Tham số / endpoint</th><th>Giải quyết vấn đề gì</th></tr></thead>
+      <tbody>
+        <tr class="best"><td class="nm"><code>/with-timestamps</code></td><td><strong>Trả về mốc thời gian từng ký tự.</strong> Bước khoá timeline (D6) không còn phải đoán, và file .srt sinh ra chính xác đến từng từ thay vì chia đều theo câu.</td></tr>
+        <tr class="best"><td class="nm"><code>previous_text</code> · <code>next_text</code><br><code>previous_request_ids</code></td><td><strong>Giữ ngữ điệu liền mạch giữa các shot.</strong> Sáu shot = sáu lần gọi TTS; không nối ngữ cảnh thì nghe như sáu người khác nhau đọc sáu câu rời. Nhận tối đa 3 request id trước đó.</td></tr>
+        <tr class="best"><td class="nm"><code>pronunciation_dictionary_locators</code></td><td><strong>Cách xử lý tên riêng tiếng Việt.</strong> Mỗi BrandKit gắn một từ điển phát âm — tên thương hiệu, tên sản phẩm, từ vay mượn — nạp tối đa 3 từ điển mỗi request. Đây là câu trả lời cho lo ngại đọc sai dấu.</td></tr>
+        <tr><td class="nm"><code>seed</code></td><td>Render lại một shot ra đúng giọng đọc cũ, hoặc cố tình đổi khi khách không ưng. Không có seed thì mỗi lần regenerate là một lần xổ số.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Interface tối thiểu — điểm mấu chốt là <strong>bắt buộc trả về timing</strong>, không chỉ tổng thời lượng:</p>
+<pre><code><span class="k">public interface</span> ITtsProvider
+{
+    <span class="c">// Timing là dữ liệu đầu vào của bước khoá timeline VÀ của phụ đề — không được optional</span>
+    Task&lt;TtsResult&gt; SynthesizeAsync(TtsRequest req, CancellationToken ct);
+}
+
+<span class="k">public record</span> TtsRequest(
+    <span class="k">string</span>   Text,
+    VoiceSpec Voice,
+    <span class="k">string</span>?  PreviousText,          <span class="c">// lời shot trước — giữ ngữ điệu liền mạch</span>
+    <span class="k">string</span>?  NextText,
+    <span class="k">string</span>[]? PreviousRequestIds,    <span class="c">// tối đa 3</span>
+    <span class="k">string</span>?  PronunciationDictId,   <span class="c">// theo BrandKit</span>
+    <span class="k">int</span>?     Seed);
+
+<span class="k">public record</span> TtsResult(
+    Stream   Audio,
+    TimeSpan Duration,
+    CharTiming[] Timings,            <span class="c">// → khoá timeline + sinh .srt</span>
+    <span class="k">string</span>   RequestId,              <span class="c">// → truyền vào shot kế tiếp</span>
+    <span class="k">decimal</span>  CostUsd);</code></pre>
+
+  <h3>VieNeu-TTS — adapter thứ hai, và là adapter nên làm sớm</h3>
+  <p>Dự án mã nguồn mở Việt Nam, chạy được trên CPU, nhân bản giọng từ <strong>3–8 giây</strong> audio mẫu, có sẵn <strong>23 giọng preset theo vùng miền</strong>, hỗ trợ song ngữ Việt–Anh cho tên thương hiệu. Bản v3 Turbo cho audio 48 kHz với real-time factor 0,37–0,62 trên CPU desktop — tức 30 giây lời thoại mất khoảng 11–19 giây máy. Có cả SDK Python lẫn cloud API tính theo ký tự nếu không muốn tự vận hành.</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Vai trò</th><th>Vì sao hợp</th></tr></thead>
+      <tbody>
+        <tr class="best"><td class="nm">Tier Nháp &amp; preview storyboard</td><td>Chi phí biên gần bằng không và RTF &lt; 1 nên nhanh hơn gọi API ra ngoài. Khách nghe thử thoải mái, không tốn credit. <strong>Dùng ngay được, không cần chờ kiểm gì.</strong></td></tr>
+        <tr class="best"><td class="nm">Khách yêu cầu dữ liệu không ra nước ngoài</td><td>Tự host nghĩa là kịch bản quảng cáo — thường chứa thông tin sản phẩm chưa ra mắt — không rời hạ tầng mình. Đây là lợi thế bán hàng thật với khách doanh nghiệp, không chỉ là chuyện kỹ thuật.</td></tr>
+        <tr><td class="nm">Giọng riêng cho nhiều tenant</td><td>ElevenLabs cần gói Creator trở lên cho Professional Voice Clone và tính tiền theo giọng. VieNeu clone từ 3–8 giây, tự host, không giới hạn số giọng — chênh lệch này lớn dần theo số khách.</td></tr>
+        <tr><td class="nm">Giảm phụ thuộc một nhà cung cấp</td><td>Adapter thứ hai mà không tốn thêm hợp đồng hay thẻ thanh toán.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Bốn điều phải kiểm trước khi cho nó chạm vào bản thành phẩm</h4>
+  <ol>
+    <li><strong>Có xuất được timing từng ký tự không?</strong> Đây là cửa cứng — quyết định D6 và toàn bộ phần phụ đề dựa vào nó. ElevenLabs có <code>/with-timestamps</code>; VieNeu có streaming theo frame nhưng chưa rõ có trả alignment không. Nếu không có thì phải chạy forced alignment riêng trên audio đã sinh, tức thêm một bước và thêm CPU. <em>Không qua cửa này thì nó chỉ dùng được cho tier Nháp.</em></li>
+    <li><strong>License của <em>weights</em>, không phải của code.</strong> Code là Apache 2.0, nhưng tài liệu không nói rõ giấy phép của model weights và nguồn của hơn 10.000 giờ dữ liệu huấn luyện. Quảng cáo thương mại có trả tiền đúng là chỗ rủi ro này thành vấn đề. Phải đọc file LICENSE trên HuggingFace và hỏi thẳng tác giả trước khi dùng cho bản bán.</li>
+    <li><strong>Chất lượng so với ElevenLabs — hiện chưa có số.</strong> Dự án không công bố điểm MOS. Cách duy nhất là nghe mù: cùng một kịch bản có tên thương hiệu tiếng Việt, cho 5 người làm marketing chấm mà không biết đâu là bản nào.</li>
+    <li><strong>Chi phí không biến mất, nó chuyển chỗ.</strong> Từ hoá đơn sang hạ tầng: vài trăm video mỗi ngày là một worker riêng. Vẫn rẻ hơn nhiều, nhưng phải tính vào capacity và <strong>chạy trên worker tách khỏi FFmpeg</strong> — hai thứ cùng ăn CPU thì tranh nhau.</li>
+  </ol>
+
+  <div class="note pick">
+    <span class="tag">Đề xuất</span>
+    <p><strong>Đưa VieNeu vào ngay từ Sprint 1 cho tier Nháp</strong> — chỗ đó không có rủi ro gì và tiết kiệm thật. Nâng lên bản thành phẩm chỉ khi qua được hai cửa đầu: có timing và license rõ ràng. Nếu không muốn tự vận hành, cloud API của họ tính theo ký tự là đường giữa — vẫn là nhà cung cấp Việt, không phải nuôi máy.</p>
+    <p>Điều này thay thế đề xuất Vbee/FPT.AI làm adapter thứ hai ở bản trước. Ba cái đều là giọng Việt bản địa, nhưng chỉ VieNeu cho phép tự host và clone giọng không giới hạn.</p>
+  </div>
+
+  <h4>Nhạc nền</h4>
+  <p>Với nội dung quảng cáo có trả tiền, nguồn gốc nhạc là vấn đề pháp lý chứ không phải vấn đề thẩm mỹ. Ưu tiên nguồn có giấy phép thương mại rõ ràng — Eleven Music (huấn luyện trên dữ liệu có bản quyền) hoặc một thư viện nhạc mua đứt lưu sẵn trên storage. Tránh các model nhạc không công bố nguồn dữ liệu huấn luyện.</p>
+  <p>Trong FFmpeg: ducking nhạc xuống ‑12 dB ở những đoạn có thoại, fade-in 0,5s đầu và fade-out 1s cuối, chuẩn hoá cả bản mix về ‑14 LUFS (chuẩn phát của Facebook/YouTube/TikTok).</p>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <h2><span class="num">06</span>Kho prompt &amp; định dạng quảng cáo</h2>
+  <p class="sub">Đây là tài sản riêng của sản phẩm — thứ khách không tự làm được và đối thủ không chép nhanh được. Nó cũng là thứ quyết định pipeline chạy song song hay tuần tự, nên phải thiết kế cùng lúc với provider chứ không để sau.</p>
+
+  <h3>Một template không phải là một đoạn prompt</h3>
+  <p>Nếu chỉ lưu mỗi định dạng thành một chuỗi text, ba tháng nữa sẽ có 200 chuỗi mà không ai dám sửa cái nào. <code>AdFormat</code> phải là một bản mô tả có cấu trúc, có version, và là <strong>dữ liệu chứ không phải code</strong> — thêm định dạng mới không được phép là một lần deploy.</p>
+
+<pre><code>{
+  <span class="k">"slug"</span>: <span class="s">"daily_soft_sell"</span>,
+  <span class="k">"name"</span>: <span class="s">"Nhật ký thường ngày"</span>,
+  <span class="k">"sell_style"</span>: <span class="s">"soft"</span>,              <span class="c">// soft | hard</span>
+  <span class="k">"render_mode"</span>: <span class="s">"sequential_chained"</span>, <span class="c">// ← quyết định pipeline, xem bên dưới</span>
+
+  <span class="k">"shot_plan"</span>: [
+    { <span class="k">"role"</span>: <span class="s">"mo_dau_sinh_hoat"</span>, <span class="k">"hint_seconds"</span>: 8, <span class="k">"framing"</span>: <span class="s">"medium"</span>,
+      <span class="k">"product_visible"</span>: <span class="k">false</span> },
+    { <span class="k">"role"</span>: <span class="s">"san_pham_xuat_hien_tinh_co"</span>, <span class="k">"hint_seconds"</span>: 8,
+      <span class="k">"product_visible"</span>: <span class="s">"background"</span> },
+    { <span class="k">"role"</span>: <span class="s">"su_dung_tu_nhien"</span>, <span class="k">"hint_seconds"</span>: 8, <span class="k">"framing"</span>: <span class="s">"close"</span> }
+  ],
+
+  <span class="k">"visual_system"</span>: {
+    <span class="k">"lighting"</span>: <span class="s">"ánh sáng tự nhiên ban ngày, không đèn studio"</span>,
+    <span class="k">"camera"</span>:   <span class="s">"cầm tay, rung nhẹ, không dolly mượt"</span>,
+    <span class="k">"grade"</span>:    <span class="s">"màu phim, hơi ngả ấm, không bão hoà"</span>
+  },
+
+  <span class="k">"vo_style"</span>: {
+    <span class="k">"person"</span>: <span class="s">"ngoi_thu_nhat"</span>, <span class="k">"tone"</span>: <span class="s">"ke_chuyen"</span>,
+    <span class="k">"cta_position"</span>: <span class="s">"cuoi_va_nhe"</span>,
+    <span class="k">"voice_settings"</span>: { <span class="k">"stability"</span>: 0.35, <span class="k">"style"</span>: 0.55 }
+  },
+
+  <span class="k">"requires"</span>: { <span class="k">"talent"</span>: <span class="k">true</span>, <span class="k">"min_product_images"</span>: 1,
+                 <span class="c">// vidu vắng mặt có chủ ý: nối frame của nó ở endpoint khác</span>
+                 <span class="k">"providers"</span>: [<span class="s">"veo"</span>, <span class="s">"kling"</span>, <span class="s">"seedance"</span>] },
+
+  <span class="k">"locale_pack"</span>: <span class="s">"vi-VN"</span>,
+  <span class="k">"negative_prompt_ref"</span>: <span class="s">"global_no_text"</span>     <span class="c">// theo quyết định D4</span>
+}</code></pre>
+
+  <h3>Danh mục khởi điểm</h3>
+  <p>Tám định dạng đủ phủ phần lớn nhu cầu quảng cáo sản phẩm. Cột "Dựng" là thứ quan trọng nhất về mặt kỹ thuật — nó quyết định thời gian chờ và chi phí.</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Định dạng</th><th>Kiểu bán</th><th>Cấu trúc</th><th>Dựng</th><th>Người</th><th>Độ khó</th></tr></thead>
+      <tbody>
+        <tr class="best"><td class="nm">Hero sản phẩm</td><td>Cứng</td><td>3–4 cận cảnh studio, xoay chậm</td><td><span class="chip y">Song song</span></td><td><span class="chip n">Không</span></td><td>Dễ nhất — làm đầu tiên</td></tr>
+        <tr class="best"><td class="nm">TVC mini đa bối cảnh</td><td>Cứng</td><td>4–6 cảnh rời, mỗi cảnh một lợi ích</td><td><span class="chip y">Song song</span></td><td>Tuỳ</td><td>Dễ</td></tr>
+        <tr><td class="nm">Vấn đề → giải pháp</td><td>Cứng</td><td>Khó chịu → sản phẩm → nhẹ nhõm</td><td><span class="chip y">Song song</span></td><td>Có</td><td>Dễ</td></tr>
+        <tr><td class="nm">Hook 1,5 giây</td><td>Cứng</td><td>Hook mạnh + 3 cảnh nhanh, cho TikTok</td><td><span class="chip y">Song song</span></td><td>Tuỳ</td><td>Dễ</td></tr>
+        <tr><td class="nm">Trước / sau</td><td>Cứng</td><td>Hai khối đối xứng, cùng góc máy</td><td><span class="chip y">Song song</span></td><td>Tuỳ</td><td>Trung bình</td></tr>
+        <tr><td class="nm">Mở hộp / chạm tay</td><td>Mềm</td><td>Cận cảnh bàn tay, nhịp chậm</td><td><span class="chip y">Song song</span></td><td>Một phần</td><td>Trung bình</td></tr>
+        <tr><td class="nm">Người thật kể chuyện</td><td>Mềm</td><td>Nói trực diện, cắt B-roll xen kẽ</td><td><span class="chip y">Song song</span></td><td>Có</td><td>TB — cần lip-sync</td></tr>
+        <tr class="best"><td class="nm">Nhật ký thường ngày</td><td>Mềm</td><td>Một mạch liên tục, sản phẩm cài tự nhiên</td><td><span class="chip p">Tuần tự</span></td><td>Có</td><td><strong>Khó nhất</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Định dạng "daily" đáng một mục riêng</h3>
+  <p>Đây là thứ anh mô tả: video trông như nhật ký sinh hoạt, sản phẩm gắn vào một cách tự nhiên. Nó bán tốt hơn quảng cáo thẳng, nhưng về kỹ thuật thì khác hẳn bảy định dạng còn lại.</p>
+
+  <h4>One-shot 40 giây là không thể sinh trực tiếp</h4>
+  <p>Model tối đa 15 giây. "Một mạch liên tục" phải giả lập bằng <strong>nối frame</strong>: render 8 giây, lấy khung hình cuối, dùng nó làm khung hình đầu của đoạn kế. Veo 3.1 có <code>last_frame</code> và nối tiếp thẳng từ video cũ; Kling và Seedance có điều khiển frame đầu/cuối ngay trong endpoint chính. <strong>Vidu không nằm trong danh sách cho định dạng này</strong> — nó vẫn nối frame được nhưng qua một endpoint riêng, và khi sang endpoint đó thì mất đúng cái lợi thế đa chủ thể đã chọn nó (mục 04).</p>
+
+  <div class="note warn">
+    <span class="tag">Hệ quả kiến trúc</span>
+    <p>Nối frame nghĩa là <strong>render tuần tự, không song song</strong> — đoạn 3 phải chờ đoạn 2 xong mới bắt đầu. Ba con số thay đổi theo:</p>
+    <ul style="margin-top:10px;margin-bottom:0">
+      <li><strong>Thời gian chờ:</strong> 40 giây daily ≈ 5 đoạn nối tiếp ≈ <strong>8–15 phút</strong>, so với 2–3 phút của video đa cảnh cùng độ dài.</li>
+      <li><strong>Chi phí retry:</strong> đoạn 2 hỏng thì đoạn 3, 4, 5 phải làm lại hết. Hệ số retry cho daily nên tính <strong>2,8×</strong> thay vì 2,0×.</li>
+      <li><strong>Trôi hình:</strong> sau 4–5 lần nối, màu và khuôn mặt bắt đầu trôi. Giảm bằng cách truyền lại ảnh tham chiếu ở <em>mỗi</em> đoạn. Giới hạn thực tế khoảng 40–60 giây — đừng hứa với khách nhiều hơn.</li>
+    </ul>
+  </div>
+
+  <h4>Ba luật để sản phẩm trông tự nhiên</h4>
+  <p>Cái khó của daily không nằm ở kỹ thuật mà ở chỗ cài sản phẩm vào mà không lộ. Đây phải là ràng buộc cứng trong director prompt, không phải gợi ý:</p>
+  <ol>
+    <li><strong>Sản phẩm không bao giờ là chủ thể của khung hình.</strong> Nó nằm đó như một vật dụng bình thường — trên bàn, trong tay, sau lưng nhân vật. Chủ thể luôn là con người và việc họ đang làm.</li>
+    <li><strong>Không cận nhãn mác trước giây thứ 10.</strong> Người xem nhận ra quảng cáo trong hai giây đầu là lướt qua ngay.</li>
+    <li><strong>Lời thoại ngôi thứ nhất, kể chuyện, không có câu khẳng định kiểu quảng cáo.</strong> "Sáng nào tôi cũng pha một ly trước khi đi làm" được; "Sản phẩm số 1 Việt Nam" thì hỏng cả video — và vướng luôn rủi ro R3.</li>
+  </ol>
+
+  <p>Giọng đọc cũng phải khác: <code>stability</code> thấp hơn và <code>style</code> cao hơn để nghe như người nói chuyện chứ không phải phát thanh viên. Vì vậy <code>VoiceProfile</code> cần gắn thẻ tông giọng, và mỗi <code>AdFormat</code> khai báo tông nó cần — chọn nhầm giọng "quảng cáo" cho format daily là hỏng ngay từ giây đầu.</p>
+
+  <h3>Thư viện bối cảnh Việt Nam</h3>
+  <p>Mặc định của mọi model là bối cảnh phương Tây. Viết "buổi sáng trong bếp" sẽ ra bếp Mỹ: đảo bếp, tủ lạnh hai cánh, cửa sổ lớn. Khách hàng Việt nhìn vào là thấy sai ngay, dù không chỉ ra được sai ở đâu.</p>
+
+  <div class="note pick">
+    <span class="tag">Vì sao đây là phần đáng đầu tư nhất</span>
+    <p>Provider sẽ đổi, giá sẽ đổi, model sẽ bị khai tử — nhưng một thư viện bối cảnh đã tinh chỉnh qua vài trăm video thì không ai chép được trong một tuần, vì nó là kết quả của thử nghiệm thật chứ không phải của việc ngồi viết ra. Nó cũng là thứ duy nhất trong cả hệ thống mà người Việt có lợi thế tự nhiên.</p>
+  </div>
+
+  <h4>Ba điều quyết định thư viện này có tác dụng hay không</h4>
+  <ol>
+    <li><strong>Mô tả bằng vật thể cụ thể, không bằng tính từ.</strong> "Quán cà phê kiểu Việt Nam" cho ra quán Âu có thêm cái nón lá. "Ghế nhựa đỏ thấp, bàn inox, ly thuỷ tinh có phin nhôm đặt trên, vỉa hè lát gạch con sâu" thì ra đúng. Model không hiểu "kiểu Việt Nam" — nó hiểu đồ vật.</li>
+    <li><strong>Mỗi entry phải có trường <code>avoid</code>.</strong> Nói cái mình muốn là chưa đủ; phải nói cả cái không muốn — "không cốc giấy takeaway, không quầy bar gỗ, không bảng hiệu chữ nước ngoài". Đây là trường hay bị bỏ quên nhất và là trường tạo khác biệt lớn nhất.</li>
+    <li><strong>Prompt lưu song ngữ, tiếng Anh là bản gửi đi.</strong> Model hiểu tiếng Anh tốt hơn hẳn. Nhưng người biên tập thư viện là người Việt, nên giữ cả hai trường: bản tiếng Việt để người sửa và tranh luận, bản tiếng Anh viết tay (<em>không</em> dịch máy) để gửi provider.</li>
+  </ol>
+
+<pre><code>{
+  <span class="k">"slug"</span>: <span class="s">"quan_ca_phe_via_he_sang"</span>,
+  <span class="k">"name_vi"</span>: <span class="s">"Quán cà phê vỉa hè buổi sáng"</span>,
+  <span class="k">"tags"</span>: [<span class="s">"ngoai_troi"</span>, <span class="s">"sang"</span>, <span class="s">"thanh_thi"</span>, <span class="s">"an_uong"</span>],
+
+  <span class="k">"prompt_en"</span>: <span class="s">"a narrow Vietnamese sidewalk coffee stall at 7am, low red plastic
+     stools, stainless steel tables, glass of iced coffee with an aluminium phin
+     filter on top, worn tiled pavement, motorbikes parked at the kerb, morning
+     sun through tree leaves"</span>,
+  <span class="k">"prompt_vi"</span>: <span class="s">"quán cà phê vỉa hè 7 giờ sáng, ghế nhựa đỏ thấp, bàn inox..."</span>,
+
+  <span class="k">"avoid"</span>: <span class="s">"no takeaway paper cups, no wooden bar counter, no espresso machine,
+     no foreign-language signage, not a European cafe"</span>,
+
+  <span class="k">"verified_on"</span>: [<span class="s">"veo"</span>, <span class="s">"kling"</span>],   <span class="c">// đã chạy thật và ra đúng</span>
+  <span class="k">"quality_score"</span>: 0.82              <span class="c">// từ FormatUsageStat, không nhập tay</span>
+}</code></pre>
+
+  <div class="note warn">
+    <span class="tag">Đừng bỏ qua</span>
+    <p>Trường <code>verified_on</code> là thứ biến thư viện từ "một file text" thành tài sản. Một mô tả ra đẹp trên Veo hoàn toàn có thể ra tệ trên Kling — ánh sáng, ống kính, cách xử lý đám đông khác nhau. Chưa kiểm chứng trên provider nào thì không được gợi ý cho provider đó.</p>
+  </div>
+
+  <h4>Danh mục hạt giống — khoảng 30 entry cho đợt đầu</h4>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Nhóm</th><th>Entry</th><th>Ngành hàng hay dùng</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">Nhà ở</td><td>Bếp chung cư nhỏ · phòng khách nhà ống · ban công phơi đồ · sân thượng chiều · phòng trọ sinh viên · sân gạch nhà quê</td><td>Gia dụng, thực phẩm, hoá mỹ phẩm</td></tr>
+        <tr><td class="nm">Ăn uống</td><td>Cà phê vỉa hè · quán phở sáng · quán trà đá · bếp quán nhỏ · quán nhậu tối</td><td>F&amp;B, đồ uống</td></tr>
+        <tr><td class="nm">Công cộng</td><td>Chợ sáng · ngõ nhỏ · phố cổ · công viên tập thể dục sáng · biển miền Trung · cầu bộ hành</td><td>Thời trang, thể thao, du lịch</td></tr>
+        <tr><td class="nm">Làm việc</td><td>Văn phòng mở · tạp hoá · shop thời trang nhỏ · xưởng may · quầy thuốc</td><td>B2B, văn phòng phẩm, dược</td></tr>
+        <tr><td class="nm">Di chuyển</td><td>Xe máy giờ tan tầm · trong xe công nghệ · bến xe buýt</td><td>Công nghệ, đồ cá nhân</td></tr>
+        <tr class="best"><td class="nm">Nhân vật</td><td>Nữ 25 văn phòng · nam 35 shipper · nội trợ 45 · sinh viên 20 · ông bà trong nhà ba thế hệ</td><td><strong>Cần riêng một nhóm</strong> — model để mặc sẽ cho ra người phương Tây hoặc người châu Á chung chung</td></tr>
+        <tr class="best"><td class="nm">Dịp &amp; mùa</td><td>Tết · Trung thu · mùa mưa Sài Gòn · nồm ẩm Hà Nội · khai giảng</td><td><strong>Nhóm bán chạy nhất</strong> — chiến dịch theo mùa là lúc khách chịu chi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Thư viện tự lớn lên: mỗi job dùng entry nào mà không bị regenerate thì entry đó tăng điểm; mô tả bối cảnh nào do LLM tự nghĩ ra mà cho kết quả tốt thì biên tập viên đẩy lên thành entry chính thức. Sau vài trăm video, phần này mới là lý do khách ở lại — không phải model.</p>
+
+  <h3>Hai tầng kho và vòng học</h3>
+  <ul>
+    <li><strong>Kho chung:</strong> do mình tuyển chọn, có version, mỗi format kèm một video ví dụ thật để khách chọn bằng mắt chứ không bằng mô tả.</li>
+    <li><strong>Kho riêng của tenant:</strong> khách nhân bản một format rồi sửa, hoặc lưu lại cấu hình đã cho ra video mà họ ưng.</li>
+    <li><strong>Vòng học:</strong> mỗi job ghi lại dùng format nào, có bị regenerate không, khách có tải về không. Sau 200–300 video là đủ dữ liệu để nói "format này hợp ngành F&amp;B, format kia hợp mỹ phẩm" — và đó là lúc kho prompt bắt đầu tự tốt lên.</li>
+  </ul>
+
+  <p>Ràng buộc dùng chung, khai báo một chỗ chứ không rải rác trong code: negative prompt toàn cục <code>"no text, no letters, no captions, no logo, no watermark"</code> theo quyết định D4, và khối <code>requires</code> để tầng API từ chối sớm — khách chọn format daily mà không upload ảnh người thì báo lỗi ngay, đừng để chạy đến bước 6 mới hỏng.</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <h2><span class="num">07</span>Hợp đồng API</h2>
+  <p class="sub">Đúng tinh thần anh đặt ra: đầu vào đơn giản nhưng đủ. Mọi trường đều có mặc định hợp lý — bắt buộc chỉ có <code>prompt</code> và ít nhất một ảnh sản phẩm.</p>
+
+  <span class="filelabel">POST /v1/ad-videos → 202 Accepted</span>
+<pre><code>{
+  <span class="k">"brief"</span>: {
+    <span class="k">"product_name"</span>: <span class="s">"Sữa hạt Nutri Gold 9 loại hạt"</span>,
+    <span class="k">"prompt"</span>: <span class="s">"Quảng cáo sữa hạt cho gia đình, không khí buổi sáng ấm áp trong bếp,
+                 nhấn mạnh 9 loại hạt và không đường, kết bằng cận cảnh hộp sản phẩm"</span>,
+    <span class="k">"duration_seconds"</span>: 30,          <span class="c">// 6–180; hệ thống tự chia shot</span>
+    <span class="k">"aspect_ratio"</span>: <span class="s">"9:16"</span>,           <span class="c">// mặc định TikTok. Một job = một tỉ lệ;</span>
+                                     <span class="c">// muốn tỉ lệ khác → dùng /reframe bên dưới</span>
+    <span class="k">"format"</span>: <span class="s">"daily_soft_sell"</span>,     <span class="c">// slug trong kho prompt; null = LLM tự chọn</span>
+    <span class="k">"language"</span>: <span class="s">"vi"</span>
+  },
+
+  <span class="k">"assets"</span>: {
+    <span class="k">"product_images"</span>: [<span class="s">"https://cdn.../hop-truoc.jpg"</span>, <span class="s">"https://cdn.../rot-ly.jpg"</span>],
+    <span class="k">"talent"</span>: {                        <span class="c">// bỏ trống nếu chỉ quay sản phẩm</span>
+      <span class="k">"image_url"</span>: <span class="s">"https://cdn.../mau-nu.jpg"</span>,
+      <span class="k">"consent_ref"</span>: <span class="s">"CONSENT-2026-0142"</span>   <span class="c">// bắt buộc khi có talent — xem mục 10</span>
+    },
+    <span class="k">"scene_reference"</span>: [<span class="s">"https://cdn.../bep-sang.jpg"</span>],
+    <span class="k">"brand_kit_id"</span>: <span class="s">"bk_nutrigold"</span>       <span class="c">// logo, font, màu, bumper kết</span>
+  },
+
+  <span class="k">"voice"</span>: {
+    <span class="k">"voice_profile_id"</span>: <span class="s">"vp_nu_bac_am"</span>,  <span class="c">// id nội bộ, không phải voice_id của ElevenLabs</span>
+    <span class="k">"speed"</span>: 1.0,
+    <span class="k">"script"</span>: <span class="k">null</span>                      <span class="c">// null = AI viết lời; hoặc truyền lời thoại cố định</span>
+  },
+
+  <span class="k">"audio"</span>: {
+    <span class="k">"native_sound"</span>: <span class="s">"sfx_only"</span>,        <span class="c">// off | sfx_only | full</span>
+                                     <span class="c">//   off      = video câm, chỉ có VO + nhạc (mặc định)</span>
+                                     <span class="c">//   sfx_only = giữ tiếng động đồng bộ của model, trộn ‑18 dB</span>
+                                     <span class="c">//   full     = giữ cả tiếng nền — chỉ Vidu tách được sạch</span>
+    <span class="k">"music"</span>: { <span class="k">"mode"</span>: <span class="s">"auto"</span>, <span class="k">"mood"</span>: <span class="s">"uplifting_acoustic"</span> }
+  },
+  <span class="k">"captions"</span>: { <span class="k">"enabled"</span>: <span class="k">true</span>, <span class="k">"style"</span>: <span class="s">"bold_bottom"</span> },
+
+  <span class="k">"options"</span>: {
+    <span class="k">"quality"</span>: <span class="s">"standard"</span>,             <span class="c">// draft | standard | premium</span>
+    <span class="k">"provider"</span>: <span class="k">null</span>,                  <span class="c">// null = tự chọn theo bảng ánh xạ ở mục 04;</span>
+                                     <span class="c">// hoặc "veo" | "kling" | "seedance" để ép</span>
+    <span class="k">"max_credits"</span>: 120,               <span class="c">// trần cứng, vượt là dừng job</span>
+    <span class="k">"require_storyboard_approval"</span>: <span class="k">true</span>
+  },
+
+  <span class="k">"callback_url"</span>: <span class="s">"https://site-khach.vn/api/hooks/ad-video"</span>
+}</code></pre>
+
+  <span class="filelabel">Phản hồi</span>
+<pre><code>{
+  <span class="k">"job_id"</span>: <span class="s">"vj_01K5R7..."</span>,
+  <span class="k">"status"</span>: <span class="s">"queued"</span>,
+  <span class="k">"credits_held"</span>: 80,                <span class="c">// đã giữ, chưa trừ hẳn — xem mục 09</span>
+  <span class="k">"credits_balance_after_hold"</span>: 220,
+  <span class="k">"estimated_ready_at"</span>: <span class="s">"2026-09-14T10:22:00Z"</span>
+}</code></pre>
+
+  <h3>Vòng đời job</h3>
+  <div class="states">
+    <span class="st">queued</span><i>→</i>
+    <span class="st">scripting</span><i>→</i>
+    <span class="st hold">awaiting_approval</span><i>→</i>
+    <span class="st">voicing</span><i>→</i>
+    <span class="st">rendering_shots <b>4/6</b></span><i>→</i>
+    <span class="st">composing</span><i>→</i>
+    <span class="st ok">completed</span>
+    <i>&nbsp;|&nbsp;</i><span class="st bad">failed</span>
+    <i>&nbsp;|&nbsp;</i><span class="st bad">cancelled</span>
+  </div>
+
+  <h3>Các endpoint còn lại</h3>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Endpoint</th><th>Công dụng</th></tr></thead>
+      <tbody>
+        <tr><td class="nm"><code>GET /v1/ad-videos/{id}</code></td><td>Trạng thái + tiến độ từng shot + số credit đang giữ và đã chốt.</td></tr>
+        <tr><td class="nm"><code>GET /v1/ad-videos/{id}/storyboard</code></td><td>Xem storyboard để hiển thị cho khách duyệt.</td></tr>
+        <tr><td class="nm"><code>PATCH /v1/ad-videos/{id}/storyboard</code></td><td>Sửa lời thoại / mô tả hình của một shot rồi duyệt.</td></tr>
+        <tr class="best"><td class="nm"><code>POST /v1/ad-videos/{id}/shots/{n}/regenerate</code></td><td><strong>Endpoint quan trọng nhất về mặt chi phí.</strong> Khách không ưng shot 3 thì render lại đúng 5 giây đó, không phải cả video 30 giây.</td></tr>
+        <tr class="best"><td class="nm"><code>POST /v1/ad-videos/{id}/reframe</code></td><td><strong>Xuất tỉ lệ khung hình khác.</strong> Tạo job mới nhưng <em>tái dùng storyboard và voice-over đã có</em> — chỉ render lại phần hình. Tiết kiệm toàn bộ chi phí LLM và TTS, và giữ đúng lời thoại giữa các bản.</td></tr>
+        <tr><td class="nm"><code>GET /v1/ad-videos/{id}/assets</code></td><td>Presigned URL hạn 15 phút: MP4, thumbnail, file .srt, voice-over rời.</td></tr>
+        <tr><td class="nm"><code>POST /v1/ad-videos/{id}/cancel</code></td><td>Huỷ job đang chạy, dừng phát sinh chi phí.</td></tr>
+        <tr class="best"><td class="nm"><code>POST /v1/estimates</code></td><td>Trả về <strong>số credit chính xác</strong> và thời gian chờ dự kiến mà không tạo job — để UI hiện thẳng trên nút bấm. Công thức tất định nên không phải là khoảng ước chừng.</td></tr>
+        <tr><td class="nm"><code>GET /v1/credits</code></td><td>Số dư, số đang bị giữ, số dùng trong kỳ, ngày hết hạn gói.</td></tr>
+        <tr><td class="nm"><code>GET /v1/credits/ledger</code></td><td>Sổ giao dịch có phân trang — khách tự đối chiếu, support không phải mở database.</td></tr>
+        <tr><td class="nm"><code>GET /v1/providers</code></td><td>Danh sách provider đang sống kèm <code>ProviderCapability</code> — để UI tự dựng form đúng giới hạn của từng model thay vì hard-code.</td></tr>
+        <tr><td class="nm"><code>GET /v1/formats</code></td><td>Danh mục định dạng quảng cáo kèm video ví dụ, khối <code>requires</code> và thời gian chờ dự kiến — để UI tự dựng bước chọn định dạng.</td></tr>
+        <tr><td class="nm"><code>GET /v1/voices</code></td><td>Kho giọng đã tuyển + giọng riêng của tenant, kèm URL nghe thử.</td></tr>
+        <tr><td class="nm"><code>POST /v1/voices/clone</code></td><td>Khách tạo giọng riêng từ file ghi âm. Bắt buộc kèm xác nhận quyền sử dụng giọng.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Sự kiện webhook: <code>job.storyboard_ready</code>, <code>job.shot_completed</code>, <code>job.completed</code>, <code>job.failed</code>. Gửi lại theo cấp số nhân trong 24 giờ; mọi payload đều kèm <code>job_id</code> để bên nhận tự đối chiếu.</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s8">
+  <h2><span class="num">08</span>Mô hình dữ liệu</h2>
+  <p class="sub">Theo đúng convention NewsCMS: entity PascalCase số ít, kế thừa <code>AuditableEntity</code>, soft-delete qua <code>ISoftDelete</code>, cấu hình bằng <code>IEntityTypeConfiguration&lt;T&gt;</code>.</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Entity</th><th>Giữ gì</th><th>Ghi chú</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">AdVideoProject</td><td>Chiến dịch của khách: tên, sản phẩm, brand kit mặc định</td><td>Một project chứa nhiều job — khách thường làm 5–10 biến thể cho cùng một sản phẩm.</td></tr>
+        <tr><td class="nm">AdVideoJob</td><td>Brief gốc (JSON), <strong>provider đã chọn</strong>, trạng thái, chi phí ước tính vs thực tế, output URLs</td><td>Bảng trung tâm. Provider nằm ở đây <em>chứ không phải ở Shot</em> — theo Luật 1 mục 04. Index theo <code>(TenantId, Status, CreatedAt)</code>.</td></tr>
+        <tr><td class="nm">Shot</td><td>Thứ tự, thời lượng, prompt hình, lời thoại, seed, request id của TTS, URL clip, số lần render lại</td><td>Cho phép regenerate từng shot mà không đụng job. Giữ <code>TtsRequestId</code> để shot kế tiếp nối được ngữ điệu.</td></tr>
+        <tr><td class="nm">MediaAsset</td><td>Ảnh vào / clip ra / audio, checksum, kích thước</td><td>Trỏ tới object storage, <strong>không</strong> lưu đường dẫn tuyệt đối trên ổ đĩa.</td></tr>
+        <tr class="best"><td class="nm">AdFormat</td><td>Định dạng quảng cáo: shot plan, visual system, vo style, <code>render_mode</code>, <code>requires</code>, version</td><td>Là <strong>dữ liệu nạp lúc chạy</strong>, không phải hằng số biên dịch — thêm định dạng mới không được là một lần deploy. <code>TenantId</code> null = kho chung.</td></tr>
+        <tr><td class="nm">SceneEntry</td><td>Mô tả bối cảnh Việt Nam tái dùng + thẻ phân loại</td><td>Locale pack ở mục 06. Tài sản tích luỹ lâu dài nhất của hệ thống.</td></tr>
+        <tr><td class="nm">FormatUsageStat</td><td>Format nào, ngành hàng nào, số lần regenerate, khách có tải về không</td><td>Nuôi vòng học — sau vài trăm video mới gợi ý được format theo ngành.</td></tr>
+        <tr><td class="nm">BrandKit</td><td>Logo, bảng màu, font, bumper mở/kết, mẫu CTA</td><td>Tái sử dụng qua mọi video của cùng khách hàng.</td></tr>
+        <tr><td class="nm">VoiceProfile</td><td>Provider + <code>voice_id</code> + loại (library / IVC / PVC) + tốc độ + URL nghe thử + <code>TenantId</code></td><td>Tên thân thiện tiếng Việt thay cho chuỗi hash. <code>TenantId</code> null = giọng dùng chung; có giá trị = giọng riêng của khách, không được lộ sang tenant khác.</td></tr>
+        <tr><td class="nm">PronunciationDictionary</td><td>Cặp từ → cách đọc, gắn theo BrandKit</td><td>Nơi sửa tên thương hiệu bị đọc sai. Đồng bộ lên ElevenLabs, lưu locator để truyền vào mỗi request TTS.</td></tr>
+        <tr class="best"><td class="nm">ProviderCall</td><td>Mỗi lần gọi ra ngoài: provider, model, tham số, thời gian, chi phí, thành/bại</td><td><strong>Bắt buộc có từ ngày đầu.</strong> Không có bảng này thì không bao giờ biết một video thực sự tốn bao nhiêu và tại sao hoá đơn tăng.</td></tr>
+        <tr class="best"><td class="nm">CreditLedgerEntry</td><td>Một dòng cho mỗi biến động: loại, số lượng có dấu, số dư sau, lý do, job liên quan, ai tạo ra</td><td><strong>Append-only.</strong> Không có UPDATE, không có cột số dư là nguồn sự thật. Khoá chống trùng theo <code>(JobId, Type)</code>.</td></tr>
+        <tr><td class="nm">CreditAccount</td><td>Số dư (cache), số đang giữ, ngưỡng âm cho phép, cấu hình cảnh báo</td><td>Một tài khoản cho mỗi tenant. Số dư ở đây luôn phải khớp với tổng ledger — có job nền đối soát hằng ngày.</td></tr>
+        <tr><td class="nm">CreditPackage</td><td>Gói bán: số credit, giá VND, hạn dùng, có tự gia hạn không</td><td>Đổi giá gói không được ảnh hưởng credit khách đã mua.</td></tr>
+        <tr><td class="nm">TenantQuota</td><td>Trần credit mỗi job, giới hạn số job chạy song song</td><td>Chốt chặn cuối — khác với số dư credit, đây là chặn hành vi bất thường.</td></tr>
+        <tr><td class="nm">ConsentRecord</td><td>Bằng chứng được phép dùng <strong>hình ảnh và giọng nói</strong> của một người</td><td>Một bảng cho cả hai — bản chất rủi ro giống nhau. Xem R5 và R6 ở mục 10.</td></tr>
+        <tr><td class="nm">ProviderCapability</td><td>Lưới thời lượng, số ảnh tham chiếu, tỉ lệ khung hình, chính sách người thật, hệ số giá</td><td>Nên là cấu hình nạp lúc chạy chứ không phải hằng số biên dịch — provider đổi giới hạn mà mình phải deploy lại là hỏng.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s9">
+  <h2><span class="num">09</span>Chi phí &amp; credit</h2>
+  <p class="sub">Hai nửa của cùng một bài toán: giá vốn thật tính bằng đô la, và số credit khách nhìn thấy. Giữ chúng tách bạch là quyết định D8.</p>
+
+  <div class="tw">
+    <table>
+      <caption>Ước tính cho tier <strong>standard</strong> (Veo 3.1 Fast + Kling 3.0, 1080p) đã gồm voice-over, nhạc, LLM và compose. Hệ số 2,0× phản ánh tỉ lệ render lại thực tế quan sát được ở các pipeline tương tự — cần đo lại bằng dữ liệu của chính mình sau Sprint 1.</caption>
+      <thead>
+        <tr><th>Thành phẩm</th><th class="num">Số shot</th><th class="num">Chi phí lý thuyết</th><th class="num">Thực tế (×2,0)</th><th class="num">Giá vốn / video</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">15 giây · 9:16</td><td class="num">3</td><td class="num">$1,65</td><td class="num">$3,30</td><td class="num">~87.000 đ</td></tr>
+        <tr class="best"><td class="nm">30 giây · 9:16</td><td class="num">6</td><td class="num">$3,15</td><td class="num">$6,30</td><td class="num">~166.000 đ</td></tr>
+        <tr><td class="nm">60 giây · 16:9</td><td class="num">10</td><td class="num">$6,20</td><td class="num">$12,40</td><td class="num">~327.000 đ</td></tr>
+        <tr><td class="nm">40 giây · daily one-shot<br><span style="color:var(--muted);font-weight:400">nối frame tuần tự · hệ số 2,8×</span></td><td class="num">5</td><td class="num">$4,45</td><td class="num">$12,50</td><td class="num">~330.000 đ</td></tr>
+        <tr><td class="nm">30 giây · tier premium</td><td class="num">6</td><td class="num">$11,00</td><td class="num">$22,00</td><td class="num">~580.000 đ</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Ba đòn bẩy giảm giá vốn, theo thứ tự hiệu quả</h4>
+  <ol>
+    <li><strong>Regenerate từng shot thay vì cả video.</strong> Đây là lý do endpoint đó tồn tại — nó cắt phần lớn hệ số 2,0× ở trên.</li>
+    <li><strong>Duyệt storyboard trước khi render.</strong> Sửa một dòng chữ tốn $0; sửa sau khi render tốn cả job.</li>
+    <li><strong>Tier draft dùng Veo Lite 720p.</strong> Cho khách xem bản nháp với giá bằng 1/3, chỉ render bản chuẩn khi đã chốt.</li>
+  </ol>
+
+  <p>Định dạng daily nên là <strong>một mức giá riêng, cao hơn</strong>. Nó tốn gấp bốn lần video 30 giây thường và khách phải chờ 8–15 phút thay vì 2–3 phút — bán cùng giá là vừa lỗ vừa tạo kỳ vọng sai về thời gian chờ.</p>
+
+  <p>Về giá bán: giá vốn khoảng 166.000 đ cho video 30 giây, so với 3–8 triệu đồng cho một TVC ngắn thuê ngoài. Biên rất rộng — vấn đề sẽ là chất lượng đầu ra có đủ để khách chịu trả hay không, chứ không phải chi phí API.</p>
+
+  <div class="note warn">
+    <span class="tag">Hoãn — làm cùng lúc với gói bán</span>
+    <p>Phần credit dưới đây <strong>không nằm trong 9 tuần đầu</strong>. Nó sẽ được thiết kế lại cùng với cấu trúc gói bán, vì credit chỉ là một thành phần của gói — bên cạnh quyền dùng tier Cao cấp, số brand kit, số giọng clone, thời gian lưu video, số job chạy song song. Thiết kế credit tách rời khỏi gói rồi ghép sau là làm hai lần.</p>
+    <p>Giữ nguyên ở đây làm bản nháp để tham chiếu. <strong>Hai điều cần tôn trọng trong lúc chờ:</strong></p>
+    <ul style="margin:10px 0 0">
+      <li><strong>Đừng dựng một phiên bản tạm của tính tiền.</strong> Không thêm cột <code>credits_remaining</code> vào bảng tenant, không dùng <code>TenantQuota</code> như một cái ví. Một cột số dư tồn tại sáu tháng rồi mới chuyển sang sổ append-only là một cuộc di dời dữ liệu có tranh chấp tiền bạc đi kèm.</li>
+      <li><strong>Bảng <code>ProviderCall</code> phải chạy từ ngày đầu.</strong> Nó không phụ thuộc gì vào credit, nhưng khi ngồi thiết kế gói bán thì dữ liệu chi phí thật của vài trăm video là thứ quyết định hệ số — không có nó thì lại đoán.</li>
+    </ul>
+  </div>
+
+  <h3>Credit: đơn vị khách nhìn thấy <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);border:1px solid var(--amber);padding:2px 7px;border-radius:20px;vertical-align:middle;margin-left:8px">Bản nháp</span></h3>
+  <p><strong>Credit neo vào giây video, không neo vào đô la.</strong> Nếu đặt 1 credit = 1 cent thì mỗi lần Google đổi giá là phải sửa bảng giá bán, và khách nhìn một con số đô la trong khi trả bằng tiền Việt. Đề xuất neo đơn giản: <strong>1 credit ≈ 1 giây video thành phẩm, tier Chuẩn, định dạng đa cảnh.</strong></p>
+
+<pre><code>credits = ceil(duration_seconds × tier_multiplier × format_multiplier)</code></pre>
+
+  <div class="tw">
+    <table>
+      <caption>Hệ số khởi điểm — đây là những con số cần chỉnh lại sau Sprint 6 khi có tỉ lệ regenerate thật, chứ không phải hằng số vĩnh viễn.</caption>
+      <thead><tr><th>Hệ số</th><th class="num">Giá trị</th><th>Ví dụ</th><th class="num">Credit</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">Tier Nháp</td><td class="num">×0,4</td><td>30 giây nháp, đa cảnh</td><td class="num">12</td></tr>
+        <tr class="best"><td class="nm">Tier Chuẩn</td><td class="num">×1,0</td><td>30 giây chuẩn, đa cảnh</td><td class="num">30</td></tr>
+        <tr><td class="nm">Tier Cao cấp</td><td class="num">×3,5</td><td>30 giây cao cấp</td><td class="num">105</td></tr>
+        <tr><td class="nm">Định dạng đa cảnh</td><td class="num">×1,0</td><td>15 giây chuẩn</td><td class="num">15</td></tr>
+        <tr class="best"><td class="nm">Định dạng daily</td><td class="num">×2,0</td><td>40 giây daily chuẩn</td><td class="num">80</td></tr>
+        <tr><td class="nm">Regenerate một shot</td><td class="num">theo độ dài shot</td><td>shot 5 giây, tier chuẩn</td><td class="num">5</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Trừ credit lúc nào — chỗ dễ sai nhất</h3>
+  <p>Không phải "trừ khi xong". Dùng mô hình giữ → chốt → hoàn, giống authorize/capture của thẻ ngân hàng:</p>
+
+  <div class="pipe">
+    <div class="step"><div class="n">1</div><div class="d"><strong>Tạo job → giữ đủ credit</strong><span>Không giữ thì khách bấm 10 job song song và tiêu vượt số dư — hệ thống chỉ phát hiện khi tiền đã mất.</span></div><div class="w">hold</div></div>
+    <div class="step"><div class="n">2</div><div class="d"><strong>Job hoàn thành → chốt đúng phần đã render</strong><span>Không chốt theo số đã giữ, mà theo số shot thực sự render xong.</span></div><div class="w">capture</div></div>
+    <div class="step"><div class="n">3</div><div class="d"><strong>Lỗi hệ thống hoặc provider → hoàn 100%</strong><span>Kể cả khi đã render được vài shot. Lỗi của mình thì mình chịu.</span></div><div class="w">release</div></div>
+    <div class="step"><div class="n">4</div><div class="d"><strong>Khách huỷ giữa chừng → chốt phần đã render, hoàn phần còn lại</strong><span>Công bằng và giải thích được khi khách thắc mắc.</span></div><div class="w">một phần</div></div>
+    <div class="step"><div class="n">5</div><div class="d"><strong>Bị chặn ở khâu kiểm duyệt nội dung → hoàn 100%</strong><span>Chặn trước khi render thì chưa tốn gì để mà trừ.</span></div><div class="w">release</div></div>
+  </div>
+
+  <h3>Sổ ghi chỉ thêm, không sửa</h3>
+  <p><code>CreditLedgerEntry</code> là append-only: <strong>không bao giờ UPDATE một cột số dư</strong>. Số dư là tổng của sổ, còn cột <code>BalanceAfter</code> chỉ là cache để tra nhanh. Mọi tranh chấp đều lần được đến từng dòng, và đây là thứ không thể thêm vào sau — đổi từ "một cột số dư" sang ledger khi đã có khách là một cuộc di dời dữ liệu đau đớn.</p>
+  <ul>
+    <li>Loại giao dịch: <code>grant</code> · <code>hold</code> · <code>capture</code> · <code>release</code> · <code>refund</code> · <code>expire</code> · <code>adjust</code>.</li>
+    <li>Khoá chống trùng theo <code>(JobId, Type)</code> — webhook gửi lại hai lần không được trừ tiền hai lần.</li>
+    <li>Mọi dòng ghi rõ ai/cái gì tạo ra nó: job nào, người nào, hay tiến trình nền nào.</li>
+  </ul>
+
+  <h3>Ước tính là con số chính xác, không phải khoảng</h3>
+  <p>Đây là lợi thế lớn nhất của credit so với tính bằng đô la: công thức tất định nên <code>POST /v1/estimates</code> trả về một số duy nhất, hiện thẳng trên nút — <em>"Tạo video · 30 credit · còn lại 270"</em>. Khách không bao giờ bị bất ngờ sau khi bấm, và support không phải giải thích hoá đơn.</p>
+
+  <div class="note pick">
+    <span class="tag">Đề xuất</span>
+    <p><strong>Cho mỗi shot một lần regenerate miễn phí</strong> ở tier Chuẩn trở lên. Khách sợ tốn credit thì không dám thử, không dám thử thì nhận video dở, nhận video dở thì bỏ đi. Nhưng vẫn ghi vào sổ dưới dạng <code>grant</code> với lý do <code>goodwill</code> — miễn phí với khách không có nghĩa là giấu chi phí khỏi chính mình.</p>
+  </div>
+
+  <h4>Ngưỡng cảnh báo</h4>
+  <ul>
+    <li><strong>80% đã dùng</strong> → cảnh báo trong UI và gửi email. Đừng đợi đến lúc hết.</li>
+    <li><strong>Hết credit</strong> → chặn tạo job mới; job đang chạy vẫn chạy nốt chứ không giết giữa chừng.</li>
+    <li><strong>Khách hợp đồng trả sau</strong> → cho phép âm tối đa một ngưỡng thoả thuận.</li>
+    <li><strong>Trần mỗi job</strong> vẫn giữ, nay tính bằng credit (<code>max_credits</code>) thay vì đô la.</li>
+  </ul>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s10">
+  <h2><span class="num">10</span>Rủi ro</h2>
+  <p class="sub">Xếp theo khả năng làm hỏng dự án, không theo khả năng xảy ra.</p>
+
+  <div class="risks">
+    <div class="risk">
+      <div class="h"><span class="lv hi">R1</span><strong>Provider biến mất giữa chừng</strong></div>
+      <p>Sora ra mắt rồi bị gỡ khỏi API trong vòng chưa đầy một năm, không có model thay thế. Điều tương tự có thể xảy ra với bất kỳ cái tên nào trong bảng ở mục 04.</p>
+      <p class="fix"><b>Giảm thiểu:</b> <code>IVideoProvider</code> từ commit đầu tiên; bốn adapter Veo / Kling / Seedance / Vidu đều phải chạy được trong production, không để ba cái nằm im làm cảnh; smoke test hằng ngày cho từng provider để phát hiện thay đổi API trước khi khách hàng phát hiện. Khi một provider chết, job đang dùng nó fail hẳn và khách được mời render lại — <em>không</em> tự đổi model giữa chừng (Luật 1, mục 04).</p>
+    </div>
+    <div class="risk">
+      <div class="h"><span class="lv hi">R2</span><strong>Thủng ví vì job chạy loạn</strong></div>
+      <p>Một vòng lặp retry sai hoặc một khách hàng bấm nút 50 lần có thể tiêu hàng trăm đô trong vài phút — tiền thật, không hoàn lại.</p>
+      <p class="fix"><b>Giảm thiểu:</b> giữ credit trước khi chạy (mục 09) là lớp chặn mạnh nhất, cộng trần <code>max_credits</code> mỗi job, <code>Idempotency-Key</code> bắt buộc, giới hạn số shot đồng thời, cảnh báo khi chi tiêu đô la trong ngày vượt ngưỡng. Bảng <code>ProviderCall</code> là nguồn sự thật về chi phí thật — <em>credit không phải</em>.</p>
+    </div>
+    <div class="risk">
+      <div class="h"><span class="lv hi">R3</span><strong>Quảng cáo sai quy định</strong></div>
+      <p>Quảng cáo tại Việt Nam bị điều chỉnh chặt: các tuyên bố kiểu "số 1", "tốt nhất" cần căn cứ; thực phẩm chức năng, dược phẩm, mỹ phẩm có yêu cầu riêng về nội dung và thường phải được xác nhận trước khi phát hành. Một LLM viết lời thoại sẽ vô tư sinh ra đúng những câu đó.</p>
+      <p><strong>Đã chốt: khách tự chịu trách nhiệm về nội dung, và khách trải rộng nhiều ngành hàng</strong> — nghĩa là không thể duyệt trước theo ngành, và cũng không có người của mình đứng ra duyệt. Vậy phòng vệ phải nằm ở chỗ khác.</p>
+      <p class="fix"><b>Giảm thiểu:</b> bộ lọc cụm từ cấm chạy trên lời thoại <em>trước</em> khi TTS (chặn "số 1", "tốt nhất", "duy nhất" không kèm căn cứ); ghi nhận việc khách chấp nhận điều khoản ở <em>từng job</em>, không phải một lần lúc đăng ký; lưu vết đầy đủ ai tạo video nào với lời thoại nào. Với các ngành có yêu cầu riêng — dược, thực phẩm chức năng, mỹ phẩm — dùng một cờ bật riêng cho tenant kèm cảnh báo trong UI, thay vì mở mặc định cho tất cả.</p>
+    </div>
+    <div class="risk">
+      <div class="h"><span class="lv hi">R4</span><strong>Nghĩa vụ gắn nhãn nội dung AI</strong></div>
+      <p>Luật Trí tuệ nhân tạo 2025 có hiệu lực <strong>từ 1/3/2026</strong> — tức đã đang áp dụng. Nội dung âm thanh, hình ảnh, video do AI tạo ra phải có dấu hiệu nhận dạng: nhãn hiển thị không dễ tẩy xoá, cộng mã định danh nhúng trong metadata (khuyến khích chuẩn C2PA). Quy định áp cho cả nhà cung cấp hệ thống AI lẫn <strong>bên triển khai</strong> — tức chính dịch vụ này, không phải khách hàng.</p>
+      <p>Mức phạt được nêu là tới 2 tỉ đồng với tổ chức, trường hợp nghiêm trọng tính theo 2% doanh thu năm trước. <strong>Đây là nghĩa vụ không chuyển sang khách được</strong> bằng điều khoản sử dụng, kể cả khi khách tự chịu trách nhiệm về nội dung quảng cáo.</p>
+      <p class="fix"><b>Giảm thiểu:</b> đưa nhãn và metadata vào <em>bước compose</em> chứ không phải bước tuỳ chọn — xem quyết định D9. Nhãn hiển thị mặc định bật, khách không tắt được. <em>Tôi không phải luật sư và các nguồn tra được là bài phân tích chứ không phải văn bản luật — cần pháp chế đọc bản gốc và chốt hình thức nhãn cụ thể trước khi mở cho khách ngoài.</em></p>
+    </div>
+    <div class="risk">
+      <div class="h"><span class="lv md">R5</span><strong>Quyền hình ảnh cá nhân</strong></div>
+      <p>Khách upload ảnh một người và bảo "cho người này cầm sản phẩm". Nếu đó là KOL hoặc nhân viên chưa đồng ý, rủi ro thuộc về nền tảng chứ không thuộc về khách.</p>
+      <p class="fix"><b>Giảm thiểu:</b> <code>consent_ref</code> là trường bắt buộc khi có <code>talent</code>; ghi lại IP, thời điểm, tài khoản khi khách xác nhận có quyền; điều khoản sử dụng nêu rõ trách nhiệm. Veo và Sora vốn đã tự chặn ảnh có mặt người — đó là tín hiệu về mức rủi ro.</p>
+    </div>
+    <div class="risk">
+      <div class="h"><span class="lv hi">R6</span><strong>Khách nhân bản giọng người khác</strong></div>
+      <p>Instant Voice Cloning chỉ cần dưới hai phút ghi âm và <strong>không có bước xác minh chính chủ</strong>. Một khách hàng có thể upload đoạn phỏng vấn của một KOL hoặc một phát thanh viên rồi cho giọng đó đọc quảng cáo sản phẩm của mình. Rủi ro pháp lý rơi vào nền tảng, và giọng nói là dữ liệu sinh trắc học nên khả năng bị xử lý nặng hơn cả hình ảnh.</p>
+      <p>VieNeu-TTS tự host còn làm rủi ro này nặng hơn: clone từ 3–8 giây và <em>không có bất kỳ lớp kiểm duyệt nào của nhà cung cấp</em>, vì máy là của mình. Toàn bộ trách nhiệm nằm ở lớp ứng dụng.</p>
+      <p class="fix"><b>Giảm thiểu:</b> mọi lần tạo giọng đều sinh một <code>ConsentRecord</code> — ghi lại tài khoản, IP, thời điểm, và tên người chủ giọng mà khách khai; chặn tái sử dụng giọng riêng của tenant này ở tenant khác; khuyến khích PVC cho giọng thương hiệu chính thức vì <b>ElevenLabs tự chạy voice-captcha xác minh chính chủ</b>. Có quy trình gỡ giọng khi bị khiếu nại.</p>
+    </div>
+    <div class="risk">
+      <div class="h"><span class="lv md">R7</span><strong>Chờ lâu, khách bỏ đi</strong></div>
+      <p>Video 60 giây mất 8–15 phút. Không ai ngồi nhìn spinner lâu đến thế.</p>
+      <p class="fix"><b>Giảm thiểu:</b> UI phải hiện từng shot ngay khi render xong (sự kiện <code>job.shot_completed</code>), gửi email/thông báo khi hoàn tất, và luôn có tier draft trả kết quả trong khoảng 2 phút.</p>
+    </div>
+    <div class="risk">
+      <div class="h"><span class="lv md">R8</span><strong>Storage phình nhanh hơn dự tính</strong></div>
+      <p>Mỗi job sinh ra clip từng shot, bản dựng thử, nhiều tỉ lệ khung hình và file audio rời. Một video giao cho khách kéo theo 5–10 file trung gian.</p>
+      <p class="fix"><b>Giảm thiểu:</b> vòng đời lưu trữ ngay từ đầu — xoá file trung gian sau 7 ngày, chuyển bản thành phẩm sang lớp lưu trữ lạnh sau 90 ngày. <em>Đây là lý do không dùng <code>wwwroot/uploads</code>.</em></p>
+    </div>
+    <div class="risk">
+      <div class="h"><span class="lv lo">R9</span><strong>Chữ tiếng Việt bị model vẽ sai</strong></div>
+      <p>Model sinh video viết sai dấu tiếng Việt gần như chắc chắn.</p>
+      <p class="fix"><b>Giảm thiểu:</b> đã xử lý bằng quyết định D4 — thêm chỉ dẫn "không có chữ trong khung hình" vào mọi prompt, và QC ở bước 9 quét khung hình để bắt chữ lọt lưới. Lưu ý cùng họ vấn đề: giọng đọc sai tên riêng thì sửa bằng <code>PronunciationDictionary</code>, xem mục 05.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s11">
+  <h2><span class="num">11</span>Lộ trình</h2>
+  <p class="sub">Khoảng 9 tuần cho 1–2 dev. Mỗi chặng kết thúc bằng một thứ chạy được, không phải một thứ "gần xong".</p>
+
+  <div class="road">
+    <div class="leg">
+      <div class="when">Tuần 1</div>
+      <div class="what"><strong>Sprint 0 — Spike provider</strong><span>Không viết service. Lấy ảnh sản phẩm thật của một khách hàng, chạy cùng một brief qua Veo 3.1 Fast, Kling 3.0, Seedance 2.0, Vidu Q2 Pro. Đo chất lượng, thời gian, chi phí thật, <strong>và rate limit song song của từng tài khoản</strong>. Riêng Vidu chạy thêm một bài test đa chủ thể: người mẫu + sản phẩm + bối cảnh trong cùng một khung. Nghe mù giọng: cùng một kịch bản có tên thương hiệu tiếng Việt, chạy qua ElevenLabs và VieNeu-TTS, cho 5 người marketing chấm. Kiểm luôn hai cửa của VieNeu: có timing từng ký tự không, và license của weights.</span></div>
+      <div class="out">12 video mẫu + bảng chấm điểm + <strong>danh sách giọng tuyển chọn</strong> + kết luận VieNeu dùng được đến đâu</div>
+    </div>
+    <div class="leg">
+      <div class="when">Tuần 2–3</div>
+      <div class="what"><strong>Sprint 1 — Xương sống</strong><span><code>AdVideo.Api</code> + worker + DB + storage. Một provider video, hai adapter TTS (ElevenLabs cho bản chuẩn, VieNeu tự host cho bản nháp), một shot 8 giây, compose FFmpeg cơ bản. Chưa có LLM đạo diễn.</span></div>
+      <div class="out">Gọi API bằng curl → nhận về một MP4 8 giây có giọng đọc</div>
+    </div>
+    <div class="leg">
+      <div class="when">Tuần 4–5</div>
+      <div class="what"><strong>Sprint 2 — Đạo diễn &amp; kho prompt</strong><span><code>AdFormat</code> nạp lúc chạy + bốn định dạng render song song (hero, TVC mini, vấn đề→giải pháp, hook 1,5s). LLM sinh storyboard từ format, khoá timeline theo audio, regenerate từng shot, provider thứ hai.</span></div>
+      <div class="out">Video 30 giây nhiều cảnh, đúng nhịp thoại, chọn được định dạng</div>
+    </div>
+    <div class="leg">
+      <div class="when">Tuần 6</div>
+      <div class="what"><strong>Sprint 3 — Định dạng daily &amp; locale pack</strong><span>Chế độ nối frame tuần tự, chống trôi hình bằng ảnh tham chiếu lặp lại, thư viện bối cảnh Việt Nam. Đây là sprint riêng vì pipeline khác hẳn — đừng nhồi vào Sprint 2.</span></div>
+      <div class="out">Video daily 40 giây một mạch, sản phẩm cài tự nhiên</div>
+    </div>
+    <div class="leg">
+      <div class="when">Tuần 7</div>
+      <div class="what"><strong>Sprint 4 — Mặt tiền trong NewsCMS</strong><span>Module <code>Marketing/VideoStudio</code>: Razor Pages nhập brief, chọn định dạng qua video ví dụ, chọn ảnh từ Media, duyệt storyboard, player xem kết quả, permission codes + seed.</span></div>
+      <div class="out">Khách hàng tự làm được video mà không cần dev</div>
+    </div>
+    <div class="leg">
+      <div class="when">Tuần 8</div>
+      <div class="what"><strong>Sprint 5 — Vận hành nhiều khách</strong><span>Multi-tenant, webhook có ký, QC tự động, brand kit, kho giọng + clone giọng, xuất nhiều tỉ lệ khung hình, theo dõi chi phí thật qua <code>ProviderCall</code>. <em>Chưa có tính tiền</em> — khách pilot dùng theo hạn mức thoả thuận.</span></div>
+      <div class="out">Nhiều khách dùng được, và biết mỗi video tốn bao nhiêu đô la thật</div>
+    </div>
+    <div class="leg">
+      <div class="when">Tuần 9</div>
+      <div class="what"><strong>Sprint 6 — Pilot</strong><span>Chạy thật với 2–3 khách hàng, đo tỉ lệ render lại theo từng định dạng, chỉnh template và thư viện bối cảnh theo phản hồi, bật <code>FormatUsageStat</code>, viết tài liệu API.</span></div>
+      <div class="out">Số liệu thật để định giá và quyết mở rộng</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s12">
+  <h2><span class="num">12</span>Đã chốt &amp; còn lại</h2>
+  <p class="sub">Sáu câu treo ở bản trước đã có câu trả lời. Đổi lại, việc tra cứu phát sinh một điểm chặn mới — và nó chặn ở chỗ khác với những cái trước.</p>
+
+  <h3>Đã chốt</h3>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Câu hỏi</th><th>Quyết định</th><th>Đã áp vào đâu</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">Storage đặt ở đâu</td><td><strong>MinIO</strong> — dựng riêng, service chỉ cấu hình và đẩy lên</td><td>Mục 02: bố cục bucket, lifecycle, presigned URL</td></tr>
+        <tr><td class="nm">Ngành hàng của khách</td><td><strong>Rất đa dạng</strong> — không duyệt trước theo ngành được</td><td>Mục 10 · R3: chuyển sang lọc cụm từ + cờ riêng cho ngành nhạy cảm</td></tr>
+        <tr><td class="nm">Ai duyệt video</td><td><strong>Khách tự chịu trách nhiệm</strong> — không có người của mình duyệt</td><td>Mục 10 · R3. Duyệt storyboard vẫn giữ, nhưng đó là khách tự kiểm chất lượng, không phải mình kiểm tuân thủ</td></tr>
+        <tr><td class="nm">Gói ElevenLabs</td><td>Anh xem xét sau — không chặn kỹ thuật</td><td>—</td></tr>
+        <tr><td class="nm">Gói bán</td><td>Tính sau, cùng lúc với credit</td><td>Mục 09: phần credit đánh dấu bản nháp</td></tr>
+        <tr><td class="nm">Nhiều tỉ lệ khung hình</td><td><strong>Khách chọn, mỗi lần xuất là một job riêng, mặc định 9:16 (TikTok)</strong></td><td>Mục 07: thêm <code>/reframe</code> — tái dùng storyboard và voice-over, chỉ render lại phần hình</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Còn lại một điểm, và nó chặn ở chỗ khác</h3>
+  <div class="qs">
+    <div class="q"><div><strong>Pháp chế đọc Luật Trí tuệ nhân tạo 2025 và chốt hình thức nhãn AI</strong><span>Luật có hiệu lực từ 1/3/2026 — đã đang áp dụng — và nghĩa vụ gắn nhãn thuộc về bên triển khai, tức chính dịch vụ này, không chuyển sang khách được bằng điều khoản. Cần chốt: nhãn hiển thị trông thế nào và đặt ở đâu trên khung hình, metadata theo chuẩn nào, và có ngoại lệ nào cho quảng cáo không. <strong>Không chặn Sprint 1</strong> — vẫn code được pipeline và để hình thức nhãn là cấu hình. <strong>Chặn việc mở cho khách ngoài.</strong> Chi tiết ở R4, mục 10.</span></div></div>
+    <div class="q"><div><strong>Gói bán gồm những gì, ngoài credit?</strong><span><em>Để sau pilot.</em> Credit chỉ là một thành phần. Gói còn quyết định: có được dùng tier Cao cấp không, bao nhiêu brand kit, bao nhiêu giọng clone, video lưu bao lâu, chạy được mấy job song song. Những thứ này là <strong>quyền sử dụng</strong>, khác hẳn bản chất với số dư tiêu dần — đừng nhồi cả hai vào một con số.</span></div></div>
+  </div>
+</section>
+
+<footer>
+  <p><strong>Nguồn tham khảo</strong> — giá và thông số thu thập ngày 14/09/2026 từ tài liệu nhà cung cấp và các trang so sánh công khai. Mọi con số phải được xác minh lại trên bảng giá chính thức trước khi đưa vào hợp đồng.</p>
+  <ul>
+    <li><a href="https://developers.openai.com/api/docs/deprecations">OpenAI — Deprecations (lịch gỡ Sora 2)</a></li>
+    <li><a href="https://developers.openai.com/api/docs/guides/video-generation">OpenAI — Video generation guide</a></li>
+    <li><a href="https://developers.googleblog.com/introducing-veo-3-1-and-new-creative-capabilities-in-the-gemini-api/">Google — Veo 3.1 trong Gemini API</a></li>
+    <li><a href="https://ai.google.dev/gemini-api/docs/veo">Google — Tài liệu model Veo</a></li>
+    <li><a href="https://ai.google.dev/gemini-api/docs/pricing">Google — Bảng giá Gemini API</a></li>
+    <li><a href="https://www.cometapi.com/ai-video-api-pricing/">CometAPI — Bảng giá video API 2026</a></li>
+    <li><a href="https://www.atlascloud.ai/models/vidu/q2-pro/reference-to-video">Atlas Cloud — Vidu Q2-Pro reference-to-video</a></li>
+    <li><a href="https://wavespeed.ai/models/vidu/start-end-to-video-q2-pro">WaveSpeedAI — Vidu Q2-Pro start-end-to-video</a></li>
+    <li><a href="https://runware.ai/creators/vidu">Runware — Danh mục model Vidu</a></li>
+    <li><a href="https://fal.ai/models/bytedance/seedance-2.0/image-to-video">fal.ai — Seedance 2.0 image-to-video</a></li>
+    <li><a href="https://fal.ai/docs/documentation/model-apis/pricing">fal.ai — Cách tính phí model API</a></li>
+    <li><a href="https://kling.ai/dev">Kling AI — Developer platform</a></li>
+    <li><a href="https://elevenlabs.io/docs/overview/capabilities/voices">ElevenLabs — Các loại giọng</a></li>
+    <li><a href="https://elevenlabs.io/docs/api-reference/text-to-speech/convert">ElevenLabs — Create speech API</a></li>
+    <li><a href="https://elevenlabs.io/docs/api-reference/voice-library/share">ElevenLabs — Add shared voice</a></li>
+    <li><a href="https://elevenlabs.io/docs/eleven-api/guides/how-to/voices/instant-voice-cloning">ElevenLabs — Instant Voice Cloning</a></li>
+    <li><a href="https://elevenlabs.io/docs/overview/capabilities/music">ElevenLabs — Eleven Music</a></li>
+    <li><a href="https://github.com/pnnbao97/VieNeu-TTS">VieNeu-TTS — mã nguồn trên GitHub</a></li>
+    <li><a href="https://docs.vieneu.io/docs/">VieNeu-TTS — tài liệu &amp; cloud API</a></li>
+    <li><a href="https://fptcloud.com/en/product/fpt-ai-text-to-speech-en/">FPT.AI — Text to Speech</a></li>
+    <li><a href="https://vbee.vn/blog/chuyen-van-ban-thanh-giong-noi/">Vbee AIVoice — Text to Speech</a></li>
+    <li><a href="https://openrouter.ai/bytedance/seedance-2.0">OpenRouter — Seedance 2.0</a></li>
+  </ul>
+</footer>
+
+</main>
+</div>
+</div>
+
+</body>
+</html>

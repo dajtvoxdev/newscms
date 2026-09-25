@@ -1,0 +1,14 @@
+# Kết quả build của máy dev không được lọt vào context: chúng nặng hơn cả source, và một
+# bin/Debug của Windows chép vào image Linux là cách để lỗi "không chạy được" xuất hiện ở
+# runtime thay vì lúc build.
+**/bin/
+**/obj/
+**/TestResults/
+**/.vs/
+**/*.user
+
+# Test không tham gia vào image nào — chúng chạy ở CI, không chạy trong container phục vụ.
+tests/
+
+# appsettings.Development.json vẫn cần (compose dùng môi trường Development để tự migrate),
+# nên KHÔNG loại trừ ở đây.

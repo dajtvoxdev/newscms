@@ -1,0 +1,113 @@
+# Quy ước code cho AdVideo.
+#
+# Repo cha KHÔNG có .editorconfig (đã kiểm tra ngày 15/09/2026), nên file này không "sao chép"
+# từ đâu cả — nó ghi lại quy ước mà NewsCMS.Core đang theo trên thực tế, cộng thêm vài luật riêng
+# của AdVideo. Viết ra đây để người mới không phải suy ra quy ước từ việc đọc mười file.
+#
+# Lưu ý về TreatWarningsAsErrors: mọi project src của AdVideo bật cờ này. Nghĩa là nếu tăng mức
+# nghiêm trọng của một luật phân tích lên error thì build fail ngay. Các luật IDE bên dưới cố ý
+# để ở mức suggestion/silent — bật chúng lên error là việc nên làm từng cái một, có kiểm chứng,
+# chứ không phải bật hàng loạt trong file này.
+
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Line-ending do .gitattributes của repo cha quyết định (LF trong repo, native khi checkout).
+# Không đặt lại ở đây để tránh hai nguồn sự thật mâu thuẫn nhau.
+
+[*.{json,yml,yaml,csproj,props,targets,config}]
+indent_size = 2
+
+[*.md]
+# Dấu cách cuối dòng trong Markdown có nghĩa (ngắt dòng), không được cắt.
+trim_trailing_whitespace = false
+
+[*.cs]
+# ── Namespace & using ──────────────────────────────────────────────────────────
+# Namespace dạng file-scoped: toàn bộ AdVideo.Core đang viết như vậy, và nó giảm một cấp thụt lề
+# cho mọi thứ bên trong.
+csharp_style_namespace_declarations = file_scoped:suggestion
+dotnet_separate_import_directive_groups = false
+dotnet_sort_system_directives_first = true
+
+# ── var ────────────────────────────────────────────────────────────────────────
+# Dùng var khi kiểu hiển nhiên (phải vế phải). Ép kiểu tường minh khi kiểu không đọc ra được —
+# điều này quan trọng với dự án nhiều record cùng hình dạng: `var r = Decide(...)` che mất
+# việc r là NativeSoundDecision hay CapabilityCheckResult.
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+csharp_style_var_for_built_in_types = true:suggestion
+
+# ── Expression body ────────────────────────────────────────────────────────────
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_properties = true:suggestion
+csharp_style_expression_bodied_operators = true:suggestion
+
+# ── Pattern matching & null ────────────────────────────────────────────────────
+# Hai luật này là phần lớn lý do Core test được 100% branch mà không cần mock: kiểm tra null
+# bằng pattern thì mọi nhánh là nhánh thật, đo được bằng coverage.
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+csharp_style_conditional_delegate_call = true:suggestion
+csharp_style_throw_expression = true:suggestion
+
+# ── using statement ────────────────────────────────────────────────────────────
+csharp_prefer_braces = true:warning
+csharp_style_using_statement = true:suggestion
+
+# ── Nullability ────────────────────────────────────────────────────────────────
+# Nullable đã bật toàn cục trong Directory.Build.props. Cảnh báo nullable PHẢI là error:
+# đây là dự án gọi API bên ngoài và ghép video, một null lọt qua là job fail sau khi đã tiêu
+# tiền provider — tức là lỗi đắt nhất có thể xảy ra.
+dotnet_diagnostic.CS8600.severity = error
+dotnet_diagnostic.CS8602.severity = error
+dotnet_diagnostic.CS8603.severity = error
+dotnet_diagnostic.CS8604.severity = error
+dotnet_diagnostic.CS8618.severity = error
+
+# ── Async ──────────────────────────────────────────────────────────────────────
+# Async method thiếu await: thường là quên await, và trong pipeline thì quên await nghĩa là
+# bước sau chạy trước khi bước trước xong.
+dotnet_diagnostic.CS1998.severity = error
+# VdVd: async void chỉ hợp lệ cho event handler. Một async void trong worker sẽ làm crash
+# process mà Hangfire không bắt lại được.
+dotnet_diagnostic.CS4014.severity = error
+
+# ── Naming ─────────────────────────────────────────────────────────────────────
+dotnet_naming_rule.interface_should_begin_with_i.severity = suggestion
+dotnet_naming_rule.interface_should_begin_with_i.symbols = interface
+dotnet_naming_rule.interface_should_begin_with_i.style = begins_with_i
+dotnet_naming_symbols.interface.applicable_kinds = interface
+dotnet_naming_styles.begins_with_i.required_prefix = I
+dotnet_naming_styles.begins_with_i.capitalization = pascal_case
+
+dotnet_naming_rule.private_static_readonly_should_be_pascal.severity = suggestion
+dotnet_naming_rule.private_static_readonly_should_be_pascal.symbols = private_static_readonly
+dotnet_naming_rule.private_static_readonly_should_be_pascal.style = pascal_case
+# Hằng số kiểu static readonly trong AdVideo là các ngưỡng nghiệp vụ (SfxLevelDb, MinReadableFontPx,
+# DurationToleranceSeconds). Viết PascalCase để khi đọc một phép so sánh ta biết ngay con số đó
+# là một ngưỡng có tên, không phải một giá trị cục bộ.
+dotnet_naming_symbols.private_static_readonly.applicable_kinds = field
+dotnet_naming_symbols.private_static_readonly.applicable_accessibilities = private, internal, protected
+dotnet_naming_symbols.private_static_readonly.required_modifiers = static, readonly
+dotnet_naming_styles.pascal_case.capitalization = pascal_case
+
+# ── Khác ───────────────────────────────────────────────────────────────────────
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:suggestion
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_explicit_tuple_names = true:suggestion
+dotnet_style_prefer_inferred_tuple_names = true:suggestion
+dotnet_style_coalesce_expression = true:suggestion
+dotnet_style_null_propagation = true:suggestion

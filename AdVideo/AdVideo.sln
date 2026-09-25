@@ -1,0 +1,64 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F5BB7FD5-3030-4F96-A987-2EA47B499A23}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdVideo.Core", "src\AdVideo.Core\AdVideo.Core.csproj", "{AE7D841F-3532-4D51-BFD8-0AB72FAEDCE1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdVideo.Infrastructure", "src\AdVideo.Infrastructure\AdVideo.Infrastructure.csproj", "{5DBA9CC2-61FF-4C1D-8A91-5A05F3475E48}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdVideo.Api", "src\AdVideo.Api\AdVideo.Api.csproj", "{6AA5046B-864B-4ABE-B40F-BF7784B52103}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdVideo.Worker", "src\AdVideo.Worker\AdVideo.Worker.csproj", "{4042699E-0FFF-4C12-8FFC-CCEEE0E9EC9A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{477A48FF-70F8-4358-9541-083119BFF000}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdVideo.Tests", "tests\AdVideo.Tests\AdVideo.Tests.csproj", "{99EAA520-AA90-439A-834D-DC83AD733885}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdVideo.Core.Tests", "tests\AdVideo.Core.Tests\AdVideo.Core.Tests.csproj", "{4802D814-8028-4D24-96D3-08E42A07FDF3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AE7D841F-3532-4D51-BFD8-0AB72FAEDCE1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE7D841F-3532-4D51-BFD8-0AB72FAEDCE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE7D841F-3532-4D51-BFD8-0AB72FAEDCE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE7D841F-3532-4D51-BFD8-0AB72FAEDCE1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5DBA9CC2-61FF-4C1D-8A91-5A05F3475E48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5DBA9CC2-61FF-4C1D-8A91-5A05F3475E48}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5DBA9CC2-61FF-4C1D-8A91-5A05F3475E48}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5DBA9CC2-61FF-4C1D-8A91-5A05F3475E48}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6AA5046B-864B-4ABE-B40F-BF7784B52103}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AA5046B-864B-4ABE-B40F-BF7784B52103}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AA5046B-864B-4ABE-B40F-BF7784B52103}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AA5046B-864B-4ABE-B40F-BF7784B52103}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4042699E-0FFF-4C12-8FFC-CCEEE0E9EC9A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4042699E-0FFF-4C12-8FFC-CCEEE0E9EC9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4042699E-0FFF-4C12-8FFC-CCEEE0E9EC9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4042699E-0FFF-4C12-8FFC-CCEEE0E9EC9A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{99EAA520-AA90-439A-834D-DC83AD733885}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99EAA520-AA90-439A-834D-DC83AD733885}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99EAA520-AA90-439A-834D-DC83AD733885}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99EAA520-AA90-439A-834D-DC83AD733885}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4802D814-8028-4D24-96D3-08E42A07FDF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4802D814-8028-4D24-96D3-08E42A07FDF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4802D814-8028-4D24-96D3-08E42A07FDF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4802D814-8028-4D24-96D3-08E42A07FDF3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{AE7D841F-3532-4D51-BFD8-0AB72FAEDCE1} = {F5BB7FD5-3030-4F96-A987-2EA47B499A23}
+		{5DBA9CC2-61FF-4C1D-8A91-5A05F3475E48} = {F5BB7FD5-3030-4F96-A987-2EA47B499A23}
+		{6AA5046B-864B-4ABE-B40F-BF7784B52103} = {F5BB7FD5-3030-4F96-A987-2EA47B499A23}
+		{4042699E-0FFF-4C12-8FFC-CCEEE0E9EC9A} = {F5BB7FD5-3030-4F96-A987-2EA47B499A23}
+		{99EAA520-AA90-439A-834D-DC83AD733885} = {477A48FF-70F8-4358-9541-083119BFF000}
+		{4802D814-8028-4D24-96D3-08E42A07FDF3} = {477A48FF-70F8-4358-9541-083119BFF000}
+	EndGlobalSection
+EndGlobal

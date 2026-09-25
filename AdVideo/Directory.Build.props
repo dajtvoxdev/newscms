@@ -1,0 +1,27 @@
+<Project>
+
+  <!--
+    Props riêng cho solution AdVideo. MSBuild dừng ở Directory.Build.props ĐẦU TIÊN
+    tìm thấy khi đi ngược lên, nên file này không bị ảnh hưởng bởi
+    NewsCMS.Core/Directory.Build.props (hai nhánh song song).
+
+    Khác NewsCMS một chỗ có chủ đích: TreatWarningsAsErrors = true.
+    NewsCMS đặt false vì warnings legacy đã tích tụ; AdVideo là codebase mới nên
+    chặn từ ngày đầu rẻ hơn nhiều so với dọn sau.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <Product>AdVideo</Product>
+    <Authors>Đạt</Authors>
+    <Version>0.1.0</Version>
+
+    <!-- Coverage: AdVideo.Core phải đạt 100% line+branch, CI fail nếu dưới. -->
+    <CollectCoverage Condition="'$(CollectCoverage)' == ''">false</CollectCoverage>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Test project RIÊNG cho AdVideo.Core, chỉ tham chiếu Core.
+
+    Tách khỏi AdVideo.Tests là có chủ đích:
+      1. Core phải đạt 100% line+branch và CI fail nếu dưới. Muốn đo riêng coverage
+         của Core thì nó phải là một assembly test riêng; gộp chung sẽ phải lọc
+         theo namespace, mà lọc tay thì dễ sót.
+      2. Test Core không cần EF/MinIO/FFmpeg nên chạy trong mili-giây. Giữ chúng
+         tách biệt để dev chạy vòng lặp nhanh mà không khởi động container.
+      3. Không tham chiếu Infrastructure nên build được ở chế độ no-dependencies,
+         không tranh lock thư mục obj khi nhiều tiến trình build song song.
+
+    Lưu ý: XML comment KHÔNG được chứa hai dấu gạch ngang liền nhau, nên chỗ nào
+    cần viết cờ CLI thì phải né (đây là lý do mục 3 viết "chế độ no-dependencies"
+    thay vì viết nguyên văn cờ đó).
+  -->
+  <PropertyGroup>
+    <RootNamespace>AdVideo.Core.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AdVideo.Core\AdVideo.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="6.12.2" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Khoi bot "using Xunit;" o dau moi file test. -->
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

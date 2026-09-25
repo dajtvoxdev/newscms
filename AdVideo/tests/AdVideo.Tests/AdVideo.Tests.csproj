@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>AdVideo.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <!-- Test project không cần coi warning là error: FluentAssertions obsolete API hay cảnh báo -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!--
+      KHÔNG đặt ArtifactsPath cho test project. Repo này từng vỡ 3 test KeoBia vì
+      test đọc file nguồn qua N cấp cha của bin/, và ArtifactsPath làm đổi độ sâu.
+      Test nào của AdVideo cần đọc fixture thì dùng đường dẫn tính từ AppContext.BaseDirectory
+      + copy fixture qua <None CopyToOutputDirectory>, không đếm cấp thư mục bằng tay.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AdVideo.Core\AdVideo.Core.csproj" />
+    <ProjectReference Include="..\..\src\AdVideo.Infrastructure\AdVideo.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\AdVideo.Api\AdVideo.Api.csproj" />
+    <ProjectReference Include="..\..\src\AdVideo.Worker\AdVideo.Worker.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="6.12.2" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <!--
+      Sqlite thay vì InMemory cho integration test: InMemory KHÔNG enforce unique
+      index, nên nó sẽ cho qua những lỗi mà SQL Server thật bắt được — ví dụ
+      IdempotencyKey trùng. Test xanh trên InMemory mà đỏ trên SQL thật là loại
+      test nguy hiểm hơn không có test.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Fixture nhị phân (clip mẫu, audio mẫu) copy sang output để test đọc được -->
+    <None Update="Fixtures\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Khoi bot "using Xunit;" o dau moi file test. -->
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>AdVideo.Api</RootNamespace>
+    <!-- API không phục vụ file tĩnh, tắt để khỏi sinh wwwroot -->
+    <StaticWebAssetBasePath Condition="'$(StaticWebAssetBasePath)' == ''">_</StaticWebAssetBasePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AdVideo.Core\AdVideo.Core.csproj" />
+    <ProjectReference Include="..\AdVideo.Infrastructure\AdVideo.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.6" />
+    <PackageReference Include="Hangfire.SqlServer" Version="1.8.6" />
+    <!-- Chỉ để `dotnet ef` chạy được từ project này; PrivateAssets để không lây sang consumer -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.22">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
