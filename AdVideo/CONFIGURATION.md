@@ -227,7 +227,7 @@ Seeder chỉ **thêm khoá còn thiếu, không bao giờ ghi đè**. Người v
 | `GlobalNegativePromptCode` | `global-negative` | | | Code prompt negative toàn cục |
 | `ProviderSmokeTestEnabled` | `false` | | | Smoke test hằng ngày — mỗi lần test là một lần tiêu tiền thật |
 | `ForceableVideoProviders` | *(rỗng)* | | | Provider khách được chỉ định qua `options.provider`. Rỗng = không cho ép (Luật 3) |
-| `ProviderHostAllowlist` | `queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io, generativelanguage.googleapis.com, http://127.0.0.1:8080` | | | Host được gọi khi nói chuyện với provider — xem 2.4 |
+| `ProviderHostAllowlist` | `queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io, generativelanguage.googleapis.com, http://127.0.0.1:8080` | | | Host được gọi khi nói chuyện với provider — xem 2.3 |
 
 Cột **Tạm** là cờ `IsProvisional`. Nó có nghĩa rất cụ thể: **số này là phỏng đoán bảo toàn, chưa được
 đo**. Sprint 0 (đo thật bằng key thật) bị bỏ qua vì chưa có API key và ngân sách, nên cờ này chính là
@@ -265,7 +265,7 @@ khai trong code, để sửa bảng giá khi nhà cung cấp đổi giá mà kh�
 > key đã mã hoá trong DB thành rác không giải mã được. Đây là lỗi đã từng xảy ra ở dự án khác trên
 > chính máy chủ này. Key ring cũng không được nằm trong `bin/`: `clean` là mất khoá.
 
-### 2.4. `ProviderHostAllowlist` — chặn SSRF
+### 2.3. `ProviderHostAllowlist` — chặn SSRF
 
 Mọi request tới provider (client `advideo-provider`) và mọi lần tải clip (client
 `advideo-provider-download`) đi qua `SsrfGuardingHandler`: host không nằm trong setting này thì request
@@ -282,7 +282,7 @@ Key chỉ được gắn khi URL **cùng origin** với endpoint của credentia
 khác (CDN, link đã ký) được gọi không kèm key. Thân lỗi được che key (`****abcd`) trước khi vào
 `ProviderCall.RawError` / `AdVideoJob.RawProviderError`.
 
-### 2.3. `PromptTemplates` — prompt
+### 2.4. `PromptTemplates` — prompt
 
 Prompt gửi cho model **không nằm trong code**. Mỗi template có `Code` (định danh ổn định), nội dung,
 và số phiên bản; sửa prompt là thêm phiên bản mới, không đè lên bản cũ — để truy được một video cũ
