@@ -1,0 +1,84 @@
+// NOVA (novagateway.net) — cổng trả bằng VNĐ. Mẫu lấy nguyên từ mục 2.2 của
+// docs/ai/planning/ad-video-studio/ke-hoach-provider-khai-bao-2026-09-25.md.
+//
+// ⚠️ CHƯA GỌI THẬT LẦN NÀO. Lưới thời lượng và tỉ lệ khung dưới đây là phỏng đoán bảo toàn;
+// xác nhận bằng một lần gọi thật (mục 4 của kế hoạch) rồi mới activate-descriptor.
+{
+  "schema": "advideo.provider/v1",
+  "name": "nova-grok-video-15",
+  "kind": "video",
+  "transport": {
+    "baseUrl": "https://novagateway.net/v1",
+    "auth": { "in": "header", "name": "Authorization", "scheme": "Bearer", "valueRef": "{{secret.api_key}}" },
+    "headers": { "Accept": "application/json" },
+    "requestTimeoutSeconds": 120
+  },
+  "defaults": { "resolution": "480p" },
+  "constraints": { "maxInputChars": 5000, "maxReferenceImages": 1 },
+  "valueMaps": {
+    "aspect": { "Portrait9x16": "9:16", "Square1x1": "1:1", "Landscape16x9": "16:9" }
+  },
+  "capability": {
+    "provider": "nova-grok-video-15",
+    "modelId": "xai/grok-imagine-video-1.5",
+    "allowedDurationSeconds": [6, 10],
+    "supportedAspectRatios": ["Portrait9x16", "Square1x1", "Landscape16x9"],
+    "acceptsHumanFaces": true,
+    "generatesNativeAudio": true,
+    "nativeAudioEnabledByDefault": true,
+    "canSeparateSfxFromSpeech": false,
+    "supportsImageToVideo": true,
+    "supportsFrameChaining": false,
+    "maxReferenceImages": 1,
+    "maxSubjectsReliably": 0,
+    "servesTiers": ["Draft"],
+    // 480p: 0,08 USD/giây + 0,01 USD/ảnh chia cho clip 6 giây ≈ 0,082 — làm tròn lên.
+    "costPerSecondUsd": 0.09,
+    "supportsSeed": false,
+    "supportsLipSync": false
+  },
+  "submit": {
+    "method": "POST",
+    "path": "/videos",
+    "body": {
+      "kind": "json",
+      "template": {
+        "model": "{{model_id}}",
+        "prompt": "{{prompt}}",
+        // NOVA cần chuỗi; fal cần số.
+        "seconds": "{{seconds|string}}",
+        "extra_body": {
+          "resolution": "{{resolution}}",
+          "aspect_ratio": "{{aspect_ratio|map:aspect}}"
+        },
+        "image": { "@when": "{{image_url}}", "url": "{{image_url}}" }
+      }
+    },
+    "successStatus": [200, 201, 202],
+    // HTTP 200 mà thân báo lỗi.
+    "failWhen": [ { "path": "error", "notEquals": 0 } ]
+  },
+  "poll": {
+    "mode": "pathTemplate",
+    "path": "/videos/{{provider_request_id}}",
+    "intervalSeconds": 5,
+    "maxWaitSeconds": 660,
+    "statusPath": "status",
+    "statusMap": { "queued": "pending", "processing": "pending", "completed": "succeeded", "failed": "failed" }
+  },
+  "result": {
+    "requestIdPath": "id",
+    "videoUrlPath": "url || video_url || share_url"
+  },
+  "errors": {
+    "byBodyCode": { "path": "error.code", "table": { "content_policy": "ContentRejected" } },
+    "byStatus": { "402": "ProviderUnavailable", "429": "RateLimited", "401": "ProviderUnavailable", "5xx": "ProviderUnavailable" },
+    "default": "Unknown",
+    "deactivateCredentialOn": ["402"]
+  },
+  "cost": {
+    "unit": "perSecond",
+    "rateBy": { "variable": "resolution", "table": { "480p": 0.08, "720p": 0.14, "1080p": 0.25 } },
+    "extras": [ { "unit": "perReferenceImage", "rateUsd": 0.01 } ]
+  }
+}
