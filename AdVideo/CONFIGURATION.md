@@ -95,6 +95,11 @@ gian), `adv-final` (video giao khách), `adv-voice` (giọng đọc).
 `FfmpegPath`/`FfprobePath` viết theo kiểu Windows trên máy dev, nhưng **khi deploy Linux phải ghi đè**
 trong `appsettings.Production.json`. Bỏ qua bước này thì việc nén/probe hỏng âm thầm.
 
+`src/AdVideo.Api/appsettings.Production.json` và `src/AdVideo.Worker/appsettings.Production.json` đã có
+sẵn bốn khoá cho VPS Ubuntu (`FfmpegPath`, `FfprobePath`, `FontFile` DejaVu, `KeyRingPath =
+/var/lib/advideo/keys`) và tắt provider giả. File này chỉ được nạp khi `ASPNETCORE_ENVIRONMENT` là
+`Production` **hoặc để trống**; biến môi trường vẫn đè lên nó như mọi khi.
+
 ```jsonc
 // appsettings.Production.json trên VPS Ubuntu
 {
@@ -289,7 +294,7 @@ descriptor (`advideo.provider/v1`) vào DB. Mẫu nằm ở `samples/providers/`
 ElevenLabs); thiết kế đầy đủ ở `docs/ai/planning/ad-video-studio/ke-hoach-provider-khai-bao-2026-09-25.md`.
 
 ```bash
-dotnet run --project src/AdVideo.Api -- set-descriptor --file samples/providers/nova-grok-video-15.json --note "thử NOVA"
+dotnet run --project src/AdVideo.Api -- set-descriptor --file "$PWD/samples/providers/nova-grok-video-15.json" --note "thử NOVA"
 dotnet run --project src/AdVideo.Api -- test-descriptor --provider nova-grok-video-15     # chạy khô, không gọi mạng
 dotnet run --project src/AdVideo.Api -- set-setting --key ProviderHostAllowlist --value "<danh sách cũ>, novagateway.net"
 dotnet run --project src/AdVideo.Api -- set-credential --provider nova-grok-video-15 --key "$NOVA_API_KEY"

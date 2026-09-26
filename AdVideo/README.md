@@ -99,8 +99,9 @@ Cần: .NET 8 SDK, SQL Server (Express là đủ), FFmpeg, và MinIO nếu muố
 `AdVideo:Storage:Provider = LocalDisk` để ghi thẳng ra đĩa.
 
 ```powershell
-# Migration
+# Migration (InitialCreate nằm ở src/AdVideo.Infrastructure/Persistence/Migrations)
 dotnet run --project src/AdVideo.Api -- migrate
+dotnet run --project src/AdVideo.Api -- seed
 
 # Tenant + key
 dotnet run --project src/AdVideo.Api -- create-tenant --name "Dev"
@@ -109,6 +110,17 @@ dotnet run --project src/AdVideo.Api -- create-tenant --name "Dev"
 dotnet run --project src/AdVideo.Api
 dotnet run --project src/AdVideo.Worker
 ```
+
+Đổi entity thì tạo migration mới (công cụ `dotnet-ef` ghim phiên bản trong `.config/dotnet-tools.json`):
+
+```bash
+dotnet tool restore
+dotnet ef migrations add <TenMigration> --project src/AdVideo.Infrastructure \
+    --startup-project src/AdVideo.Api --output-dir Persistence/Migrations
+```
+
+Quên bước này thì `MigrationTests` đỏ — test integration dùng SQLite + `EnsureCreated` nên tự chúng
+không bắt được.
 
 `appsettings.Development.json` đã trỏ sẵn FFmpeg vào `C:/ffmpeg/...` và font vào
 `C:/Windows/Fonts/arial.ttf`. Đường dẫn trong JSON dùng **gạch chéo xuôi**: `"\f"` là ký tự

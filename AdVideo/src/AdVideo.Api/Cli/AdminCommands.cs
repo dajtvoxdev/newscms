@@ -301,6 +301,15 @@ public static class AdminCommands
             return 1;
         }
 
+        if (!File.Exists(file))
+        {
+            // dotnet run chạy app với thư mục làm việc là thư mục project, nên đường dẫn tương đối
+            // gõ từ thư mục AdVideo/ bị lệch. In đường dẫn tuyệt đối đã thử để người gõ thấy ngay.
+            Console.Error.WriteLine($"Không thấy file {Path.GetFullPath(file)}. Dùng đường dẫn tuyệt đối, ví dụ --file \"$PWD/samples/providers/...\".");
+
+            return 1;
+        }
+
         string json = await File.ReadAllTextAsync(file);
 
         try
@@ -402,6 +411,13 @@ public static class AdminCommands
 
         if (Arg(args, "--file") is { } file)
         {
+            if (!File.Exists(file))
+            {
+                Console.Error.WriteLine($"Không thấy file {Path.GetFullPath(file)}. Dùng đường dẫn tuyệt đối.");
+
+                return 1;
+            }
+
             json = await File.ReadAllTextAsync(file);
         }
         else if (Arg(args, "--provider") is { } provider)
