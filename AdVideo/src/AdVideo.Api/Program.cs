@@ -98,6 +98,7 @@ return 0;
 static async Task<IResult> HealthAsync(
     AdVideoDbContext db,
     IStorageService storage,
+    JobStorage jobStorage,
     CancellationToken cancellationToken)
 {
     var checks = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -129,7 +130,11 @@ static async Task<IResult> HealthAsync(
 
     try
     {
-        IMonitoringApi monitoring = JobStorage.Current.GetMonitoringApi();
+        // Lấy từ DI, KHÔNG dùng JobStorage.Current: API chỉ là client Hangfire, và Current chỉ được
+        // gán khi một dịch vụ Hangfire được resolve lần đầu (thường là lúc đẩy job đầu tiên). Dùng
+        // Current thì /healthz báo unhealthy từ lúc khởi động — và worker trong docker-compose
+        // (depends_on: api: service_healthy) không bao giờ được bật.
+        IMonitoringApi monitoring = jobStorage.GetMonitoringApi();
         int servers = monitoring.Servers().Count;
 
         checks["queue"] = servers > 0
