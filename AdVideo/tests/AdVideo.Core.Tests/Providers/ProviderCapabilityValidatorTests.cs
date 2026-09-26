@@ -15,6 +15,9 @@ namespace AdVideo.Core.Tests.Providers;
 /// </remarks>
 public class ProviderCapabilityValidatorTests
 {
+    /// <summary>Provider mẫu không nhận mặt người (vai trò Veo cũ — Veo gọi thẳng đã bị xoá).</summary>
+    private const string RejectsFaces = "khong-nhan-nguoi";
+
     [Fact]
     public void Nem_khi_thieu_doi_so()
     {
@@ -79,7 +82,7 @@ public class ProviderCapabilityValidatorTests
     {
         var result = ProviderCapabilityValidator.Check(
             Caps.Requirements(hasPerson: true),
-            Caps.Video(provider: ProviderNames.Veo, acceptsHumanFaces: false));
+            Caps.Video(provider: RejectsFaces, acceptsHumanFaces: false));
 
         result.IsSatisfied.Should().BeFalse();
         result.BlockingReasons.Should().ContainSingle().Which.Should().Contain("mặt người");
@@ -145,7 +148,7 @@ public class ProviderCapabilityValidatorTests
     [Fact]
     public void Bi_chan_thi_goi_y_provider_lam_duoc_viec_nay_xep_theo_gia()
     {
-        var rejected = Caps.Video(provider: ProviderNames.Veo, acceptsHumanFaces: false);
+        var rejected = Caps.Video(provider: RejectsFaces, acceptsHumanFaces: false);
 
         var result = ProviderCapabilityValidator.Check(
             Caps.Requirements(durationSeconds: 8, hasPerson: true),
@@ -170,7 +173,7 @@ public class ProviderCapabilityValidatorTests
     [Fact]
     public void Goi_y_giai_thich_dung_ly_do_lam_duoc_viec()
     {
-        var rejected = Caps.Video(provider: ProviderNames.Veo, supportsFrameChaining: false);
+        var rejected = Caps.Video(provider: RejectsFaces, supportsFrameChaining: false);
 
         var chaining = ProviderCapabilityValidator.Check(
             Caps.Requirements(needsFrameChaining: true),
@@ -194,7 +197,7 @@ public class ProviderCapabilityValidatorTests
 
         var generic = ProviderCapabilityValidator.Check(
             Caps.Requirements(ratio: AspectRatio.Square1x1),
-            Caps.Video(provider: ProviderNames.Veo, ratios: [AspectRatio.Portrait9x16]),
+            Caps.Video(provider: RejectsFaces, ratios: [AspectRatio.Portrait9x16]),
             alternatives: [Caps.Video(provider: ProviderNames.Kling, ratios: [AspectRatio.Square1x1])]);
 
         generic.Suggestions.Should().ContainSingle().Which.Reason.Should().Contain("Chuẩn");
@@ -203,7 +206,7 @@ public class ProviderCapabilityValidatorTests
     [Fact]
     public void Video_dai_hon_mot_shot_thi_gia_goi_y_tinh_theo_so_shot_phai_goi()
     {
-        var rejected = Caps.Video(provider: ProviderNames.Veo, acceptsHumanFaces: false);
+        var rejected = Caps.Video(provider: RejectsFaces, acceptsHumanFaces: false);
 
         var result = ProviderCapabilityValidator.Check(
             Caps.Requirements(durationSeconds: 30, hasPerson: true),
@@ -227,7 +230,7 @@ public class ProviderCapabilityValidatorTests
     {
         // Thứ tự không ổn định là thứ tự khiến cùng một request cho ra hai câu trả lời khác nhau
         // và test thì lúc xanh lúc đỏ.
-        var rejected = Caps.Video(provider: ProviderNames.Veo, acceptsHumanFaces: false);
+        var rejected = Caps.Video(provider: RejectsFaces, acceptsHumanFaces: false);
 
         var result = ProviderCapabilityValidator.Check(
             Caps.Requirements(durationSeconds: 8, hasPerson: true),

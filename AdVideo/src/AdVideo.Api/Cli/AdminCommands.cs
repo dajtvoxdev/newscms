@@ -161,7 +161,7 @@ public static class AdminCommands
 
         if (string.IsNullOrWhiteSpace(provider))
         {
-            Console.Error.WriteLine("Thiếu --provider. Ví dụ: set-credential --provider veo --key \"$GEMINI_API_KEY\"");
+            Console.Error.WriteLine("Thiếu --provider. Ví dụ: set-credential --provider kling --key \"$FAL_KEY\"");
 
             return 1;
         }
@@ -181,7 +181,7 @@ public static class AdminCommands
         if (category is null)
         {
             Console.Error.WriteLine(
-                $"Không nhận ra provider \"{provider}\". Các tên viết tay: veo, kling, seedance, vidu, elevenlabs, vieneu; " +
+                $"Không nhận ra provider \"{provider}\". Các tên viết tay: kling, seedance, vidu, elevenlabs, vieneu; " +
                 "provider khác phải nạp descriptor trước bằng set-descriptor.");
 
             return 1;

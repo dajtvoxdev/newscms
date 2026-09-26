@@ -6,7 +6,6 @@ using AdVideo.Infrastructure.Media;
 using AdVideo.Infrastructure.Providers.Declarative;
 using AdVideo.Infrastructure.Providers.ElevenLabs;
 using AdVideo.Infrastructure.Providers.Fal;
-using AdVideo.Infrastructure.Providers.Veo;
 using AdVideo.Infrastructure.Providers.VieNeu;
 using Microsoft.Extensions.Logging;
 
@@ -207,7 +206,7 @@ public sealed class ProviderRegistry : IProviderRegistry
             suggestions.AddRange(check.Suggestions);
         }
 
-        // Gộp lý do của mọi provider: nói "Kling không hỗ trợ 16:9" mà giấu việc Veo cũng không
+        // Gộp lý do của mọi provider: nói "Kling không hỗ trợ 16:9" mà giấu việc Vidu cũng không
         // hỗ trợ thì người dùng sửa xong vẫn hỏng, và phải hỏi lại lần nữa.
         return ProviderSelectionResult.Failure(
             reasons.Distinct(StringComparer.Ordinal).ToList(),
@@ -331,9 +330,6 @@ public sealed class ProviderRegistry : IProviderRegistry
 
         return credential.Provider switch
         {
-            ProviderNames.Veo => new VeoVideoProvider(
-                http, credential, capability, _loggerFactory.CreateLogger<VeoVideoProvider>()),
-
             // Ba model này đi qua cùng một hàng đợi của fal.ai; khác biệt nằm ở model id và
             // capability, cả hai đều lấy từ DB. Thêm model thứ tư chỉ cần một dòng trong DB.
             ProviderNames.Kling or ProviderNames.Seedance or ProviderNames.Vidu => new FalQueueVideoProvider(

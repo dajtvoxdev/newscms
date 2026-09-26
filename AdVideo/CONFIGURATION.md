@@ -232,7 +232,7 @@ Seeder chỉ **thêm khoá còn thiếu, không bao giờ ghi đè**. Người v
 | `GlobalNegativePromptCode` | `global-negative` | | | Code prompt negative toàn cục |
 | `ProviderSmokeTestEnabled` | `false` | | | Smoke test hằng ngày — mỗi lần test là một lần tiêu tiền thật |
 | `ForceableVideoProviders` | *(rỗng)* | | | Provider khách được chỉ định qua `options.provider`. Rỗng = không cho ép (Luật 3) |
-| `ProviderHostAllowlist` | `queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io, generativelanguage.googleapis.com, http://127.0.0.1:8080` | | | Host được gọi khi nói chuyện với provider — xem 2.3 |
+| `ProviderHostAllowlist` | `queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io, http://127.0.0.1:8080` | | | Host được gọi khi nói chuyện với provider — xem 2.3 |
 
 Cột **Tạm** là cờ `IsProvisional`. Nó có nghĩa rất cụ thể: **số này là phỏng đoán bảo toàn, chưa được
 đo**. Sprint 0 (đo thật bằng key thật) bị bỏ qua vì chưa có API key và ngân sách, nên cờ này chính là
@@ -252,9 +252,13 @@ API hay log; chỉ `ProviderRegistry` giải mã lúc dựng provider.
 Nạp key bằng CLI của `AdVideo.Api` (không sửa DB bằng tay):
 
 ```bash
-dotnet run --project src/AdVideo.Api -- set-credential --provider veo --key "$GEMINI_API_KEY"
+dotnet run --project src/AdVideo.Api -- set-credential --provider kling --key "$FAL_KEY"
 dotnet run --project src/AdVideo.Api -- set-credential --provider elevenlabs --key "$ELEVENLABS_API_KEY"
 ```
+
+> **Veo gọi thẳng qua Gemini API đã bị xoá** (26/09/2026): adapter, hằng `veo`, manifest và host
+> `generativelanguage.googleapis.com` không còn. Credential `veo` cũ trong DB sẽ bị registry bỏ qua kèm
+> cảnh báo. Cần Veo 3 thì đi qua NOVA (`google/flow-veo`) bằng descriptor — xem 2.4.
 
 Mỗi credential còn mang theo endpoint và **capability** (giá mỗi đơn vị, độ dài clip cho phép, có
 mốc thời gian theo từ hay không, voice hết hạn khi nào). Capability trong DB **ghi đè** capability

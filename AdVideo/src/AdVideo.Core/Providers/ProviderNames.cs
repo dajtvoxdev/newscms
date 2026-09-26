@@ -14,7 +14,6 @@ namespace AdVideo.Core.Providers;
 /// </remarks>
 public static class ProviderNames
 {
-    public const string Veo = "veo";
     public const string Kling = "kling";
     public const string Seedance = "seedance";
     public const string Vidu = "vidu";

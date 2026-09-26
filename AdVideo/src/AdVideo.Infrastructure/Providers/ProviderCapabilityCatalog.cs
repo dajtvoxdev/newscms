@@ -26,31 +26,6 @@ public static class ProviderCapabilityCatalog
     public static VideoProviderCapability? Video(string provider) =>
         provider.Trim().ToLowerInvariant() switch
         {
-            ProviderNames.Veo => new VideoProviderCapability
-            {
-                Provider = ProviderNames.Veo,
-                ModelId = "veo-3.1-fast-generate-preview",
-
-                // Lưới RỜI RẠC, không phải khoảng: xin 5 giây là trả tiền 6 giây.
-                AllowedDurationSeconds = [4, 6, 8],
-                SupportedAspectRatios = [AspectRatio.Portrait9x16, AspectRatio.Landscape16x9],
-
-                // Veo từ chối ảnh tham chiếu có mặt người. Đây là chính sách nội dung, không phải
-                // giới hạn kỹ thuật — và là lý do job "có người" được đẩy sang Kling.
-                AcceptsHumanFaces = false,
-                GeneratesNativeAudio = true,
-                NativeAudioEnabledByDefault = false,
-                CanSeparateSfxFromSpeech = false,
-                SupportsImageToVideo = true,
-                SupportsFrameChaining = true,
-                MaxReferenceImages = 3,
-                MaxSubjectsReliably = 1,
-                ServesTiers = [VideoTier.Standard],
-                CostPerSecondUsd = 0.12m,
-                SupportsSeed = true,
-                SupportsLipSync = false,
-            },
-
             ProviderNames.Kling => new VideoProviderCapability
             {
                 Provider = ProviderNames.Kling,
@@ -186,8 +161,8 @@ public static class ProviderCapabilityCatalog
     public static ProviderCategory? CategoryOf(string provider) =>
         provider.Trim().ToLowerInvariant() switch
         {
-            ProviderNames.Veo or ProviderNames.Kling or ProviderNames.Seedance
-                or ProviderNames.Vidu or ProviderNames.Runway => ProviderCategory.Video,
+            ProviderNames.Kling or ProviderNames.Seedance or ProviderNames.Vidu
+                or ProviderNames.Runway => ProviderCategory.Video,
             ProviderNames.ElevenLabs or ProviderNames.VieNeu => ProviderCategory.TextToSpeech,
             _ => null,
         };
@@ -196,7 +171,6 @@ public static class ProviderCapabilityCatalog
     public static string? DefaultEndpoint(string provider) =>
         provider.Trim().ToLowerInvariant() switch
         {
-            ProviderNames.Veo => "https://generativelanguage.googleapis.com/v1beta",
             ProviderNames.Kling or ProviderNames.Seedance or ProviderNames.Vidu => "https://queue.fal.run",
             ProviderNames.ElevenLabs => "https://api.elevenlabs.io",
             ProviderNames.VieNeu => "http://127.0.0.1:8080",

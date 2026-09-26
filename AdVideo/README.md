@@ -139,9 +139,9 @@ Hai chỗ, và ranh giới giữa chúng là cố ý (D10):
 **Không có API key nào trong `appsettings.json`.** Nạp bằng CLI:
 
 ```bash
-docker compose exec api dotnet AdVideo.Api.dll set-credential --provider veo --key <api key> --model veo-3
+docker compose exec api dotnet AdVideo.Api.dll set-credential --provider kling --key <fal key>
 docker compose exec api dotnet AdVideo.Api.dll list-settings
-docker compose exec api dotnet AdVideo.Api.dll set-setting --key DefaultVideoProvider --value veo
+docker compose exec api dotnet AdVideo.Api.dll set-setting --key DefaultVideoProvider --value kling
 ```
 
 Chi tiết từng khoá: [CONFIGURATION.md](CONFIGURATION.md).

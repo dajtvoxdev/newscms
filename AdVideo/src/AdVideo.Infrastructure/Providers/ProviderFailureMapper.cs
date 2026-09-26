@@ -15,7 +15,7 @@ namespace AdVideo.Infrastructure.Providers;
 /// Ngược lại, phân loại 429 thành ContentRejected là bỏ cuộc trong khi chỉ cần chờ vài giây.
 /// </para>
 /// <para>
-/// <b>422 là mã đặc biệt.</b> Cả fal.ai lẫn Gemini đều dùng 422 cho "tham số không hợp lệ", trong
+/// <b>422 là mã đặc biệt.</b> fal.ai (và nhiều cổng khác) dùng 422 cho "tham số không hợp lệ", trong
 /// đó có cả trường hợp prompt vi phạm chính sách nội dung. Thân phản hồi là thứ duy nhất phân
 /// biệt được hai loại, nên phải đọc nó chứ không chỉ nhìn mã.
 /// </para>

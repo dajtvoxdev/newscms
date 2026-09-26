@@ -89,7 +89,7 @@ public sealed class SystemSettingSeeder
             MinValue: "1",
             MaxValue: "8"),
 
-        // Mặc định là provider giả, KHÔNG phải Veo hay Kling: Sprint 1 chạy toàn tuyến mà không
+        // Mặc định là provider giả, KHÔNG phải Kling hay Seedance: Sprint 1 chạy toàn tuyến mà không
         // tiêu một đồng nào. Đổi sang provider thật là một hành động có ý thức của người vận hành
         // sau khi đã nạp key bằng lệnh set-credential.
         new(
@@ -113,7 +113,7 @@ public sealed class SystemSettingSeeder
             "Engine TTS cho tier Thành phẩm. Bắt buộc engine có mốc thời gian theo từ — đổi sang elevenlabs khi có key.",
             IsProvisional: true),
 
-        // 600 giây vì Veo là long-running operation: gửi xong còn phải poll. Timeout ngắn hơn
+        // 600 giây vì provider video là thao tác chạy dài: gửi xong còn phải poll. Timeout ngắn hơn
         // thời gian render thật thì client bỏ cuộc trong khi provider vẫn render — và vẫn tính tiền.
         new(
             SettingKeys.VideoProviderTimeoutSeconds,
@@ -209,7 +209,7 @@ public sealed class SystemSettingSeeder
         // gọi ra ngoài. fal trả clip qua CDN *.fal.media; VieNeu tự host ở máy nội bộ.
         new(
             SettingKeys.ProviderHostAllowlist,
-            "queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io, generativelanguage.googleapis.com, http://127.0.0.1:8080",
+            "queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io, http://127.0.0.1:8080",
             SettingValueType.String,
             "Host được gọi khi nói chuyện với provider (baseUrl, URL trong phản hồi, URL tải file). Cách nhau bằng dấu phẩy. *.domain = mọi host con. http chỉ được khi ghi đủ http://host:cổng. Rỗng = chặn hết.",
             IsProvisional: false),
