@@ -106,3 +106,55 @@ public sealed class NoNetworkHandler : HttpMessageHandler
             "Test tự động chỉ được chạy với provider giả — một lời gọi thật ở đây là một hoá đơn.");
     }
 }
+
+/// <summary>
+/// Handler trả lời theo kịch bản, để test adapter provider mà không gọi ra ngoài.
+/// </summary>
+/// <remarks>
+/// Ghi lại MỌI request kèm thân và header — thứ cần kiểm ở adapter thường là "gửi đi cái gì",
+/// không chỉ "đọc về cái gì". Thân được đọc ngay lúc gửi vì <see cref="HttpContent"/> bị huỷ sau
+/// khi request xong.
+/// </remarks>
+public sealed class ScriptedHttpHandler : HttpMessageHandler
+{
+    private readonly Func<HttpRequestMessage, string?, HttpResponseMessage> _respond;
+
+    public ScriptedHttpHandler(Func<HttpRequestMessage, string?, HttpResponseMessage> respond)
+    {
+        _respond = respond;
+    }
+
+    /// <summary>Mọi request đã gửi, theo thứ tự.</summary>
+    public List<RecordedRequest> Requests { get; } = [];
+
+    /// <summary>Dựng phản hồi JSON nhanh.</summary>
+    public static HttpResponseMessage Json(string json, HttpStatusCode status = HttpStatusCode.OK) =>
+        new(status) { Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json") };
+
+    /// <inheritdoc />
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        string? body = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
+
+        Requests.Add(new RecordedRequest(
+            request.Method,
+            request.RequestUri!,
+            body,
+            request.Headers.ToDictionary(h => h.Key, h => string.Join(",", h.Value), StringComparer.OrdinalIgnoreCase)));
+
+        HttpResponseMessage response = _respond(request, body);
+        response.RequestMessage ??= request;
+
+        return response;
+    }
+
+    /// <summary>Một request đã ghi lại.</summary>
+    public sealed record RecordedRequest(
+        HttpMethod Method,
+        Uri Uri,
+        string? Body,
+        IReadOnlyDictionary<string, string> Headers);
+}

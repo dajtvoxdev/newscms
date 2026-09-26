@@ -41,6 +41,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Mau descriptor trong samples/providers la fixture: test doc tung file, nen mau khong the troi thanh JSON hong. -->
+    <None Include="..\..\samples\providers\*.json" Link="Samples\providers\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Khoi bot "using Xunit;" o dau moi file test. -->
     <Using Include="Xunit" />
   </ItemGroup>

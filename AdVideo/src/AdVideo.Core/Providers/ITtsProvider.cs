@@ -74,6 +74,12 @@ public sealed record TtsResult
     /// <summary>Chi phí provider báo về. ElevenLabs tính theo ký tự — xem header <c>xi-character-count</c>.</summary>
     public decimal? ReportedCostUsd { get; init; }
 
+    /// <summary>Chi phí adapter TỰ SUY. Vào sổ với <c>CostIsReported = false</c>. Null thì bước gọi suy từ capability.</summary>
+    public decimal? EstimatedCostUsd { get; init; }
+
+    /// <summary>SHA-256 của descriptor đã sinh ra kết quả này. Null = adapter viết tay.</summary>
+    public string? DescriptorSha256 { get; init; }
+
     /// <summary>Số ký tự bị tính tiền, để đối soát hoá đơn.</summary>
     public int? BilledCharacterCount { get; init; }
 

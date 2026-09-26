@@ -95,6 +95,11 @@ gian), `adv-final` (video giao khách), `adv-voice` (giọng đọc).
 `FfmpegPath`/`FfprobePath` viết theo kiểu Windows trên máy dev, nhưng **khi deploy Linux phải ghi đè**
 trong `appsettings.Production.json`. Bỏ qua bước này thì việc nén/probe hỏng âm thầm.
 
+`src/AdVideo.Api/appsettings.Production.json` và `src/AdVideo.Worker/appsettings.Production.json` đã có
+sẵn bốn khoá cho VPS Ubuntu (`FfmpegPath`, `FfprobePath`, `FontFile` DejaVu, `KeyRingPath =
+/var/lib/advideo/keys`) và tắt provider giả. File này chỉ được nạp khi `ASPNETCORE_ENVIRONMENT` là
+`Production` **hoặc để trống**; biến môi trường vẫn đè lên nó như mọi khi.
+
 ```jsonc
 // appsettings.Production.json trên VPS Ubuntu
 {
@@ -118,7 +123,7 @@ trong `appsettings.Production.json`. Bỏ qua bước này thì việc nén/prob
 
 | Khoá | Mặc định | Ghi chú |
 |---|---|---|
-| `Enabled` | `true` | **Production phải đặt `false`** |
+| `Enabled` | `false` | Phải bật tường minh. **Bật trên Production thì host từ chối khởi động** |
 | `LatencyMs` | `0` | Giả lập độ trễ mỗi lần gọi |
 | `FailShotIndexes` | `[]` | Shot có chỉ số trong danh sách sẽ fail |
 | `FailureKind` | `Transient` | `Transient`, `ContentPolicy`, `ProviderUnavailable`, … |
@@ -128,6 +133,13 @@ trong `appsettings.Production.json`. Bỏ qua bước này thì việc nén/prob
 
 > **Vì sao production phải tắt.** Nếu credential thật hỏng mà provider giả vẫn còn trong danh sách,
 > nó sẽ **âm thầm nhận việc** và khách nhận về một video `testsrc2`. Thà job fail còn hơn.
+> Vì vậy mặc định trong code là `false`, và `AddAdVideoInfrastructure` **ném exception** nếu
+> `Enabled = true` khi `ASPNETCORE_ENVIRONMENT` là `Production` (hoặc để trống). Worker trong
+> `docker-compose.yml` chạy với `ASPNETCORE_ENVIRONMENT=DockerDev` vì lý do này.
+>
+> Khách cũng **không ép được** provider qua `options.provider` trừ khi tên đó nằm trong setting
+> `ForceableVideoProviders` (mặc định rỗng), và provider được ép vẫn phải qua kiểm năng lực như
+> provider tự chọn. Provider giả không bao giờ ép được ở Production.
 
 Mọi mặc định đều là "chạy trơn tru": bật lỗi phải là hành động cố ý của test. Đường thành công thì
 test nào cũng đi qua — thứ cần chứng minh là pipeline xử lý đúng khi một shot bị từ chối nội dung,
@@ -219,6 +231,8 @@ Seeder chỉ **thêm khoá còn thiếu, không bao giờ ghi đè**. Người v
 | `MaxLipSyncDriftMs` | `200` | 40–1000 | | Dung sai lệch tiếng-hình, vượt là QC đánh trượt |
 | `GlobalNegativePromptCode` | `global-negative` | | | Code prompt negative toàn cục |
 | `ProviderSmokeTestEnabled` | `false` | | | Smoke test hằng ngày — mỗi lần test là một lần tiêu tiền thật |
+| `ForceableVideoProviders` | *(rỗng)* | | | Provider khách được chỉ định qua `options.provider`. Rỗng = không cho ép (Luật 3) |
+| `ProviderHostAllowlist` | `queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io, http://127.0.0.1:8080` | | | Host được gọi khi nói chuyện với provider — xem 2.3 |
 
 Cột **Tạm** là cờ `IsProvisional`. Nó có nghĩa rất cụ thể: **số này là phỏng đoán bảo toàn, chưa được
 đo**. Sprint 0 (đo thật bằng key thật) bị bỏ qua vì chưa có API key và ngân sách, nên cờ này chính là
@@ -238,20 +252,71 @@ API hay log; chỉ `ProviderRegistry` giải mã lúc dựng provider.
 Nạp key bằng CLI của `AdVideo.Api` (không sửa DB bằng tay):
 
 ```bash
-dotnet run --project src/AdVideo.Api -- set-credential --provider veo --key "$GEMINI_API_KEY"
+dotnet run --project src/AdVideo.Api -- set-credential --provider kling --key "$FAL_KEY"
 dotnet run --project src/AdVideo.Api -- set-credential --provider elevenlabs --key "$ELEVENLABS_API_KEY"
 ```
+
+> **Veo gọi thẳng qua Gemini API đã bị xoá** (26/09/2026): adapter, hằng `veo`, manifest và host
+> `generativelanguage.googleapis.com` không còn. Credential `veo` cũ trong DB sẽ bị registry bỏ qua kèm
+> cảnh báo. Cần Veo 3 thì đi qua NOVA (`google/flow-veo`) bằng descriptor — xem 2.4.
 
 Mỗi credential còn mang theo endpoint và **capability** (giá mỗi đơn vị, độ dài clip cho phép, có
 mốc thời gian theo từ hay không, voice hết hạn khi nào). Capability trong DB **ghi đè** capability
 khai trong code, để sửa bảng giá khi nhà cung cấp đổi giá mà không phải deploy.
+
+> ⚠️ **DB nạp trước 26/09/2026 cần sửa tay hai chỗ** (catalog trong code đã sửa, nhưng catalog chỉ là
+> mẫu điền lần đầu): credential `elevenlabs` còn `ModelId = eleven_multilingual_v2` — model này
+> **không đọc được tiếng Việt**, đổi sang `eleven_flash_v2_5`; và `CapabilityJson` của `kling`,
+> `seedance`, `elevenlabs` còn giá cũ cao 1,5–9 lần (đúng: 0,11 / 0,10 USD/giây, 0,05 USD/1000 ký tự).
 
 > ⚠️ **`IApiKeyProtector` phải là singleton.** Đăng ký scoped thì mỗi request dựng một DataProtection
 > provider mới, và trên một số cấu hình key ring điều đó làm key bị **sinh lại** — nghĩa là mọi API
 > key đã mã hoá trong DB thành rác không giải mã được. Đây là lỗi đã từng xảy ra ở dự án khác trên
 > chính máy chủ này. Key ring cũng không được nằm trong `bin/`: `clean` là mất khoá.
 
-### 2.3. `PromptTemplates` — prompt
+### 2.3. `ProviderHostAllowlist` — chặn SSRF
+
+Mọi request tới provider (client `advideo-provider`) và mọi lần tải clip (client
+`advideo-provider-download`) đi qua `SsrfGuardingHandler`: host không nằm trong setting này thì request
+**không ra khỏi máy**, kể cả khi bị chuyển hướng (handler tự theo redirect và kiểm từng bước; redirect
+tự động của .NET bị tắt vì nó xảy ra sau lưng handler).
+
+- `api.elevenlabs.io` — https, cổng 443. `*.fal.media` — mọi host con. `host:8443` — cổng khác.
+- `http://127.0.0.1:8080` — cách duy nhất cho phép http, dành cho engine tự host.
+- **Rỗng hoặc thiếu = chặn hết.** Chạy `seed` sau khi nâng cấp để có giá trị mặc định.
+- Thêm provider mới (kể cả bằng descriptor) = thêm host của nó vào đây. Dán descriptor **không** tự
+  cấp quyền gọi ra ngoài — đó là chủ đích.
+
+Key chỉ được gắn khi URL **cùng origin** với endpoint của credential; URL trong phản hồi trỏ sang host
+khác (CDN, link đã ký) được gọi không kèm key. Thân lỗi được che key (`****abcd`) trước khi vào
+`ProviderCall.RawError` / `AdVideoJob.RawProviderError`.
+
+### 2.4. `ProviderDescriptors` — provider khai báo bằng JSON
+
+Thêm nhà cung cấp mới có hình dạng *submit → (poll) → đọc JSON* **không cần viết C#**: dán một file
+descriptor (`advideo.provider/v1`) vào DB. Mẫu nằm ở `samples/providers/` (fal-kling, NOVA,
+ElevenLabs); thiết kế đầy đủ ở `docs/ai/planning/ad-video-studio/ke-hoach-provider-khai-bao-2026-09-25.md`.
+
+```bash
+dotnet run --project src/AdVideo.Api -- set-descriptor --file "$PWD/samples/providers/nova-grok-video-15.json" --note "thử NOVA"
+dotnet run --project src/AdVideo.Api -- test-descriptor --provider nova-grok-video-15     # chạy khô, không gọi mạng
+dotnet run --project src/AdVideo.Api -- set-setting --key ProviderHostAllowlist --value "<danh sách cũ>, novagateway.net"
+dotnet run --project src/AdVideo.Api -- set-credential --provider nova-grok-video-15 --key "$NOVA_API_KEY"
+dotnet run --project src/AdVideo.Api -- activate-descriptor --provider nova-grok-video-15 --version 1
+```
+
+- Bản mới **luôn vào ở trạng thái tắt**; `activate-descriptor` bật nó và ghi khối `capability` vào
+  `CapabilityJson` của credential cùng tên. Rollback = bật lại bản cũ. Có hiệu lực trong 30 giây, không
+  restart.
+- Descriptor đang bật **thắng** adapter viết tay cùng tên; `deactivate-descriptor` quay về adapter cũ.
+- Validator từ chối lưu nếu: biến lạ, `{{secret.*}}` nằm ngoài `transport`, chuỗi trông như key thật,
+  poll không có `maxWaitSeconds`, hoặc `capability.costPerSecondUsd` thấp hơn giá xấu nhất theo khối
+  `cost` (dự toán thấp hơn hoá đơn).
+- Mỗi `ProviderCall` ghi `DescriptorSha256` — một clip hỏng tra ngược được đúng bản descriptor đã sinh ra nó.
+- `errors.deactivateCredentialOn` (ví dụ `402`) **tự tắt credential** khi provider trả mã đó; bật lại
+  bằng `set-credential` sau khi xử lý.
+
+### 2.5. `PromptTemplates` — prompt
 
 Prompt gửi cho model **không nằm trong code**. Mỗi template có `Code` (định danh ổn định), nội dung,
 và số phiên bản; sửa prompt là thêm phiên bản mới, không đè lên bản cũ — để truy được một video cũ

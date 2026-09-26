@@ -22,7 +22,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
         $"Thiếu chuỗi kết nối '{DependencyInjection.ConnectionStringName}'. Xem AdVideo/CONFIGURATION.md.");
 }
 
-builder.Services.AddAdVideoInfrastructure(builder.Configuration);
+builder.Services.AddAdVideoInfrastructure(builder.Configuration, builder.Environment.EnvironmentName);
 
 // Pipeline + hai HttpClient của nó nằm trong WorkerPipeline để test integration dùng chung đúng
 // một chỗ đăng ký với tiến trình thật. Danh sách bước chép làm hai bản là cách chắc chắn để một

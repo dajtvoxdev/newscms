@@ -1,0 +1,84 @@
+// Kling qua hàng đợi fal.ai, viết lại bằng descriptor. Mục tiêu P4.1: body dựng ra phải BẰNG
+// body của FalQueueVideoProvider hôm nay — đó là bằng chứng engine đủ sức trước khi bỏ adapter.
+{
+  "schema": "advideo.provider/v1",
+  "name": "kling",
+  "kind": "video",
+  "transport": {
+    "baseUrl": "https://queue.fal.run",
+    // fal dùng lược đồ "Key", KHÔNG phải Bearer.
+    "auth": { "in": "header", "name": "Authorization", "scheme": "Key", "valueRef": "{{secret.api_key}}" },
+    "requestTimeoutSeconds": 120
+  },
+  "valueMaps": {
+    "aspect": { "Portrait9x16": "9:16", "Square1x1": "1:1", "Landscape16x9": "16:9" }
+  },
+  "capability": {
+    "provider": "kling",
+    "modelId": "fal-ai/kling-video/v3/pro/image-to-video",
+    "allowedDurationSeconds": [5, 10],
+    "supportedAspectRatios": ["Portrait9x16", "Square1x1", "Landscape16x9"],
+    "acceptsHumanFaces": true,
+    "generatesNativeAudio": true,
+    "nativeAudioEnabledByDefault": false,
+    "canSeparateSfxFromSpeech": false,
+    "supportsImageToVideo": true,
+    "supportsFrameChaining": true,
+    "maxReferenceImages": 2,
+    "maxSubjectsReliably": 2,
+    "servesTiers": ["Draft", "Standard"],
+    "costPerSecondUsd": 0.11,
+    "supportsSeed": true,
+    "supportsLipSync": false
+  },
+  "submit": {
+    "method": "POST",
+    // model id nằm ở đường dẫn; dấu "/" trong model id được giữ nguyên.
+    "path": "/{{model_id}}",
+    "body": {
+      "kind": "json",
+      "template": {
+        "prompt": "{{prompt}}",
+        "duration": "{{seconds|string}}",
+        "aspect_ratio": "{{aspect_ratio|map:aspect}}",
+        "negative_prompt": "{{negative_prompt}}",
+        "seed": "{{seed}}",
+        "image_url": "{{image_url}}",
+        "image_urls": "{{image_urls}}",
+        // generate_audio chỉ có giá trị (false) khi pipeline cần tắt tiếng gốc; còn lại biến mất.
+        "enable_audio": "{{generate_audio}}",
+        "generate_audio": "{{generate_audio}}",
+        "bgm": "{{generate_audio}}"
+      }
+    }
+  },
+  "poll": {
+    "mode": "urlFromSubmit",
+    "urlPath": "status_url",
+    "intervalSeconds": 3,
+    "maxWaitSeconds": 600,
+    "statusPath": "status",
+    "statusMap": {
+      "IN_QUEUE": "pending",
+      "IN_PROGRESS": "pending",
+      "COMPLETED": "succeeded",
+      "FAILED": "failed",
+      "ERROR": "failed"
+    }
+  },
+  "result": {
+    "requestIdPath": "request_id",
+    "fetchUrlPath": "response_url",
+    "videoUrlPath": "video.url || videos[0].url || output.video_url"
+  },
+  "errors": {
+    "byBodyCode": {
+      "path": "detail[0].type",
+      "table": { "content_policy_violation": "ContentRejected" }
+    },
+    "byStatus": { "401": "ProviderUnavailable", "403": "ProviderUnavailable", "402": "ProviderUnavailable", "429": "RateLimited", "5xx": "ProviderUnavailable" },
+    "default": "Unknown",
+    "deactivateCredentialOn": ["402"]
+  },
+  "cost": { "unit": "perSecond", "rateUsd": 0.11 }
+}

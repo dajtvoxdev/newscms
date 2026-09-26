@@ -50,6 +50,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Descriptor mau la fixture chung voi AdVideo.Core.Tests. -->
+    <None Include="..\..\samples\providers\*.json" Link="Samples\providers\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Khoi bot "using Xunit;" o dau moi file test. -->
     <Using Include="Xunit" />
   </ItemGroup>

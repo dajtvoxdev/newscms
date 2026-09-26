@@ -2,6 +2,7 @@ using AdVideo.Core.Entities;
 using AdVideo.Core.Enums;
 using AdVideo.Core.Pipeline;
 using AdVideo.Core.Providers;
+using AdVideo.Core.Security;
 using AdVideo.Core.Storage;
 using AdVideo.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
@@ -119,7 +120,8 @@ public sealed class JobArtifacts
         string? rawError = null,
         bool costIsReported = false,
         int? billedCharacters = null,
-        int attemptNumber = 1)
+        int attemptNumber = 1,
+        string? descriptorSha256 = null)
     {
         var call = new ProviderCall
         {
@@ -137,10 +139,12 @@ public sealed class JobArtifacts
             FailureKind = failureKind,
 
             // Lỗi nguyên văn bị cắt: một provider trả cả trang HTML lỗi sẽ làm dòng log và cột
-            // này phình ra mà 4000 ký tự đầu đã đủ để biết chuyện gì xảy ra.
-            RawError = Truncate(rawError, 4000),
+            // này phình ra mà 4000 ký tự đầu đã đủ để biết chuyện gì xảy ra. Che theo hình dạng
+            // key là lưới an toàn thứ hai — adapter đã che đúng key của nó trước khi trả về.
+            RawError = Truncate(SecretRedactor.RedactPatterns(rawError), 4000),
             BilledCharacterCount = billedCharacters,
             AttemptNumber = attemptNumber,
+            DescriptorSha256 = descriptorSha256,
         };
 
         _db.ProviderCalls.Add(call);

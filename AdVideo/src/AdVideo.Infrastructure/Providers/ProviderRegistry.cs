@@ -3,9 +3,9 @@ using AdVideo.Core.Entities;
 using AdVideo.Core.Enums;
 using AdVideo.Core.Providers;
 using AdVideo.Infrastructure.Media;
+using AdVideo.Infrastructure.Providers.Declarative;
 using AdVideo.Infrastructure.Providers.ElevenLabs;
 using AdVideo.Infrastructure.Providers.Fal;
-using AdVideo.Infrastructure.Providers.Veo;
 using AdVideo.Infrastructure.Providers.VieNeu;
 using Microsoft.Extensions.Logging;
 
@@ -37,6 +37,7 @@ public sealed class ProviderRegistry : IProviderRegistry
     public const string HttpClientName = "advideo-provider";
 
     private readonly ICredentialStore _credentials;
+    private readonly IDescriptorStore _descriptors;
     private readonly ISettingsStore _settings;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IMediaInspector _inspector;
@@ -47,6 +48,7 @@ public sealed class ProviderRegistry : IProviderRegistry
 
     public ProviderRegistry(
         ICredentialStore credentials,
+        IDescriptorStore descriptors,
         ISettingsStore settings,
         IHttpClientFactory httpClientFactory,
         IMediaInspector inspector,
@@ -56,6 +58,7 @@ public sealed class ProviderRegistry : IProviderRegistry
         ILogger<ProviderRegistry> logger)
     {
         _credentials = credentials;
+        _descriptors = descriptors;
         _settings = settings;
         _httpClientFactory = httpClientFactory;
         _inspector = inspector;
@@ -87,7 +90,7 @@ public sealed class ProviderRegistry : IProviderRegistry
                 continue;
             }
 
-            IVideoProvider? provider = CreateVideoProvider(credential, capability);
+            IVideoProvider? provider = await CreateVideoProviderAsync(credential, capability, cancellationToken);
 
             if (provider is not null)
             {
@@ -122,7 +125,7 @@ public sealed class ProviderRegistry : IProviderRegistry
                 continue;
             }
 
-            ITtsProvider? provider = CreateTtsProvider(credential, capability);
+            ITtsProvider? provider = await CreateTtsProviderAsync(credential, capability, cancellationToken);
 
             if (provider is not null)
             {
@@ -203,7 +206,7 @@ public sealed class ProviderRegistry : IProviderRegistry
             suggestions.AddRange(check.Suggestions);
         }
 
-        // Gộp lý do của mọi provider: nói "Kling không hỗ trợ 16:9" mà giấu việc Veo cũng không
+        // Gộp lý do của mọi provider: nói "Kling không hỗ trợ 16:9" mà giấu việc Vidu cũng không
         // hỗ trợ thì người dùng sửa xong vẫn hỏng, và phải hỏi lại lần nữa.
         return ProviderSelectionResult.Failure(
             reasons.Distinct(StringComparer.Ordinal).ToList(),
@@ -299,15 +302,34 @@ public sealed class ProviderRegistry : IProviderRegistry
         }
     }
 
-    private IVideoProvider? CreateVideoProvider(ResolvedCredential credential, VideoProviderCapability capability)
+    /// <remarks>
+    /// Thứ tự: descriptor đang bật → adapter viết tay → bỏ qua. Descriptor thắng adapter cùng tên,
+    /// để chuyển một provider sang descriptor (P4) là bật một dòng DB, và tắt dòng đó là quay về
+    /// adapter cũ — không deploy ở cả hai chiều.
+    /// </remarks>
+    private async Task<IVideoProvider?> CreateVideoProviderAsync(
+        ResolvedCredential credential,
+        VideoProviderCapability capability,
+        CancellationToken cancellationToken)
     {
         HttpClient http = _httpClientFactory.CreateClient(HttpClientName);
 
+        if (await _descriptors.GetActiveAsync(credential.Provider, cancellationToken) is { } descriptor)
+        {
+            if (descriptor.Descriptor.Kind == Core.Providers.Descriptors.DescriptorKind.Video)
+            {
+                return new DeclarativeVideoProvider(
+                    http, credential, capability, descriptor, _credentials, _loggerFactory.CreateLogger<DeclarativeVideoProvider>());
+            }
+
+            _logger.LogWarning(
+                "Descriptor {Provider} là loại {Kind} nhưng credential là video — bỏ qua descriptor.",
+                credential.Provider,
+                descriptor.Descriptor.Kind);
+        }
+
         return credential.Provider switch
         {
-            ProviderNames.Veo => new VeoVideoProvider(
-                http, credential, capability, _loggerFactory.CreateLogger<VeoVideoProvider>()),
-
             // Ba model này đi qua cùng một hàng đợi của fal.ai; khác biệt nằm ở model id và
             // capability, cả hai đều lấy từ DB. Thêm model thứ tư chỉ cần một dòng trong DB.
             ProviderNames.Kling or ProviderNames.Seedance or ProviderNames.Vidu => new FalQueueVideoProvider(
@@ -321,16 +343,33 @@ public sealed class ProviderRegistry : IProviderRegistry
             http.Dispose();
 
             _logger.LogWarning(
-                "Không có adapter cho provider video {Provider} — có credential trong DB nhưng chưa viết code.",
+                "Không có adapter cũng không có descriptor đang bật cho provider video {Provider} — nạp bằng set-descriptor + activate-descriptor.",
                 provider);
 
             return null;
         }
     }
 
-    private ITtsProvider? CreateTtsProvider(ResolvedCredential credential, TtsProviderCapability capability)
+    private async Task<ITtsProvider?> CreateTtsProviderAsync(
+        ResolvedCredential credential,
+        TtsProviderCapability capability,
+        CancellationToken cancellationToken)
     {
         HttpClient http = _httpClientFactory.CreateClient(HttpClientName);
+
+        if (await _descriptors.GetActiveAsync(credential.Provider, cancellationToken) is { } descriptor)
+        {
+            if (descriptor.Descriptor.Kind == Core.Providers.Descriptors.DescriptorKind.Tts)
+            {
+                return new DeclarativeTtsProvider(
+                    http, credential, capability, descriptor, _credentials, _inspector, _loggerFactory.CreateLogger<DeclarativeTtsProvider>());
+            }
+
+            _logger.LogWarning(
+                "Descriptor {Provider} là loại {Kind} nhưng credential là TTS — bỏ qua descriptor.",
+                credential.Provider,
+                descriptor.Descriptor.Kind);
+        }
 
         return credential.Provider switch
         {
@@ -348,7 +387,7 @@ public sealed class ProviderRegistry : IProviderRegistry
             http.Dispose();
 
             _logger.LogWarning(
-                "Không có adapter cho engine TTS {Provider} — có credential trong DB nhưng chưa viết code.",
+                "Không có adapter cũng không có descriptor đang bật cho engine TTS {Provider} — nạp bằng set-descriptor + activate-descriptor.",
                 provider);
 
             return null;

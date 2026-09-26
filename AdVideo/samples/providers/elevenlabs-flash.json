@@ -1,0 +1,63 @@
+// ElevenLabs Flash v2.5 viết bằng descriptor. Luôn gọi /with-timestamps: không có mốc thì bước 5
+// không khoá được timeline. Mốc trả về theo KÝ TỰ; engine ghép thành từ.
+{
+  "schema": "advideo.provider/v1",
+  "name": "elevenlabs",
+  "kind": "tts",
+  "transport": {
+    "baseUrl": "https://api.elevenlabs.io",
+    // Header là xi-api-key, không phải Authorization.
+    "auth": { "in": "header", "name": "xi-api-key", "valueRef": "{{secret.api_key}}" }
+  },
+  "constraints": { "maxInputChars": 5000 },
+  "capability": {
+    "provider": "elevenlabs",
+    "modelId": "eleven_flash_v2_5",
+    "hasWordTimings": true,
+    "hasCharacterTimings": true,
+    "supportedLanguages": ["vi", "en"],
+    "supportsVoiceCloning": true,
+    "minCloneSampleSeconds": 60,
+    "hasVoiceOwnershipVerification": true,
+    "supportsProsodyContinuation": true,
+    "costPer1000CharsUsd": 0.05,
+    "realTimeFactor": 0.3,
+    "voicesExpireAt": "2026-12-31T00:00:00Z"
+  },
+  "submit": {
+    "method": "POST",
+    "path": "/v1/text-to-speech/{{voice_id}}/with-timestamps?output_format=mp3_44100_128",
+    "body": {
+      "kind": "json",
+      "template": {
+        "text": "{{text}}",
+        "model_id": "{{model_id}}",
+        "voice_settings": { "speed": "{{speed}}" },
+        // Mảng chỉ còn phần tử rỗng thì cả khoá biến mất — đúng như adapter cũ: không có id thì không gửi.
+        "previous_request_ids": ["{{previous_request_id}}"],
+        "previous_text": "{{previous_text}}"
+      }
+    }
+  },
+  "result": {
+    "audioBase64Path": "audio_base64",
+    "audioContentType": "audio/mpeg",
+    "alignment": {
+      "format": "characters",
+      "textPath": "alignment.characters || normalized_alignment.characters",
+      "startsPath": "alignment.character_start_times_seconds || normalized_alignment.character_start_times_seconds",
+      "endsPath": "alignment.character_end_times_seconds || normalized_alignment.character_end_times_seconds",
+      "timeUnit": "seconds"
+    },
+    "billedCharactersHeader": "xi-character-count",
+    // Id lần đọc nằm ở header; gửi lại ở previous_request_ids để shot sau nối ngữ điệu.
+    "requestIdHeader": "request-id"
+  },
+  "errors": {
+    "byBodyCode": { "path": "detail.status", "table": { "quota_exceeded": "ProviderUnavailable", "invalid_api_key": "ProviderUnavailable" } },
+    "byStatus": { "401": "ProviderUnavailable", "402": "ProviderUnavailable", "429": "RateLimited", "5xx": "ProviderUnavailable" },
+    "default": "Unknown",
+    "deactivateCredentialOn": ["402"]
+  },
+  "cost": { "unit": "per1000Chars", "rateUsd": 0.05 }
+}

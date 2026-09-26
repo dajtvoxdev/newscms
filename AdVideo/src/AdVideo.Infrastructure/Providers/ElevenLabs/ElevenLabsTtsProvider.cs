@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using AdVideo.Core.Configuration;
 using AdVideo.Core.Providers;
+using AdVideo.Core.Security;
 using Microsoft.Extensions.Logging;
 
 namespace AdVideo.Infrastructure.Providers.ElevenLabs;
@@ -22,7 +22,7 @@ namespace AdVideo.Infrastructure.Providers.ElevenLabs;
 /// </para>
 /// <para>
 /// <b>Mốc trả về là theo KÝ TỰ, không theo từ.</b> Ghép lại thành từ là việc của adapter này —
-/// xem <see cref="BuildWordTimings"/>. Đây cũng là chỗ duy nhất trong hệ thống biết hình dạng
+/// xem <see cref="WordTimingBuilder"/>. Đây cũng là chỗ duy nhất trong hệ thống biết hình dạng
 /// alignment của ElevenLabs.
 /// </para>
 /// <para>
@@ -52,9 +52,6 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
         _logger = logger;
 
         Capability = capability;
-
-        _http.DefaultRequestHeaders.Remove("xi-api-key");
-        _http.DefaultRequestHeaders.TryAddWithoutValidation("xi-api-key", credential.ApiKey);
     }
 
     public string Name => _credential.Provider;
@@ -70,7 +67,7 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
         string url = $"{BaseUrl()}/v1/text-to-speech/{Uri.EscapeDataString(request.VoiceId)}/with-timestamps"
             + $"?output_format={OutputFormat}";
 
-        using HttpResponseMessage response = await _http.PostAsJsonAsync(url, BuildPayload(request), cancellationToken);
+        using HttpResponseMessage response = await _http.SendAsync(Authorized(HttpMethod.Post, url, BuildPayload(request)), cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -81,7 +78,7 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
                 IsSuccess = false,
                 FailureKind = ProviderFailureMapper.FromStatus(response.StatusCode, body),
                 FailureReason = $"ElevenLabs trả {(int)response.StatusCode}.",
-                RawError = body,
+                RawError = Redact(body),
                 RetryAfterSeconds = ProviderFailureMapper.ReadRetryAfter(response),
             };
         }
@@ -106,7 +103,7 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
                     IsSuccess = false,
                     FailureKind = VideoFailureKind.Unknown,
                     FailureReason = "ElevenLabs trả 200 nhưng không có audio_base64 trong phản hồi.",
-                    RawError = Truncate(root.ToString()),
+                    RawError = Redact(Truncate(root.ToString())),
                 };
             }
 
@@ -126,11 +123,11 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
                     IsSuccess = false,
                     FailureKind = VideoFailureKind.Unknown,
                     FailureReason = "ElevenLabs trả audio nhưng thiếu alignment — không khoá được timeline.",
-                    RawError = Truncate(root.ToString()),
+                    RawError = Redact(Truncate(root.ToString())),
                 };
             }
 
-            IReadOnlyList<WordTiming> words = BuildWordTimings(characters);
+            IReadOnlyList<WordTiming> words = WordTimingBuilder.FromCharacters(characters);
             double duration = characters[^1].EndSeconds;
 
             int billedCharacters = ReadCharacterCount(response) ?? request.Text.Length;
@@ -154,7 +151,10 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
                 // (TtsRequest.PreviousRequestId), nên phải giữ lại.
                 ProviderRequestId = ReadHeader(response, "request-id"),
                 BilledCharacterCount = billedCharacters,
-                ReportedCostUsd = Capability.CostPer1000CharsUsd * billedCharacters / 1000m,
+
+                // KHÔNG điền ReportedCostUsd: ElevenLabs báo số ký tự, không báo tiền. Điền đơn giá
+                // manifest × ký tự vào đây là đánh dấu CostIsReported = true cho một con số tự suy,
+                // và mất khả năng đối soát hoá đơn. TtsStep tự suy từ BilledCharacterCount.
             };
         }
     }
@@ -164,7 +164,7 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
         try
         {
             // /v1/user trả hạn mức ký tự còn lại: xác nhận key mà không tốn ký tự nào.
-            using HttpResponseMessage response = await _http.GetAsync($"{BaseUrl()}/v1/user", cancellationToken);
+            using HttpResponseMessage response = await _http.SendAsync(Authorized(HttpMethod.Get, $"{BaseUrl()}/v1/user"), cancellationToken);
 
             return response.IsSuccessStatusCode;
         }
@@ -175,6 +175,11 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
             return false;
         }
     }
+
+    private HttpRequestMessage Authorized(HttpMethod method, string url, object? body = null) =>
+        ProviderHttp.Create(method, url, new Uri(BaseUrl()), "xi-api-key", _credential.ApiKey, body);
+
+    private string? Redact(string? text) => SecretRedactor.RedactKnown(text, _credential.ApiKey);
 
     private string BaseUrl()
         => string.IsNullOrWhiteSpace(_credential.Endpoint)
@@ -250,52 +255,6 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
         }
 
         return result;
-    }
-
-    /// <remarks>
-    /// Gộp ký tự thành từ bằng khoảng trắng. Dấu câu dính vào từ liền trước là có chủ đích: phụ đề
-    /// hiển thị "Xin chào," chứ không tách dấu phẩy thành một "từ" riêng dài ba mươi mili giây.
-    /// </remarks>
-    private static IReadOnlyList<WordTiming> BuildWordTimings(IReadOnlyList<CharacterTiming> characters)
-    {
-        var words = new List<WordTiming>();
-        var buffer = new StringBuilder();
-
-        double start = 0;
-        double end = 0;
-
-        foreach (CharacterTiming character in characters)
-        {
-            if (char.IsWhiteSpace(character.Character))
-            {
-                Flush();
-
-                continue;
-            }
-
-            if (buffer.Length == 0)
-            {
-                start = character.StartSeconds;
-            }
-
-            buffer.Append(character.Character);
-            end = character.EndSeconds;
-        }
-
-        Flush();
-
-        return words;
-
-        void Flush()
-        {
-            if (buffer.Length == 0)
-            {
-                return;
-            }
-
-            words.Add(new WordTiming(buffer.ToString(), start, end));
-            buffer.Clear();
-        }
     }
 
     /// <summary>Số ký tự bị tính tiền, lấy từ header để đối soát với hoá đơn.</summary>

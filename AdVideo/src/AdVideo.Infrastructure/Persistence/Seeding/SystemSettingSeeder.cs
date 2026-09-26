@@ -89,7 +89,7 @@ public sealed class SystemSettingSeeder
             MinValue: "1",
             MaxValue: "8"),
 
-        // Mặc định là provider giả, KHÔNG phải Veo hay Kling: Sprint 1 chạy toàn tuyến mà không
+        // Mặc định là provider giả, KHÔNG phải Kling hay Seedance: Sprint 1 chạy toàn tuyến mà không
         // tiêu một đồng nào. Đổi sang provider thật là một hành động có ý thức của người vận hành
         // sau khi đã nạp key bằng lệnh set-credential.
         new(
@@ -113,7 +113,7 @@ public sealed class SystemSettingSeeder
             "Engine TTS cho tier Thành phẩm. Bắt buộc engine có mốc thời gian theo từ — đổi sang elevenlabs khi có key.",
             IsProvisional: true),
 
-        // 600 giây vì Veo là long-running operation: gửi xong còn phải poll. Timeout ngắn hơn
+        // 600 giây vì provider video là thao tác chạy dài: gửi xong còn phải poll. Timeout ngắn hơn
         // thời gian render thật thì client bỏ cuộc trong khi provider vẫn render — và vẫn tính tiền.
         new(
             SettingKeys.VideoProviderTimeoutSeconds,
@@ -194,6 +194,24 @@ public sealed class SystemSettingSeeder
             "false",
             SettingValueType.Bool,
             "Bật smoke test provider hằng ngày. Tắt ở Sprint 1 vì mỗi lần test là một lần tiêu tiền thật.",
+            IsProvisional: false),
+
+        // Rỗng có chủ đích: Luật 3 — khách không chọn provider. Mở từng tên khi cần chẩn đoán.
+        new(
+            SettingKeys.ForceableVideoProviders,
+            "",
+            SettingValueType.String,
+            "Provider video khách được chỉ định qua options.provider, cách nhau bằng dấu phẩy. Rỗng = không cho ép. Provider giả không bao giờ ép được ở production.",
+            IsProvisional: false),
+
+        // Chỉ những host mà adapter viết tay hôm nay thật sự gọi. Provider khai báo mới thì người
+        // vận hành thêm host của nó vào đây — đó là chủ đích: dán descriptor KHÔNG tự cấp quyền
+        // gọi ra ngoài. fal trả clip qua CDN *.fal.media; VieNeu tự host ở máy nội bộ.
+        new(
+            SettingKeys.ProviderHostAllowlist,
+            "queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io, http://127.0.0.1:8080",
+            SettingValueType.String,
+            "Host được gọi khi nói chuyện với provider (baseUrl, URL trong phản hồi, URL tải file). Cách nhau bằng dấu phẩy. *.domain = mọi host con. http chỉ được khi ghi đủ http://host:cổng. Rỗng = chặn hết.",
             IsProvisional: false),
     ];
 

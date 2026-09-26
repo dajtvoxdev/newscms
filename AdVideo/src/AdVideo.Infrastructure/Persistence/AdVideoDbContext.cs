@@ -2,6 +2,7 @@ using AdVideo.Core.Common;
 using AdVideo.Core.Entities;
 using AdVideo.Infrastructure.Persistence.Tenancy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace AdVideo.Infrastructure.Persistence;
 
@@ -46,6 +47,18 @@ public class AdVideoDbContext : DbContext
     public DbSet<ProviderCredential> ProviderCredentials => Set<ProviderCredential>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
     public DbSet<PromptTemplate> PromptTemplates => Set<PromptTemplate>();
+    public DbSet<ProviderDescriptorRow> ProviderDescriptors => Set<ProviderDescriptorRow>();
+
+    /// <summary>
+    /// Khoá cache model: model gắn converter mã hoá giữ <see cref="IApiKeyProtector"/>, nên mỗi
+    /// protector phải có model riêng. Xem <see cref="ProtectorAwareModelCacheKeyFactory"/>.
+    /// </summary>
+    internal IApiKeyProtector Protector => _protector;
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, ProtectorAwareModelCacheKeyFactory>();
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -103,6 +116,8 @@ public class AdVideoDbContext : DbContext
 
         modelBuilder.Entity<PromptTemplate>().HasQueryFilter(e => !e.IsDeleted);
 
+        modelBuilder.Entity<ProviderDescriptorRow>().HasQueryFilter(e => !e.IsDeleted);
+
         // Shot: không soft-delete. Shot là bằng chứng của một lần render đã tiêu tiền; xoá nó là
         // làm mất khả năng đối soát chi phí. Muốn "xoá" thì đổi Status.
 
@@ -159,4 +174,21 @@ public class AdVideoDbContext : DbContext
             }
         }
     }
+}
+
+/// <summary>
+/// Cache model EF theo (kiểu context, protector, design-time) thay vì chỉ theo kiểu context.
+/// </summary>
+/// <remarks>
+/// EF cache model TOÀN CỤC theo kiểu DbContext. <see cref="EncryptedStringConverter"/> nằm trong model
+/// và giữ <see cref="IApiKeyProtector"/> của context ĐẦU TIÊN dựng model — mọi host sau dùng lại
+/// protector đó. Production chỉ có một host nên không thấy; test dựng nhiều host thì host đầu bị
+/// dispose là mọi lần mã hoá sau ném <c>ObjectDisposedException</c>, tuỳ thứ tự test.
+/// </remarks>
+internal sealed class ProtectorAwareModelCacheKeyFactory : IModelCacheKeyFactory
+{
+    public object Create(DbContext context, bool designTime) =>
+        context is AdVideoDbContext advideo
+            ? (context.GetType(), advideo.Protector, designTime)
+            : (object)(context.GetType(), designTime);
 }

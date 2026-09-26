@@ -104,4 +104,20 @@ public static class SettingKeys
 
     /// <summary>Bật smoke test provider hằng ngày (Sprint 5).</summary>
     public const string ProviderSmokeTestEnabled = "ProviderSmokeTestEnabled";
+
+    /// <summary>
+    /// Provider video khách được phép chỉ định qua <c>options.provider</c>, cách nhau bằng dấu phẩy.
+    /// </summary>
+    /// <remarks>
+    /// Rỗng = không ai ép được gì (Luật 3). Xem <see cref="Providers.ForcedProviderPolicy"/>.
+    /// </remarks>
+    public const string ForceableVideoProviders = "ForceableVideoProviders";
+
+    /// <summary>
+    /// Host được phép gọi khi nói chuyện với provider. Xem <see cref="Providers.ProviderHostAllowlist"/>.
+    /// </summary>
+    /// <remarks>
+    /// Áp cho baseUrl, URL provider trả về trong phản hồi, và URL tải file. Thiếu setting = chặn hết.
+    /// </remarks>
+    public const string ProviderHostAllowlist = "ProviderHostAllowlist";
 }

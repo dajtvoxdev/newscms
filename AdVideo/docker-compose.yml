@@ -95,6 +95,9 @@ services:
       # KHÔNG đặt Development ở đây: worker cố tình không chạy migration, và biến này chỉ tổ làm
       # người đọc tưởng nó có chạy. Nhưng vẫn phải đè đủ khoá vì appsettings.json gốc trỏ MinIO
       # vào localhost.
+      # Cũng KHÔNG để trống: trống = Production, và Production bật provider giả thì worker từ chối
+      # khởi động (DependencyInjection.AddProviders). "DockerDev" không có file appsettings riêng.
+      ASPNETCORE_ENVIRONMENT: DockerDev
       ConnectionStrings__AdVideoDb: Server=sqlserver,1433;Database=AdVideoDb;User Id=sa;Password=${ADVIDEO_SA_PASSWORD:-Dev_Advideo_2026!};TrustServerCertificate=True;MultipleActiveResultSets=True
       AdVideo__Storage__Provider: Minio
       AdVideo__Storage__ServiceUrl: http://minio:9000

@@ -24,11 +24,14 @@ public sealed class FakeProviderOptions
     /// Có đăng ký provider giả vào DI không.
     /// </summary>
     /// <remarks>
-    /// Mặc định bật để Sprint 1 chạy được khi chưa có API key. <b>Production phải đặt false</b>:
-    /// nếu credential thật hỏng, provider giả còn trong danh sách sẽ âm thầm nhận việc và khách
-    /// nhận về một video testsrc2 — thà job fail còn hơn.
+    /// <b>Mặc định TẮT trong code</b> — muốn dùng phải bật tường minh trong
+    /// <c>appsettings.Development.json</c>, biến môi trường, hoặc test. Trước đây mặc định bật,
+    /// nên một host production thiếu section này là có provider giả trong danh sách: credential
+    /// thật hỏng thì provider giả âm thầm nhận việc và khách nhận về video testsrc2.
+    /// Bật trên môi trường Production thì host <b>từ chối khởi động</b>
+    /// (<c>DependencyInjection.AddProviders</c>).
     /// </remarks>
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; }
 
     /// <summary>Giả lập độ trễ mỗi lần gọi, mili giây. 0 = trả về ngay.</summary>
     public int LatencyMs { get; set; }

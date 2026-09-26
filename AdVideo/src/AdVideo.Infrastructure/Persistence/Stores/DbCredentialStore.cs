@@ -172,6 +172,39 @@ public sealed class DbCredentialStore : ICredentialStore
         Invalidate();
     }
 
+    public async Task DeactivateAsync(string provider, string reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(provider);
+
+        List<ProviderCredential> rows = await _db.ProviderCredentials
+            .Where(x => x.Provider == provider && x.Scope == CredentialScope.System && x.IsActive)
+            .ToListAsync(cancellationToken);
+
+        foreach (ProviderCredential row in rows)
+        {
+            row.IsActive = false;
+
+            string note = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC] Tự tắt: {reason}";
+            string notes = string.IsNullOrWhiteSpace(row.Notes) ? note : $"{row.Notes}\n{note}";
+
+            // Cột giới hạn 1000 ký tự; giữ phần CUỐI vì ghi chú mới nhất là thứ cần đọc.
+            row.Notes = notes.Length <= 1000 ? notes : notes[^1000..];
+        }
+
+        if (rows.Count > 0)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+
+            _logger.LogCritical(
+                "Đã TẮT {Count} credential của provider {Provider}: {Reason}. Bật lại bằng set-credential sau khi xử lý.",
+                rows.Count,
+                provider,
+                reason);
+        }
+
+        Invalidate();
+    }
+
     public void Invalidate() => _signal.Reset();
 
     private async Task<IReadOnlyList<ResolvedCredential>> LoadActiveAsync(

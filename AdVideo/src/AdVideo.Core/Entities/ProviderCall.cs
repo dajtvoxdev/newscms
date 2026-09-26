@@ -75,5 +75,14 @@ public class ProviderCall : BaseEntity
     /// <summary>Lần thử thứ mấy. Retry mà không ghi số lần thì không bao giờ phát hiện được vòng lặp tốn tiền.</summary>
     public int AttemptNumber { get; set; } = 1;
 
+    /// <summary>
+    /// SHA-256 của descriptor đã sinh ra lời gọi này. Null = adapter viết tay.
+    /// </summary>
+    /// <remarks>
+    /// Một clip hỏng tra ngược được ra đúng bản descriptor lúc đó, kể cả khi người vận hành đã
+    /// nạp bản mới. Xem <see cref="ProviderDescriptorRow"/>.
+    /// </remarks>
+    public string? DescriptorSha256 { get; set; }
+
     public AdVideoJob? Job { get; set; }
 }
