@@ -67,7 +67,10 @@ public static class ProviderCapabilityCatalog
                 MaxReferenceImages = 2,
                 MaxSubjectsReliably = 2,
                 ServesTiers = [VideoTier.Draft, VideoTier.Standard],
-                CostPerSecondUsd = 0.17m,
+
+                // Đọc lại 25/09/2026: ~0,11 USD/giây. Số cũ 0,17 cao gấp 1,5 lần — dự toán sai về
+                // phía an toàn vẫn là sai: trần chi tiêu từ chối oan job hợp lệ.
+                CostPerSecondUsd = 0.11m,
                 SupportsSeed = true,
                 SupportsLipSync = false,
             },
@@ -88,7 +91,10 @@ public static class ProviderCapabilityCatalog
                 MaxReferenceImages = 4,
                 MaxSubjectsReliably = 2,
                 ServesTiers = [VideoTier.Premium],
-                CostPerSecondUsd = 0.30m,
+
+                // Giá thật 0,034–0,10 USD/giây tuỳ độ phân giải; lấy mức TRÊN của khoảng. Số cũ
+                // 0,30 cao gấp 3–9 lần. Xem ke-hoach-provider-khai-bao-2026-09-25.md mục 1.3.
+                CostPerSecondUsd = 0.10m,
                 SupportsSeed = true,
                 SupportsLipSync = false,
             },
@@ -130,7 +136,9 @@ public static class ProviderCapabilityCatalog
             ProviderNames.ElevenLabs => new TtsProviderCapability
             {
                 Provider = ProviderNames.ElevenLabs,
-                ModelId = "eleven_multilingual_v2",
+                // eleven_multilingual_v2 KHÔNG có tiếng Việt — tiếng Việt chỉ có từ Flash/Turbo v2.5.
+                // Flash thay Turbo (ElevenLabs đã xếp Turbo vào mục bị thay thế) và rẻ bằng nửa v2.
+                ModelId = "eleven_flash_v2_5",
 
                 // Mốc theo từ là điều kiện để khoá timeline (bước 5). Không có nó thì bước 5 mù.
                 HasWordTimings = true,
@@ -140,7 +148,8 @@ public static class ProviderCapabilityCatalog
                 MinCloneSampleSeconds = 60,
                 HasVoiceOwnershipVerification = true,
                 SupportsProsodyContinuation = true,
-                CostPer1000CharsUsd = 0.30m,
+                // Giá Flash v2.5. Số cũ 0,30 cao gấp 3–6 lần kể cả so với model v2/v3.
+                CostPer1000CharsUsd = 0.05m,
                 RealTimeFactor = 0.3m,
 
                 // Giọng "Default" của ElevenLabs ngừng phục vụ 31/12/2026. Ghi vào manifest để

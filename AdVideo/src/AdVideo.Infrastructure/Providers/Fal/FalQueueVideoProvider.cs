@@ -138,7 +138,9 @@ public sealed class FalQueueVideoProvider : IVideoProvider
             // đường xử lý.
             HasNativeAudio = Capability.GeneratesNativeAudio && !request.SuppressNativeAudio,
             MeasuredDurationSeconds = request.DurationSeconds,
-            ReportedCostUsd = Capability.CostPerSecondUsd * request.DurationSeconds,
+
+            // KHÔNG điền ReportedCostUsd: phản hồi của fal.ai không có giá. RenderShotsStep tự suy
+            // từ manifest và ghi CostIsReported = false — đúng sự thật, để còn đối soát hoá đơn.
         };
     }
 
@@ -251,9 +253,7 @@ public sealed class FalQueueVideoProvider : IVideoProvider
 
                     // Hàng đợi báo hỏng thường là do nội dung bị chặn; phần còn lại là sự cố phía
                     // họ. Đọc thân phản hồi để không xếp nhầm một prompt bị từ chối thành lỗi tạm thời.
-                    FailureKind = ProviderFailureMapper.LooksLikeContentPolicy(body)
-                        ? VideoFailureKind.ContentRejected
-                        : VideoFailureKind.ProviderUnavailable,
+                    FailureKind = ProviderFailureMapper.FromFailedJobBody(body),
                     FailureReason = "fal.ai báo job trong hàng đợi thất bại.",
                     RawError = body,
                 };

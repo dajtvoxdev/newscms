@@ -133,7 +133,6 @@ public sealed class VeoVideoProvider : IVideoProvider
             VideoBytes = bytes,
             HasNativeAudio = Capability.GeneratesNativeAudio,
             MeasuredDurationSeconds = request.DurationSeconds,
-            ReportedCostUsd = Capability.CostPerSecondUsd * request.DurationSeconds,
         };
     }
 
@@ -251,9 +250,7 @@ public sealed class VeoVideoProvider : IVideoProvider
                 return (new VideoResult
                 {
                     IsSuccess = false,
-                    FailureKind = ProviderFailureMapper.LooksLikeContentPolicy(body)
-                        ? VideoFailureKind.ContentRejected
-                        : VideoFailureKind.ProviderUnavailable,
+                    FailureKind = ProviderFailureMapper.FromFailedJobBody(body),
                     FailureReason = "Thao tác Veo kết thúc với lỗi.",
                     RawError = body,
                 }, null);

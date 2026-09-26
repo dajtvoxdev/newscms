@@ -154,7 +154,10 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
                 // (TtsRequest.PreviousRequestId), nên phải giữ lại.
                 ProviderRequestId = ReadHeader(response, "request-id"),
                 BilledCharacterCount = billedCharacters,
-                ReportedCostUsd = Capability.CostPer1000CharsUsd * billedCharacters / 1000m,
+
+                // KHÔNG điền ReportedCostUsd: ElevenLabs báo số ký tự, không báo tiền. Điền đơn giá
+                // manifest × ký tự vào đây là đánh dấu CostIsReported = true cho một con số tự suy,
+                // và mất khả năng đối soát hoá đơn. TtsStep tự suy từ BilledCharacterCount.
             };
         }
     }

@@ -253,6 +253,11 @@ Mỗi credential còn mang theo endpoint và **capability** (giá mỗi đơn v�
 mốc thời gian theo từ hay không, voice hết hạn khi nào). Capability trong DB **ghi đè** capability
 khai trong code, để sửa bảng giá khi nhà cung cấp đổi giá mà không phải deploy.
 
+> ⚠️ **DB nạp trước 26/09/2026 cần sửa tay hai chỗ** (catalog trong code đã sửa, nhưng catalog chỉ là
+> mẫu điền lần đầu): credential `elevenlabs` còn `ModelId = eleven_multilingual_v2` — model này
+> **không đọc được tiếng Việt**, đổi sang `eleven_flash_v2_5`; và `CapabilityJson` của `kling`,
+> `seedance`, `elevenlabs` còn giá cũ cao 1,5–9 lần (đúng: 0,11 / 0,10 USD/giây, 0,05 USD/1000 ký tự).
+
 > ⚠️ **`IApiKeyProtector` phải là singleton.** Đăng ký scoped thì mỗi request dựng một DataProtection
 > provider mới, và trên một số cấu hình key ring điều đó làm key bị **sinh lại** — nghĩa là mọi API
 > key đã mã hoá trong DB thành rác không giải mã được. Đây là lỗi đã từng xảy ra ở dự án khác trên

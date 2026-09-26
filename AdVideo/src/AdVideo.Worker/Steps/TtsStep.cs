@@ -107,8 +107,10 @@ public sealed class TtsStep : IPipelineStep
         TtsResult result = await provider.SynthesizeAsync(request, cancellationToken);
         stopwatch.Stop();
 
+        // Engine không báo giá thì suy từ số ký tự BỊ TÍNH (header của provider) nếu có — nó có
+        // thể khác độ dài văn bản gửi đi — rồi mới tới độ dài văn bản.
         decimal cost = result.ReportedCostUsd
-            ?? provider.Capability.CostPer1000CharsUsd * request.Text.Length / 1000m;
+            ?? provider.Capability.CostPer1000CharsUsd * (result.BilledCharacterCount ?? request.Text.Length) / 1000m;
 
         await _artifacts.RecordCallAsync(
             context,
