@@ -21,6 +21,7 @@ public sealed class ProviderCallConfiguration : IEntityTypeConfiguration<Provide
         builder.Property(x => x.ProviderRequestId).HasMaxLength(200);
         builder.Property(x => x.RequestJson);
         builder.Property(x => x.RawError);
+        builder.Property(x => x.DescriptorSha256).HasMaxLength(64).IsFixedLength();
         builder.Property(x => x.CostUsd).HasPrecision(18, 6);
 
         // Cột chốt chặn ngân sách ngày (SettingKeys.DailySystemCostLimitUsd): mỗi lần nhận job mới

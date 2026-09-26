@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using AdVideo.Core.Configuration;
 using AdVideo.Core.Providers;
@@ -23,7 +22,7 @@ namespace AdVideo.Infrastructure.Providers.ElevenLabs;
 /// </para>
 /// <para>
 /// <b>Mốc trả về là theo KÝ TỰ, không theo từ.</b> Ghép lại thành từ là việc của adapter này —
-/// xem <see cref="BuildWordTimings"/>. Đây cũng là chỗ duy nhất trong hệ thống biết hình dạng
+/// xem <see cref="WordTimingBuilder"/>. Đây cũng là chỗ duy nhất trong hệ thống biết hình dạng
 /// alignment của ElevenLabs.
 /// </para>
 /// <para>
@@ -128,7 +127,7 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
                 };
             }
 
-            IReadOnlyList<WordTiming> words = BuildWordTimings(characters);
+            IReadOnlyList<WordTiming> words = WordTimingBuilder.FromCharacters(characters);
             double duration = characters[^1].EndSeconds;
 
             int billedCharacters = ReadCharacterCount(response) ?? request.Text.Length;
@@ -256,52 +255,6 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
         }
 
         return result;
-    }
-
-    /// <remarks>
-    /// Gộp ký tự thành từ bằng khoảng trắng. Dấu câu dính vào từ liền trước là có chủ đích: phụ đề
-    /// hiển thị "Xin chào," chứ không tách dấu phẩy thành một "từ" riêng dài ba mươi mili giây.
-    /// </remarks>
-    private static IReadOnlyList<WordTiming> BuildWordTimings(IReadOnlyList<CharacterTiming> characters)
-    {
-        var words = new List<WordTiming>();
-        var buffer = new StringBuilder();
-
-        double start = 0;
-        double end = 0;
-
-        foreach (CharacterTiming character in characters)
-        {
-            if (char.IsWhiteSpace(character.Character))
-            {
-                Flush();
-
-                continue;
-            }
-
-            if (buffer.Length == 0)
-            {
-                start = character.StartSeconds;
-            }
-
-            buffer.Append(character.Character);
-            end = character.EndSeconds;
-        }
-
-        Flush();
-
-        return words;
-
-        void Flush()
-        {
-            if (buffer.Length == 0)
-            {
-                return;
-            }
-
-            words.Add(new WordTiming(buffer.ToString(), start, end));
-            buffer.Clear();
-        }
     }
 
     /// <summary>Số ký tự bị tính tiền, lấy từ header để đối soát với hoá đơn.</summary>

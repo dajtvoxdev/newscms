@@ -127,10 +127,12 @@ public static class DependencyInjection
         services.AddSingleton<StoreCacheSignal<DbSettingsStore>>();
         services.AddSingleton<StoreCacheSignal<DbCredentialStore>>();
         services.AddSingleton<StoreCacheSignal<DbPromptStore>>();
+        services.AddSingleton<StoreCacheSignal<DbDescriptorStore>>();
 
         services.AddScoped<ISettingsStore, DbSettingsStore>();
         services.AddScoped<ICredentialStore, DbCredentialStore>();
         services.AddScoped<IPromptStore, DbPromptStore>();
+        services.AddScoped<IDescriptorStore, DbDescriptorStore>();
     }
 
     private static void AddStorage(IServiceCollection services, IConfiguration configuration)

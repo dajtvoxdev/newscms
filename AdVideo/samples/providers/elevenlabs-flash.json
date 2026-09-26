@@ -49,7 +49,9 @@
       "endsPath": "alignment.character_end_times_seconds || normalized_alignment.character_end_times_seconds",
       "timeUnit": "seconds"
     },
-    "billedCharactersHeader": "xi-character-count"
+    "billedCharactersHeader": "xi-character-count",
+    // Id lần đọc nằm ở header; gửi lại ở previous_request_ids để shot sau nối ngữ điệu.
+    "requestIdHeader": "request-id"
   },
   "errors": {
     "byBodyCode": { "path": "detail.status", "table": { "quota_exceeded": "ProviderUnavailable", "invalid_api_key": "ProviderUnavailable" } },

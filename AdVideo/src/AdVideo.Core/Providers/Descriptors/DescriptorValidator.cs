@@ -312,6 +312,11 @@ public static partial class DescriptorValidator
             errors.Add("result.billedCharactersHeader không phải tên header hợp lệ.");
         }
 
+        if (r.RequestIdHeader is { } idHeader && !HeaderNamePattern().IsMatch(idHeader))
+        {
+            errors.Add("result.requestIdHeader không phải tên header hợp lệ.");
+        }
+
         if (d.Kind == DescriptorKind.Video)
         {
             if (r.VideoUrlPath is null && r.VideoBase64Path is null && r.ContentPath is null)

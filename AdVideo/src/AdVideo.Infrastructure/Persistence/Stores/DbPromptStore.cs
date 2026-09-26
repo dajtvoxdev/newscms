@@ -142,30 +142,36 @@ public sealed class DbPromptStore : IPromptStore
             ?? throw new InvalidOperationException(
                 $"Không tìm thấy prompt {code} bản {version} để bật.");
 
-        List<PromptTemplate> currentlyActive = await _db.PromptTemplates
-            .Where(x => x.Code == code && x.IsActive && x.Version != version)
-            .ToListAsync(cancellationToken);
-
-        // Hai lần SaveChanges trong MỘT transaction, tắt trước rồi mới bật. Gộp vào một lần
-        // SaveChanges thì EF tự chọn thứ tự UPDATE, và nếu nó bật trước khi tắt thì unique index
-        // lọc (Code) WHERE IsActive = 1 chặn ngay — lỗi chỉ xuất hiện trên SQL Server thật, còn
-        // test in-memory thì không bao giờ thấy.
-        await using var transaction = await BeginTransactionAsync(cancellationToken);
-
-        foreach (PromptTemplate item in currentlyActive)
+        // Transaction PHẢI chạy trong execution strategy: DbContext bật EnableRetryOnFailure, và với
+        // chiến lược đó SQL Server ném InvalidOperationException ngay khi tự mở transaction ở ngoài.
+        // Test SQLite không có chiến lược retry nên chưa từng thấy lỗi này.
+        await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            item.IsActive = false;
-        }
+            List<PromptTemplate> currentlyActive = await _db.PromptTemplates
+                .Where(x => x.Code == code && x.IsActive && x.Version != version)
+                .ToListAsync(cancellationToken);
 
-        await _db.SaveChangesAsync(cancellationToken);
+            // Hai lần SaveChanges trong MỘT transaction, tắt trước rồi mới bật. Gộp vào một lần
+            // SaveChanges thì EF tự chọn thứ tự UPDATE, và nếu nó bật trước khi tắt thì unique index
+            // lọc (Code) WHERE IsActive = 1 chặn ngay — lỗi chỉ xuất hiện trên SQL Server thật, còn
+            // test in-memory thì không bao giờ thấy.
+            await using var transaction = await BeginTransactionAsync(cancellationToken);
 
-        target.IsActive = true;
-        await _db.SaveChangesAsync(cancellationToken);
+            foreach (PromptTemplate item in currentlyActive)
+            {
+                item.IsActive = false;
+            }
 
-        if (transaction is not null)
-        {
-            await transaction.CommitAsync(cancellationToken);
-        }
+            await _db.SaveChangesAsync(cancellationToken);
+
+            target.IsActive = true;
+            await _db.SaveChangesAsync(cancellationToken);
+
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+        });
 
         Invalidate();
     }

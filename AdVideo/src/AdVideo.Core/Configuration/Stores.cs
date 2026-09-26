@@ -1,5 +1,6 @@
 using AdVideo.Core.Entities;
 using AdVideo.Core.Providers;
+using AdVideo.Core.Providers.Descriptors;
 
 namespace AdVideo.Core.Configuration;
 
@@ -78,6 +79,15 @@ public interface ICredentialStore
     /// <summary>Nạp credential lần đầu. Mã hoá key trước khi ghi.</summary>
     Task UpsertAsync(ProviderCredential credential, string plainApiKey, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Tắt mọi credential scope System của một provider, kèm lý do vào ghi chú.
+    /// </summary>
+    /// <remarks>
+    /// Dùng khi provider báo một lỗi mà thử lại chắc chắn vô ích và tốn tiền — ví dụ 402 hết tiền
+    /// (<c>errors.deactivateCredentialOn</c> của descriptor). Bật lại là việc của người vận hành.
+    /// </remarks>
+    Task DeactivateAsync(string provider, string reason, CancellationToken cancellationToken = default);
+
     void Invalidate();
 }
 
@@ -99,6 +109,47 @@ public interface IPromptStore
 
     /// <summary>Rollback về một version cũ bằng cách đảo cờ active.</summary>
     Task ActivateVersionAsync(string code, int version, CancellationToken cancellationToken = default);
+
+    void Invalidate();
+}
+
+/// <summary>Descriptor đang bật của một provider, đã parse và kiểm.</summary>
+/// <param name="Descriptor">Descriptor đã qua <see cref="DescriptorValidator"/>. Không được sửa — nó nằm trong cache dùng chung.</param>
+/// <param name="Version">Số phiên bản trong bảng <c>ProviderDescriptors</c>.</param>
+/// <param name="Sha256">SHA-256 của JSON gốc, ghi vào mỗi <see cref="ProviderCall"/>.</param>
+public sealed record ActiveDescriptor(ProviderDescriptor Descriptor, int Version, string Sha256);
+
+/// <summary>Descriptor không qua được <see cref="DescriptorValidator"/>. <see cref="Errors"/> liệt kê đủ mọi lỗi.</summary>
+public sealed class DescriptorInvalidException(IReadOnlyList<string> errors)
+    : Exception("Descriptor không hợp lệ:" + Environment.NewLine + string.Join(Environment.NewLine, errors.Select(e => "  - " + e)))
+{
+    public IReadOnlyList<string> Errors { get; } = errors;
+}
+
+/// <summary>
+/// Kho descriptor provider khai báo (bảng <c>ProviderDescriptors</c>), theo khuôn <see cref="IPromptStore"/>.
+/// </summary>
+public interface IDescriptorStore
+{
+    /// <summary>Descriptor đang bật của một provider. Null = không có, dùng adapter viết tay (nếu có).</summary>
+    Task<ActiveDescriptor?> GetActiveAsync(string provider, CancellationToken cancellationToken = default);
+
+    /// <summary>Mọi phiên bản, mới nhất trước. <paramref name="provider"/> null = mọi provider.</summary>
+    Task<IReadOnlyList<ProviderDescriptorRow>> ListAsync(string? provider = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Kiểm rồi thêm một phiên bản mới ở trạng thái TẮT. Ném <see cref="DescriptorInvalidException"/> nếu không hợp lệ.
+    /// </summary>
+    Task<ProviderDescriptorRow> AddVersionAsync(string json, string? changeNote, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Bật một phiên bản (tắt bản đang bật) và ghi khối <c>capability</c> của nó vào
+    /// <c>ProviderCredential.CapabilityJson</c> của mọi credential cùng tên.
+    /// </summary>
+    Task ActivateVersionAsync(string provider, int version, CancellationToken cancellationToken = default);
+
+    /// <summary>Tắt descriptor đang bật. Provider quay về adapter viết tay nếu có, không thì biến khỏi danh sách.</summary>
+    Task DeactivateAsync(string provider, CancellationToken cancellationToken = default);
 
     void Invalidate();
 }

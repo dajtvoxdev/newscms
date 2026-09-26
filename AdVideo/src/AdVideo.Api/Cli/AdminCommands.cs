@@ -2,10 +2,12 @@ using System.Text.Json;
 using AdVideo.Core.Configuration;
 using AdVideo.Core.Entities;
 using AdVideo.Core.Providers;
+using AdVideo.Core.Providers.Descriptors;
 using AdVideo.Core.Security;
 using AdVideo.Infrastructure.Persistence;
 using AdVideo.Infrastructure.Persistence.Seeding;
 using AdVideo.Infrastructure.Providers;
+using AdVideo.Infrastructure.Providers.Declarative;
 using Microsoft.EntityFrameworkCore;
 
 namespace AdVideo.Api.Cli;
@@ -30,7 +32,10 @@ public static class AdminCommands
 {
     /// <summary>Những từ đầu tiên được coi là lệnh CLI thay vì tham số của web host.</summary>
     private static readonly string[] Known =
-        ["create-tenant", "rotate-key", "set-credential", "list-settings", "set-setting", "seed", "migrate"];
+        [
+            "create-tenant", "rotate-key", "set-credential", "list-settings", "set-setting", "seed", "migrate",
+            "set-descriptor", "list-descriptors", "activate-descriptor", "deactivate-descriptor", "test-descriptor",
+        ];
 
     public static bool IsCommand(string[] args) =>
         args.Length > 0 && Known.Contains(args[0], StringComparer.Ordinal);
@@ -52,6 +57,11 @@ public static class AdminCommands
                 "set-setting" => await SetSettingAsync(args, sp),
                 "seed" => await SeedAsync(sp),
                 "migrate" => await MigrateAsync(sp),
+                "set-descriptor" => await SetDescriptorAsync(args, sp),
+                "list-descriptors" => await ListDescriptorsAsync(args, sp),
+                "activate-descriptor" => await ActivateDescriptorAsync(args, sp),
+                "deactivate-descriptor" => await DeactivateDescriptorAsync(args, sp),
+                "test-descriptor" => await TestDescriptorAsync(args, sp),
                 _ => Usage(),
             };
         }
@@ -158,10 +168,21 @@ public static class AdminCommands
 
         ProviderCategory? category = ProviderCapabilityCatalog.CategoryOf(provider);
 
+        // Provider khai báo: tên không có trong catalog viết tay, nhưng có descriptor trong DB. Loại
+        // và capability lấy từ descriptor mới nhất — trước đây set-credential từ chối mọi tên lạ,
+        // nên dán descriptor xong vẫn không nạp được key.
+        ProviderDescriptor? descriptor = await LatestDescriptorAsync(provider, sp);
+
+        if (category is null && descriptor is not null)
+        {
+            category = descriptor.Kind == DescriptorKind.Video ? ProviderCategory.Video : ProviderCategory.TextToSpeech;
+        }
+
         if (category is null)
         {
             Console.Error.WriteLine(
-                $"Không nhận ra provider \"{provider}\". Các tên đã biết: veo, kling, seedance, vidu, elevenlabs, vieneu.");
+                $"Không nhận ra provider \"{provider}\". Các tên viết tay: veo, kling, seedance, vidu, elevenlabs, vieneu; " +
+                "provider khác phải nạp descriptor trước bằng set-descriptor.");
 
             return 1;
         }
@@ -174,6 +195,10 @@ public static class AdminCommands
         if (capabilityFile is not null)
         {
             capabilityJson = await File.ReadAllTextAsync(capabilityFile);
+        }
+        else if (descriptor?.Capability is { } fromDescriptor)
+        {
+            capabilityJson = fromDescriptor.ToJsonString(ProviderDescriptorParser.JsonOptions);
         }
         else if (category == ProviderCategory.Video)
         {
@@ -224,7 +249,7 @@ public static class AdminCommands
                 Category = category.Value,
                 Scope = CredentialScope.System,
                 TenantId = null,
-                EndpointUrl = Arg(args, "--endpoint") ?? ProviderCapabilityCatalog.DefaultEndpoint(provider),
+                EndpointUrl = Arg(args, "--endpoint") ?? descriptor?.Transport.BaseUrl ?? ProviderCapabilityCatalog.DefaultEndpoint(provider),
                 EncryptedApiKey = string.Empty,
                 CapabilityJson = capabilityJson,
                 IsActive = !args.Contains("--disabled", StringComparer.Ordinal),
@@ -254,6 +279,188 @@ public static class AdminCommands
         }
 
         return 0;
+    }
+
+    private static async Task<ProviderDescriptor?> LatestDescriptorAsync(string provider, IServiceProvider sp)
+    {
+        IReadOnlyList<ProviderDescriptorRow> rows = await sp.GetRequiredService<IDescriptorStore>().ListAsync(provider);
+
+        ProviderDescriptorRow? row = rows.FirstOrDefault(r => r.IsActive) ?? rows.FirstOrDefault();
+
+        return row is null ? null : ProviderDescriptorParser.Parse(row.Json).Descriptor;
+    }
+
+    private static async Task<int> SetDescriptorAsync(string[] args, IServiceProvider sp)
+    {
+        string? file = Arg(args, "--file");
+
+        if (string.IsNullOrWhiteSpace(file))
+        {
+            Console.Error.WriteLine("Thiếu --file. Ví dụ: set-descriptor --file samples/providers/nova-grok-video-15.json --note \"thử NOVA\"");
+
+            return 1;
+        }
+
+        string json = await File.ReadAllTextAsync(file);
+
+        try
+        {
+            ProviderDescriptorRow row = await sp.GetRequiredService<IDescriptorStore>().AddVersionAsync(json, Arg(args, "--note"));
+
+            Console.WriteLine($"Đã lưu descriptor {row.Code} bản {row.Version} ({row.Kind}) — đang TẮT.");
+            Console.WriteLine($"  sha256: {row.Sha256}");
+            Console.WriteLine();
+            Console.WriteLine("Bước tiếp:");
+            Console.WriteLine($"  1. test-descriptor --provider {row.Code} --version {row.Version}   (chạy khô, không gọi mạng)");
+            Console.WriteLine($"  2. set-setting --key {SettingKeys.ProviderHostAllowlist} ...         (thêm host của provider nếu chưa có)");
+            Console.WriteLine($"  3. set-credential --provider {row.Code} --key <api key>");
+            Console.WriteLine($"  4. activate-descriptor --provider {row.Code} --version {row.Version}");
+
+            return 0;
+        }
+        catch (DescriptorInvalidException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+
+            return 1;
+        }
+    }
+
+    private static async Task<int> ListDescriptorsAsync(string[] args, IServiceProvider sp)
+    {
+        IReadOnlyList<ProviderDescriptorRow> rows =
+            await sp.GetRequiredService<IDescriptorStore>().ListAsync(Arg(args, "--provider"));
+
+        if (rows.Count == 0)
+        {
+            Console.WriteLine("Chưa có descriptor nào.");
+
+            return 0;
+        }
+
+        foreach (ProviderDescriptorRow row in rows)
+        {
+            Console.WriteLine(
+                $"{(row.IsActive ? "*" : " ")} {row.Code,-28} v{row.Version,-3} {row.Kind,-5} {row.CreatedAt:yyyy-MM-dd HH:mm}  {row.Sha256[..12]}  {row.ChangeNote}");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("* = đang bật.");
+
+        return 0;
+    }
+
+    private static async Task<int> ActivateDescriptorAsync(string[] args, IServiceProvider sp)
+    {
+        string? provider = Arg(args, "--provider");
+
+        if (string.IsNullOrWhiteSpace(provider) || !int.TryParse(Arg(args, "--version"), out int version))
+        {
+            Console.Error.WriteLine("Cần --provider và --version. Xem list-descriptors.");
+
+            return 1;
+        }
+
+        try
+        {
+            await sp.GetRequiredService<IDescriptorStore>().ActivateVersionAsync(provider, version);
+        }
+        catch (DescriptorInvalidException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+
+            return 1;
+        }
+
+        Console.WriteLine($"Đã bật descriptor {provider} bản {version}. Capability đã ghi vào credential cùng tên.");
+        Console.WriteLine("Có hiệu lực trong vòng 30 giây trên mọi tiến trình (cache ngắn), không cần restart.");
+
+        return 0;
+    }
+
+    private static async Task<int> DeactivateDescriptorAsync(string[] args, IServiceProvider sp)
+    {
+        string? provider = Arg(args, "--provider");
+
+        if (string.IsNullOrWhiteSpace(provider))
+        {
+            Console.Error.WriteLine("Cần --provider.");
+
+            return 1;
+        }
+
+        await sp.GetRequiredService<IDescriptorStore>().DeactivateAsync(provider);
+
+        Console.WriteLine($"Đã tắt descriptor của {provider}. Provider quay về adapter viết tay nếu có, không thì biến khỏi danh sách chọn.");
+
+        return 0;
+    }
+
+    private static async Task<int> TestDescriptorAsync(string[] args, IServiceProvider sp)
+    {
+        string? json = null;
+
+        if (Arg(args, "--file") is { } file)
+        {
+            json = await File.ReadAllTextAsync(file);
+        }
+        else if (Arg(args, "--provider") is { } provider)
+        {
+            IReadOnlyList<ProviderDescriptorRow> rows = await sp.GetRequiredService<IDescriptorStore>().ListAsync(provider);
+            ProviderDescriptorRow? row = int.TryParse(Arg(args, "--version"), out int version)
+                ? rows.FirstOrDefault(r => r.Version == version)
+                : rows.FirstOrDefault();
+
+            json = row?.Json;
+        }
+
+        if (json is null)
+        {
+            Console.Error.WriteLine("Cần --file <đường dẫn> hoặc --provider <tên> [--version <số>].");
+
+            return 1;
+        }
+
+        DescriptorParseResult parsed = ProviderDescriptorParser.Parse(json);
+
+        if (!parsed.IsValid)
+        {
+            Console.Error.WriteLine("Descriptor KHÔNG hợp lệ:");
+
+            foreach (string error in parsed.Errors)
+            {
+                Console.Error.WriteLine($"  - {error}");
+            }
+
+            return 1;
+        }
+
+        string? allowlist = await sp.GetRequiredService<ISettingsStore>().GetStringAsync(SettingKeys.ProviderHostAllowlist);
+
+        DescriptorPreviewResult preview = DescriptorPreview.Render(parsed.Descriptor!, ProviderHostAllowlist.Parse(allowlist));
+
+        Console.WriteLine($"Descriptor {parsed.Descriptor!.Name} hợp lệ. Request sẽ gửi cho một request mẫu (KHÔNG gọi mạng):");
+        Console.WriteLine();
+        Console.WriteLine($"{preview.Method} {preview.Url}");
+
+        foreach ((string name, string value) in preview.Headers)
+        {
+            Console.WriteLine($"{name}: {value}");
+        }
+
+        if (preview.Body is not null)
+        {
+            Console.WriteLine();
+            Console.WriteLine(preview.Body);
+        }
+
+        foreach (string warning in preview.Warnings)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"⚠ {warning}");
+        }
+
+        return preview.Warnings.Count == 0 ? 0 : 2;
     }
 
     private static async Task<int> ListSettingsAsync(IServiceProvider sp)
@@ -431,6 +638,21 @@ public static class AdminCommands
 
               set-setting --key <tên> --value <giá trị>
                   Đổi một setting, có kiểm khoảng hợp lệ.
+
+              set-descriptor --file <json> [--note "..."]
+                  Kiểm rồi lưu một bản descriptor mới ở trạng thái TẮT.
+
+              list-descriptors [--provider <tên>]
+                  Liệt kê mọi bản descriptor, * = đang bật.
+
+              test-descriptor (--file <json> | --provider <tên> [--version <số>])
+                  Chạy khô: kiểm, dựng request mẫu, soát allowlist. Không gọi mạng.
+
+              activate-descriptor --provider <tên> --version <số>
+                  Bật một bản (tắt bản đang bật), ghi capability vào credential cùng tên.
+
+              deactivate-descriptor --provider <tên>
+                  Tắt descriptor; provider quay về adapter viết tay nếu có.
             """);
 
         return 1;

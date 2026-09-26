@@ -46,6 +46,7 @@ public class AdVideoDbContext : DbContext
     public DbSet<ProviderCredential> ProviderCredentials => Set<ProviderCredential>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
     public DbSet<PromptTemplate> PromptTemplates => Set<PromptTemplate>();
+    public DbSet<ProviderDescriptorRow> ProviderDescriptors => Set<ProviderDescriptorRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -102,6 +103,8 @@ public class AdVideoDbContext : DbContext
         modelBuilder.Entity<SystemSetting>().HasQueryFilter(e => !e.IsDeleted);
 
         modelBuilder.Entity<PromptTemplate>().HasQueryFilter(e => !e.IsDeleted);
+
+        modelBuilder.Entity<ProviderDescriptorRow>().HasQueryFilter(e => !e.IsDeleted);
 
         // Shot: không soft-delete. Shot là bằng chứng của một lần render đã tiêu tiền; xoá nó là
         // làm mất khả năng đối soát chi phí. Muốn "xoá" thì đổi Status.

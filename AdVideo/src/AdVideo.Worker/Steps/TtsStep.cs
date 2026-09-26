@@ -110,6 +110,7 @@ public sealed class TtsStep : IPipelineStep
         // Engine không báo giá thì suy từ số ký tự BỊ TÍNH (header của provider) nếu có — nó có
         // thể khác độ dài văn bản gửi đi — rồi mới tới độ dài văn bản.
         decimal cost = result.ReportedCostUsd
+            ?? result.EstimatedCostUsd
             ?? provider.Capability.CostPer1000CharsUsd * (result.BilledCharacterCount ?? request.Text.Length) / 1000m;
 
         await _artifacts.RecordCallAsync(
@@ -126,7 +127,8 @@ public sealed class TtsStep : IPipelineStep
             failureKind: result.FailureKind,
             rawError: result.RawError,
             costIsReported: result.ReportedCostUsd is not null,
-            billedCharacters: result.BilledCharacterCount ?? request.Text.Length);
+            billedCharacters: result.BilledCharacterCount ?? request.Text.Length,
+            descriptorSha256: result.DescriptorSha256);
 
         if (!result.IsSuccess || result.AudioBytes is null || result.AudioBytes.Length == 0)
         {

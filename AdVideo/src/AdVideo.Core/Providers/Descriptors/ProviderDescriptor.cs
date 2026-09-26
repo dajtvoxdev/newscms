@@ -229,6 +229,12 @@ public sealed record DescriptorResult
 
     /// <summary>Header chứa số ký tự bị tính tiền (TTS), ví dụ <c>xi-character-count</c>.</summary>
     public string? BilledCharactersHeader { get; init; }
+
+    /// <summary>
+    /// Header chứa id phía provider, khi id không nằm trong thân (ElevenLabs: <c>request-id</c> —
+    /// thứ duy nhất cho phép nối ngữ điệu ở lần gọi sau).
+    /// </summary>
+    public string? RequestIdHeader { get; init; }
 }
 
 public sealed record DescriptorAlignment

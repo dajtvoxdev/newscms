@@ -120,6 +120,15 @@ public sealed record VideoResult
     /// <summary>Chi phí provider BÁO VỀ. Có thể null (fal.ai không trả cost trong response).</summary>
     public decimal? ReportedCostUsd { get; init; }
 
+    /// <summary>
+    /// Chi phí adapter TỰ SUY (ví dụ theo khối <c>cost</c> của descriptor). Vào sổ với
+    /// <c>CostIsReported = false</c>. Null thì bước gọi suy từ capability.
+    /// </summary>
+    public decimal? EstimatedCostUsd { get; init; }
+
+    /// <summary>SHA-256 của descriptor đã sinh ra kết quả này. Null = adapter viết tay.</summary>
+    public string? DescriptorSha256 { get; init; }
+
     public VideoFailureKind FailureKind { get; init; } = VideoFailureKind.None;
 
     /// <summary>Lý do đọc được, dành cho người dùng cuối. Không phải chuỗi lỗi kỹ thuật.</summary>

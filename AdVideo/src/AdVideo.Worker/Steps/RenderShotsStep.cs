@@ -260,9 +260,11 @@ public sealed class RenderShotsStep : IPipelineStep
             VideoResult result = await provider.GenerateAsync(request, cancellationToken);
             stopwatch.Stop();
 
-            // Provider nào không báo giá (fal.ai) thì suy từ manifest. Con số suy ra vẫn phải vào
-            // sổ: một lần gọi không có dòng chi phí là một lần gọi mà trần chi tiêu không thấy.
+            // Provider nào không báo giá (fal.ai) thì lấy giá adapter tự suy (khối cost của
+            // descriptor), rồi mới tới manifest. Con số suy ra vẫn phải vào sổ: một lần gọi không có
+            // dòng chi phí là một lần gọi mà trần chi tiêu không thấy.
             decimal cost = result.ReportedCostUsd
+                ?? result.EstimatedCostUsd
                 ?? provider.Capability.CostPerSecondUsd * shot.VideoDurationSeconds;
 
             await _artifacts.RecordCallAsync(
@@ -280,7 +282,8 @@ public sealed class RenderShotsStep : IPipelineStep
                 failureKind: result.FailureKind,
                 rawError: result.RawError,
                 costIsReported: result.ReportedCostUsd is not null,
-                attemptNumber: attempt);
+                attemptNumber: attempt,
+                descriptorSha256: result.DescriptorSha256);
 
             shot.CostUsd += cost;
             shot.Seed = request.Seed;

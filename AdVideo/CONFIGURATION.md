@@ -282,7 +282,32 @@ Key chỉ được gắn khi URL **cùng origin** với endpoint của credentia
 khác (CDN, link đã ký) được gọi không kèm key. Thân lỗi được che key (`****abcd`) trước khi vào
 `ProviderCall.RawError` / `AdVideoJob.RawProviderError`.
 
-### 2.4. `PromptTemplates` — prompt
+### 2.4. `ProviderDescriptors` — provider khai báo bằng JSON
+
+Thêm nhà cung cấp mới có hình dạng *submit → (poll) → đọc JSON* **không cần viết C#**: dán một file
+descriptor (`advideo.provider/v1`) vào DB. Mẫu nằm ở `samples/providers/` (fal-kling, NOVA,
+ElevenLabs); thiết kế đầy đủ ở `docs/ai/planning/ad-video-studio/ke-hoach-provider-khai-bao-2026-09-25.md`.
+
+```bash
+dotnet run --project src/AdVideo.Api -- set-descriptor --file samples/providers/nova-grok-video-15.json --note "thử NOVA"
+dotnet run --project src/AdVideo.Api -- test-descriptor --provider nova-grok-video-15     # chạy khô, không gọi mạng
+dotnet run --project src/AdVideo.Api -- set-setting --key ProviderHostAllowlist --value "<danh sách cũ>, novagateway.net"
+dotnet run --project src/AdVideo.Api -- set-credential --provider nova-grok-video-15 --key "$NOVA_API_KEY"
+dotnet run --project src/AdVideo.Api -- activate-descriptor --provider nova-grok-video-15 --version 1
+```
+
+- Bản mới **luôn vào ở trạng thái tắt**; `activate-descriptor` bật nó và ghi khối `capability` vào
+  `CapabilityJson` của credential cùng tên. Rollback = bật lại bản cũ. Có hiệu lực trong 30 giây, không
+  restart.
+- Descriptor đang bật **thắng** adapter viết tay cùng tên; `deactivate-descriptor` quay về adapter cũ.
+- Validator từ chối lưu nếu: biến lạ, `{{secret.*}}` nằm ngoài `transport`, chuỗi trông như key thật,
+  poll không có `maxWaitSeconds`, hoặc `capability.costPerSecondUsd` thấp hơn giá xấu nhất theo khối
+  `cost` (dự toán thấp hơn hoá đơn).
+- Mỗi `ProviderCall` ghi `DescriptorSha256` — một clip hỏng tra ngược được đúng bản descriptor đã sinh ra nó.
+- `errors.deactivateCredentialOn` (ví dụ `402`) **tự tắt credential** khi provider trả mã đó; bật lại
+  bằng `set-credential` sau khi xử lý.
+
+### 2.5. `PromptTemplates` — prompt
 
 Prompt gửi cho model **không nằm trong code**. Mỗi template có `Code` (định danh ổn định), nội dung,
 và số phiên bản; sửa prompt là thêm phiên bản mới, không đè lên bản cũ — để truy được một video cũ

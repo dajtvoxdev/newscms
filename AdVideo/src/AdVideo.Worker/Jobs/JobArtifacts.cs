@@ -120,7 +120,8 @@ public sealed class JobArtifacts
         string? rawError = null,
         bool costIsReported = false,
         int? billedCharacters = null,
-        int attemptNumber = 1)
+        int attemptNumber = 1,
+        string? descriptorSha256 = null)
     {
         var call = new ProviderCall
         {
@@ -143,6 +144,7 @@ public sealed class JobArtifacts
             RawError = Truncate(SecretRedactor.RedactPatterns(rawError), 4000),
             BilledCharacterCount = billedCharacters,
             AttemptNumber = attemptNumber,
+            DescriptorSha256 = descriptorSha256,
         };
 
         _db.ProviderCalls.Add(call);

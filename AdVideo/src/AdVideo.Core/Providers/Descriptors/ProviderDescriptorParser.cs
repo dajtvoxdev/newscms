@@ -91,9 +91,52 @@ public static class ProviderDescriptorParser
 
         IReadOnlyList<string> errors = DescriptorValidator.Validate(descriptor, raw);
 
-        return errors.Count == 0
-            ? new DescriptorParseResult(descriptor, raw, errors)
-            : new DescriptorParseResult(null, raw, errors);
+        if (errors.Count > 0)
+        {
+            return new DescriptorParseResult(null, raw, errors);
+        }
+
+        Materialize(descriptor.Defaults);
+        Materialize(descriptor.Capability);
+        Materialize(descriptor.Submit.Body?.Template);
+
+        foreach (DescriptorCondition condition in descriptor.Submit.FailWhen)
+        {
+            Materialize(condition.EqualTo);
+            Materialize(condition.NotEqualTo);
+        }
+
+        return new DescriptorParseResult(descriptor, raw, errors);
+    }
+
+    /// <summary>
+    /// Duyệt hết cây một lần để <see cref="JsonObject"/>/<see cref="JsonArray"/> dựng xong dữ liệu nội bộ.
+    /// </summary>
+    /// <remarks>
+    /// Chúng khởi tạo LƯỜI ở lần đọc đầu tiên, và bước khởi tạo đó không an toàn đa luồng. Descriptor
+    /// đã parse nằm trong cache dùng chung giữa nhiều job chạy song song, nên phải khởi tạo xong
+    /// trước khi vào cache — sau đó chỉ còn đọc.
+    /// </remarks>
+    private static void Materialize(JsonNode? node)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                foreach (KeyValuePair<string, JsonNode?> property in obj)
+                {
+                    Materialize(property.Value);
+                }
+
+                break;
+
+            case JsonArray array:
+                foreach (JsonNode? item in array)
+                {
+                    Materialize(item);
+                }
+
+                break;
+        }
     }
 
     private static DescriptorParseResult Fail(string error) => new(null, null, [error]);
