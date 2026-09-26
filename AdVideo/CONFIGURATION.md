@@ -226,6 +226,8 @@ Seeder chỉ **thêm khoá còn thiếu, không bao giờ ghi đè**. Người v
 | `MaxLipSyncDriftMs` | `200` | 40–1000 | | Dung sai lệch tiếng-hình, vượt là QC đánh trượt |
 | `GlobalNegativePromptCode` | `global-negative` | | | Code prompt negative toàn cục |
 | `ProviderSmokeTestEnabled` | `false` | | | Smoke test hằng ngày — mỗi lần test là một lần tiêu tiền thật |
+| `ForceableVideoProviders` | *(rỗng)* | | | Provider khách được chỉ định qua `options.provider`. Rỗng = không cho ép (Luật 3) |
+| `ProviderHostAllowlist` | `queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io, generativelanguage.googleapis.com, http://127.0.0.1:8080` | | | Host được gọi khi nói chuyện với provider — xem 2.4 |
 
 Cột **Tạm** là cờ `IsProvisional`. Nó có nghĩa rất cụ thể: **số này là phỏng đoán bảo toàn, chưa được
 đo**. Sprint 0 (đo thật bằng key thật) bị bỏ qua vì chưa có API key và ngân sách, nên cờ này chính là
@@ -262,6 +264,23 @@ khai trong code, để sửa bảng giá khi nhà cung cấp đổi giá mà kh�
 > provider mới, và trên một số cấu hình key ring điều đó làm key bị **sinh lại** — nghĩa là mọi API
 > key đã mã hoá trong DB thành rác không giải mã được. Đây là lỗi đã từng xảy ra ở dự án khác trên
 > chính máy chủ này. Key ring cũng không được nằm trong `bin/`: `clean` là mất khoá.
+
+### 2.4. `ProviderHostAllowlist` — chặn SSRF
+
+Mọi request tới provider (client `advideo-provider`) và mọi lần tải clip (client
+`advideo-provider-download`) đi qua `SsrfGuardingHandler`: host không nằm trong setting này thì request
+**không ra khỏi máy**, kể cả khi bị chuyển hướng (handler tự theo redirect và kiểm từng bước; redirect
+tự động của .NET bị tắt vì nó xảy ra sau lưng handler).
+
+- `api.elevenlabs.io` — https, cổng 443. `*.fal.media` — mọi host con. `host:8443` — cổng khác.
+- `http://127.0.0.1:8080` — cách duy nhất cho phép http, dành cho engine tự host.
+- **Rỗng hoặc thiếu = chặn hết.** Chạy `seed` sau khi nâng cấp để có giá trị mặc định.
+- Thêm provider mới (kể cả bằng descriptor) = thêm host của nó vào đây. Dán descriptor **không** tự
+  cấp quyền gọi ra ngoài — đó là chủ đích.
+
+Key chỉ được gắn khi URL **cùng origin** với endpoint của credential; URL trong phản hồi trỏ sang host
+khác (CDN, link đã ký) được gọi không kèm key. Thân lỗi được che key (`****abcd`) trước khi vào
+`ProviderCall.RawError` / `AdVideoJob.RawProviderError`.
 
 ### 2.3. `PromptTemplates` — prompt
 

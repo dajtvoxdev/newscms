@@ -33,10 +33,14 @@ public static class WorkerPipeline
             client.Timeout = TimeSpan.FromMinutes(2);
         });
 
+        // Client tải clip KHÔNG mang header xác thực nào: URL clip do provider trả về, và key không
+        // được đi theo tới host đó. Vẫn bị chặn theo allowlist như client gọi provider.
         services.AddHttpClient(RenderShotsStep.HttpClientName, client =>
-        {
-            client.Timeout = TimeSpan.FromMinutes(10);
-        });
+            {
+                client.Timeout = TimeSpan.FromMinutes(10);
+            })
+            .AddHttpMessageHandler<AdVideo.Infrastructure.Providers.SsrfGuardingHandler>()
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
         services.AddScoped<JobArtifacts>();
 

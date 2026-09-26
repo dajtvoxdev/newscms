@@ -223,21 +223,4 @@ public class DescriptorValidatorTests
         FluentActions.Invoking(() => DescriptorValidator.Validate(null!, new JsonObject())).Should().Throw<ArgumentNullException>();
         FluentActions.Invoking(() => DescriptorValidator.Validate(descriptor, null!)).Should().Throw<ArgumentNullException>();
     }
-
-    [Theory]
-    [InlineData("sk-proj-abcdefghijklmnopqrstuvwx", true)]
-    [InlineData("sk_0123456789abcdef0123", true)]
-    [InlineData("xi-abcdefghijklmnopqrstuvwxyz", true)]
-    [InlineData("0123456789abcdef0123456789abcdef", true)]
-    [InlineData("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.sig", true)]
-    [InlineData("Bearer Zx81kQp2Lm4Nn7Vv0Ww3Yy6Tt9Rr5Ss1Uu", true)]
-    [InlineData("fal-ai/kling-video/v3/pro/image-to-video", false)]
-    [InlineData("eleven_flash_v2_5", false)]
-    [InlineData("content_policy_violation_something_long", false)]
-    [InlineData("Bearer {{secret.api_key}}", false)]
-    [InlineData("xi-api-key", false)]
-    public void Nhan_dien_chuoi_giong_key_that(string text, bool expected)
-    {
-        DescriptorValidator.LooksLikeSecret(text).Should().Be(expected);
-    }
 }

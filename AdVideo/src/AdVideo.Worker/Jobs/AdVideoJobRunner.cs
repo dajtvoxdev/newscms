@@ -2,6 +2,7 @@ using AdVideo.Core.Configuration;
 using AdVideo.Core.Entities;
 using AdVideo.Core.Enums;
 using AdVideo.Core.Pipeline;
+using AdVideo.Core.Security;
 using AdVideo.Infrastructure.Persistence;
 using AdVideo.Infrastructure.Persistence.Tenancy;
 using Hangfire;
@@ -258,7 +259,8 @@ public sealed class AdVideoJobRunner : IAdVideoJobRunner
         job.Status = JobStatus.Failed;
         job.CompletedAt = DateTime.UtcNow;
         job.FailureReason = reason ?? "Job thất bại nhưng không có lý do — đây là lỗi của hệ thống, không phải của brief.";
-        job.RawProviderError = rawError;
+        // Chuỗi lỗi có thể là ex.ToString() với URL chứa key, hoặc thân phản hồi dội lại request.
+        job.RawProviderError = SecretRedactor.RedactPatterns(rawError);
 
         await _db.SaveChangesAsync(cancellationToken);
 

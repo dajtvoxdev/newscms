@@ -356,6 +356,12 @@ public sealed class RenderShotsStep : IPipelineStep
 
                 bytes = await http.GetByteArrayAsync(result.VideoUri, cancellationToken);
             }
+            catch (ProviderHostBlockedException ex)
+            {
+                // Không retry: lần sau vẫn bị chặn, và mỗi lần retry là một lần render trả tiền.
+                return StepResult.Fail(
+                    $"Shot {shot.Index + 1}/{shotCount}: provider trả link clip ở host không được phép. {ex.Message}");
+            }
             catch (HttpRequestException ex)
             {
                 // Clip này ĐÃ TRẢ TIỀN rồi. Retry được vì lỗi nằm ở đường truyền chứ không ở nội

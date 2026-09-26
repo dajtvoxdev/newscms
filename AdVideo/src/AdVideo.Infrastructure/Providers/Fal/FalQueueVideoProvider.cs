@@ -5,6 +5,7 @@ using System.Text.Json;
 using AdVideo.Core.Configuration;
 using AdVideo.Core.Enums;
 using AdVideo.Core.Providers;
+using AdVideo.Core.Security;
 using Microsoft.Extensions.Logging;
 
 namespace AdVideo.Infrastructure.Providers.Fal;
@@ -48,9 +49,6 @@ public sealed class FalQueueVideoProvider : IVideoProvider
         _logger = logger;
 
         Capability = capability;
-
-        _http.DefaultRequestHeaders.Remove("Authorization");
-        _http.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Key {credential.ApiKey}");
     }
 
     public string Name => _credential.Provider;
@@ -65,9 +63,8 @@ public sealed class FalQueueVideoProvider : IVideoProvider
 
         string submitUrl = BuildSubmitUrl();
 
-        using HttpResponseMessage submit = await _http.PostAsJsonAsync(
-            submitUrl,
-            BuildPayload(request),
+        using HttpResponseMessage submit = await _http.SendAsync(
+            Authorized(HttpMethod.Post, submitUrl, BuildPayload(request)),
             cancellationToken);
 
         if (!submit.IsSuccessStatusCode)
@@ -88,7 +85,7 @@ public sealed class FalQueueVideoProvider : IVideoProvider
                 IsSuccess = false,
                 FailureKind = VideoFailureKind.Unknown,
                 FailureReason = "fal.ai nhận yêu cầu nhưng không trả về status_url/response_url.",
-                RawError = queued.RootElement.ToString(),
+                RawError = Redact(queued.RootElement.ToString()),
             };
         }
 
@@ -105,7 +102,7 @@ public sealed class FalQueueVideoProvider : IVideoProvider
             return pollFailure;
         }
 
-        using HttpResponseMessage final = await _http.GetAsync(responseUrl, cancellationToken);
+        using HttpResponseMessage final = await _http.SendAsync(Authorized(HttpMethod.Get, responseUrl), cancellationToken);
 
         if (!final.IsSuccessStatusCode)
         {
@@ -123,7 +120,7 @@ public sealed class FalQueueVideoProvider : IVideoProvider
                 IsSuccess = false,
                 FailureKind = VideoFailureKind.Unknown,
                 FailureReason = "Không tìm thấy URL video trong kết quả của fal.ai.",
-                RawError = payload.RootElement.ToString(),
+                RawError = Redact(payload.RootElement.ToString()),
             };
         }
 
@@ -150,9 +147,8 @@ public sealed class FalQueueVideoProvider : IVideoProvider
         {
             // Không có endpoint health riêng. Gọi thẳng vào model với payload rỗng: 401/403 nghĩa
             // là key hỏng, còn 422 (payload sai) lại là tin tốt — nghĩa là key được chấp nhận.
-            using HttpResponseMessage response = await _http.PostAsJsonAsync(
-                BuildSubmitUrl(),
-                new { },
+            using HttpResponseMessage response = await _http.SendAsync(
+                Authorized(HttpMethod.Post, BuildSubmitUrl(), new { }),
                 cancellationToken);
 
             return response.StatusCode is not (HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden);
@@ -164,6 +160,16 @@ public sealed class FalQueueVideoProvider : IVideoProvider
             return false;
         }
     }
+
+    /// <remarks>
+    /// Key chỉ gắn khi URL cùng origin với endpoint. <c>status_url</c>/<c>response_url</c> lấy từ
+    /// thân phản hồi: nếu chúng trỏ sang host khác thì request vẫn đi (nếu host nằm trong allowlist)
+    /// nhưng không mang key.
+    /// </remarks>
+    private HttpRequestMessage Authorized(HttpMethod method, string url, object? body = null) =>
+        ProviderHttp.Create(method, url, new Uri(BuildSubmitUrl()), "Authorization", $"Key {_credential.ApiKey}", body);
+
+    private string? Redact(string? text) => SecretRedactor.RedactKnown(text, _credential.ApiKey);
 
     private string BuildSubmitUrl()
     {
@@ -226,7 +232,7 @@ public sealed class FalQueueVideoProvider : IVideoProvider
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            using HttpResponseMessage status = await _http.GetAsync(statusUrl, cancellationToken);
+            using HttpResponseMessage status = await _http.SendAsync(Authorized(HttpMethod.Get, statusUrl), cancellationToken);
 
             if (!status.IsSuccessStatusCode)
             {
@@ -255,7 +261,7 @@ public sealed class FalQueueVideoProvider : IVideoProvider
                     // họ. Đọc thân phản hồi để không xếp nhầm một prompt bị từ chối thành lỗi tạm thời.
                     FailureKind = ProviderFailureMapper.FromFailedJobBody(body),
                     FailureReason = "fal.ai báo job trong hàng đợi thất bại.",
-                    RawError = body,
+                    RawError = Redact(body),
                 };
             }
 
@@ -277,7 +283,7 @@ public sealed class FalQueueVideoProvider : IVideoProvider
             IsSuccess = false,
             FailureKind = ProviderFailureMapper.FromStatus(response.StatusCode, body),
             FailureReason = $"fal.ai trả {(int)response.StatusCode} khi {phase}.",
-            RawError = body,
+            RawError = Redact(body),
             RetryAfterSeconds = ProviderFailureMapper.ReadRetryAfter(response),
         };
     }

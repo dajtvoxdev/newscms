@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AdVideo.Core.Configuration;
 using AdVideo.Core.Providers;
+using AdVideo.Core.Security;
 using AdVideo.Core.Qc;
 using AdVideo.Infrastructure.Media;
 using Microsoft.Extensions.Logging;
@@ -57,14 +58,6 @@ public sealed class VieNeuTtsProvider : ITtsProvider
         _logger = logger;
 
         Capability = capability;
-
-        // Bản tự host có thể chạy trần trong mạng nội bộ, không đặt key. Chỉ gắn header khi thật
-        // sự có key, để một chuỗi rỗng không biến thành "Bearer " và bị máy chủ từ chối.
-        if (!string.IsNullOrWhiteSpace(credential.ApiKey))
-        {
-            _http.DefaultRequestHeaders.Remove("Authorization");
-            _http.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Bearer {credential.ApiKey}");
-        }
     }
 
     public string Name => _credential.Provider;
@@ -86,9 +79,8 @@ public sealed class VieNeuTtsProvider : ITtsProvider
                 request.VoiceId);
         }
 
-        using HttpResponseMessage response = await _http.PostAsJsonAsync(
-            $"{BaseUrl()}/tts",
-            BuildPayload(request),
+        using HttpResponseMessage response = await _http.SendAsync(
+            Authorized(HttpMethod.Post, $"{BaseUrl()}/tts", BuildPayload(request)),
             cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -100,7 +92,7 @@ public sealed class VieNeuTtsProvider : ITtsProvider
                 IsSuccess = false,
                 FailureKind = ProviderFailureMapper.FromStatus(response.StatusCode, body),
                 FailureReason = $"VieNeu trả {(int)response.StatusCode}.",
-                RawError = body,
+                RawError = SecretRedactor.RedactKnown(body, _credential.ApiKey),
                 RetryAfterSeconds = ProviderFailureMapper.ReadRetryAfter(response),
             };
         }
@@ -162,7 +154,7 @@ public sealed class VieNeuTtsProvider : ITtsProvider
     {
         try
         {
-            using HttpResponseMessage response = await _http.GetAsync($"{BaseUrl()}/health", cancellationToken);
+            using HttpResponseMessage response = await _http.SendAsync(Authorized(HttpMethod.Get, $"{BaseUrl()}/health"), cancellationToken);
 
             return response.IsSuccessStatusCode;
         }
@@ -174,6 +166,27 @@ public sealed class VieNeuTtsProvider : ITtsProvider
 
             return false;
         }
+    }
+
+    /// <remarks>
+    /// Bản tự host có thể chạy trần trong mạng nội bộ, không đặt key. Chỉ gắn header khi thật sự có
+    /// key, để một chuỗi rỗng không biến thành "Bearer " và bị máy chủ từ chối.
+    /// </remarks>
+    private HttpRequestMessage Authorized(HttpMethod method, string url, object? body = null)
+    {
+        if (!string.IsNullOrWhiteSpace(_credential.ApiKey))
+        {
+            return ProviderHttp.Create(method, url, new Uri(BaseUrl()), "Authorization", $"Bearer {_credential.ApiKey}", body);
+        }
+
+        var request = new HttpRequestMessage(method, url);
+
+        if (body is not null)
+        {
+            request.Content = System.Net.Http.Json.JsonContent.Create(body);
+        }
+
+        return request;
     }
 
     private string BaseUrl()

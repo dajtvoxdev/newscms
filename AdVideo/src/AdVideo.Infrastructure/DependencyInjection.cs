@@ -165,6 +165,8 @@ public static class DependencyInjection
     {
         services.Configure<FakeProviderOptions>(configuration.GetSection(FakeProviderOptions.SectionName));
 
+        services.AddTransient<SsrfGuardingHandler>();
+
         services.AddHttpClient(ProviderRegistry.HttpClientName, client =>
             {
                 // 10 phút cho MỘT request HTTP, không phải cho cả lần render. Mặc định 100 giây của
@@ -177,6 +179,13 @@ public static class DependencyInjection
             .AddPolicyHandler((provider, _) =>
                 PollyPolicies.ProviderRetry(
                     provider.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(PollyPolicies))))
+
+            // Sau Polly (tức là GẦN mạng hơn): mỗi lần thử lại cũng bị kiểm host.
+            .AddHttpMessageHandler<SsrfGuardingHandler>()
+
+            // Redirect tự động xảy ra bên trong handler gốc, sau lưng SsrfGuardingHandler. Tắt nó để
+            // handler tự theo redirect và kiểm allowlist từng bước.
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false })
 
             // Handler dùng lại trong 5 phút thay vì mặc định 2 phút: provider video giữ kết nối
             // lâu (một lần gọi có thể mất hàng phút), còn DNS của họ thì hiếm khi đổi.

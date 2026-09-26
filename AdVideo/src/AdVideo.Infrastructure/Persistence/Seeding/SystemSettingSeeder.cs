@@ -203,6 +203,16 @@ public sealed class SystemSettingSeeder
             SettingValueType.String,
             "Provider video khách được chỉ định qua options.provider, cách nhau bằng dấu phẩy. Rỗng = không cho ép. Provider giả không bao giờ ép được ở production.",
             IsProvisional: false),
+
+        // Chỉ những host mà adapter viết tay hôm nay thật sự gọi. Provider khai báo mới thì người
+        // vận hành thêm host của nó vào đây — đó là chủ đích: dán descriptor KHÔNG tự cấp quyền
+        // gọi ra ngoài. fal trả clip qua CDN *.fal.media; VieNeu tự host ở máy nội bộ.
+        new(
+            SettingKeys.ProviderHostAllowlist,
+            "queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io, generativelanguage.googleapis.com, http://127.0.0.1:8080",
+            SettingValueType.String,
+            "Host được gọi khi nói chuyện với provider (baseUrl, URL trong phản hồi, URL tải file). Cách nhau bằng dấu phẩy. *.domain = mọi host con. http chỉ được khi ghi đủ http://host:cổng. Rỗng = chặn hết.",
+            IsProvisional: false),
     ];
 
     /// <summary>Một dòng seed. Tách record để test đọc được danh sách mà không phải chạm DB.</summary>

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using AdVideo.Core.Security;
 
 namespace AdVideo.Core.Providers.Descriptors;
 
@@ -47,12 +48,6 @@ public static partial class DescriptorValidator
 
     [GeneratedRegex(@"^([1-5]xx|[1-5][0-9]{2})$")]
     private static partial Regex StatusKeyPattern();
-
-    [GeneratedRegex(@"^(sk[-_][A-Za-z0-9_-]{16,}|xi-[A-Za-z0-9]{20,}|[0-9a-fA-F]{32,}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\..*)$")]
-    private static partial Regex KnownKeyPattern();
-
-    [GeneratedRegex(@"^[A-Za-z0-9_-]{32,}$")]
-    private static partial Regex LongOpaqueToken();
 
     /// <summary>Kiểm descriptor đã parse. <paramref name="raw"/> là cây gốc, để quét secret và biến ở mọi chỗ.</summary>
     public static IReadOnlyList<string> Validate(ProviderDescriptor descriptor, JsonNode raw)
@@ -710,36 +705,13 @@ public static partial class DescriptorValidator
                 break;
 
             case JsonValue value when value.GetValueKind() == JsonValueKind.String:
-                if (LooksLikeSecret(value.GetValue<string>()))
+                if (SecretRedactor.LooksLikeSecret(StripExpressions(value.GetValue<string>())))
                 {
                     errors.Add($"{where}: giá trị trông như một API key thật. Descriptor không được chứa secret — dùng {{{{{DescriptorVariables.SecretApiKey}}}}}.");
                 }
 
                 break;
         }
-    }
-
-    /// <summary>
-    /// Chuỗi có chứa token trông như key thật không. Công khai để lớp ghi log dùng lại cùng một luật.
-    /// </summary>
-    public static bool LooksLikeSecret(string text)
-    {
-        ArgumentNullException.ThrowIfNull(text);
-
-        foreach (string token in StripExpressions(text).Split([' ', '\t', '\n', '\r', ',', ';', '"', '\''], StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (KnownKeyPattern().IsMatch(token))
-            {
-                return true;
-            }
-
-            if (LongOpaqueToken().IsMatch(token) && token.Any(char.IsDigit) && token.Any(char.IsLetter))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /// <remarks>

@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using AdVideo.Core.Configuration;
 using AdVideo.Core.Providers;
+using AdVideo.Core.Security;
 using Microsoft.Extensions.Logging;
 
 namespace AdVideo.Infrastructure.Providers.ElevenLabs;
@@ -52,9 +53,6 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
         _logger = logger;
 
         Capability = capability;
-
-        _http.DefaultRequestHeaders.Remove("xi-api-key");
-        _http.DefaultRequestHeaders.TryAddWithoutValidation("xi-api-key", credential.ApiKey);
     }
 
     public string Name => _credential.Provider;
@@ -70,7 +68,7 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
         string url = $"{BaseUrl()}/v1/text-to-speech/{Uri.EscapeDataString(request.VoiceId)}/with-timestamps"
             + $"?output_format={OutputFormat}";
 
-        using HttpResponseMessage response = await _http.PostAsJsonAsync(url, BuildPayload(request), cancellationToken);
+        using HttpResponseMessage response = await _http.SendAsync(Authorized(HttpMethod.Post, url, BuildPayload(request)), cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -81,7 +79,7 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
                 IsSuccess = false,
                 FailureKind = ProviderFailureMapper.FromStatus(response.StatusCode, body),
                 FailureReason = $"ElevenLabs trả {(int)response.StatusCode}.",
-                RawError = body,
+                RawError = Redact(body),
                 RetryAfterSeconds = ProviderFailureMapper.ReadRetryAfter(response),
             };
         }
@@ -106,7 +104,7 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
                     IsSuccess = false,
                     FailureKind = VideoFailureKind.Unknown,
                     FailureReason = "ElevenLabs trả 200 nhưng không có audio_base64 trong phản hồi.",
-                    RawError = Truncate(root.ToString()),
+                    RawError = Redact(Truncate(root.ToString())),
                 };
             }
 
@@ -126,7 +124,7 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
                     IsSuccess = false,
                     FailureKind = VideoFailureKind.Unknown,
                     FailureReason = "ElevenLabs trả audio nhưng thiếu alignment — không khoá được timeline.",
-                    RawError = Truncate(root.ToString()),
+                    RawError = Redact(Truncate(root.ToString())),
                 };
             }
 
@@ -167,7 +165,7 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
         try
         {
             // /v1/user trả hạn mức ký tự còn lại: xác nhận key mà không tốn ký tự nào.
-            using HttpResponseMessage response = await _http.GetAsync($"{BaseUrl()}/v1/user", cancellationToken);
+            using HttpResponseMessage response = await _http.SendAsync(Authorized(HttpMethod.Get, $"{BaseUrl()}/v1/user"), cancellationToken);
 
             return response.IsSuccessStatusCode;
         }
@@ -178,6 +176,11 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider
             return false;
         }
     }
+
+    private HttpRequestMessage Authorized(HttpMethod method, string url, object? body = null) =>
+        ProviderHttp.Create(method, url, new Uri(BaseUrl()), "xi-api-key", _credential.ApiKey, body);
+
+    private string? Redact(string? text) => SecretRedactor.RedactKnown(text, _credential.ApiKey);
 
     private string BaseUrl()
         => string.IsNullOrWhiteSpace(_credential.Endpoint)
