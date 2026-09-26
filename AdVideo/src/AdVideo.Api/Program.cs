@@ -27,7 +27,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
         $"Thiếu chuỗi kết nối '{DependencyInjection.ConnectionStringName}'. Xem AdVideo/CONFIGURATION.md.");
 }
 
-builder.Services.AddAdVideoInfrastructure(builder.Configuration);
+builder.Services.AddAdVideoInfrastructure(builder.Configuration, builder.Environment.EnvironmentName);
 
 builder.Services.ConfigureHttpJsonOptions(options => ApiJson.Apply(options.SerializerOptions));
 builder.Services.AddProblemDetails();

@@ -125,7 +125,7 @@ public sealed class PipelineTestHost : IAsyncDisposable
             builder.AddProvider(new ListLoggerProvider(log));
         });
 
-        services.AddAdVideoInfrastructure(configuration);
+        services.AddAdVideoInfrastructure(configuration, "Testing");
         services.AddAdVideoPipeline();
 
         UseSqlite(services, Path.Combine(root, "advideo.db"));

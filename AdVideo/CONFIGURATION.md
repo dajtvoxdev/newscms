@@ -118,7 +118,7 @@ trong `appsettings.Production.json`. Bỏ qua bước này thì việc nén/prob
 
 | Khoá | Mặc định | Ghi chú |
 |---|---|---|
-| `Enabled` | `true` | **Production phải đặt `false`** |
+| `Enabled` | `false` | Phải bật tường minh. **Bật trên Production thì host từ chối khởi động** |
 | `LatencyMs` | `0` | Giả lập độ trễ mỗi lần gọi |
 | `FailShotIndexes` | `[]` | Shot có chỉ số trong danh sách sẽ fail |
 | `FailureKind` | `Transient` | `Transient`, `ContentPolicy`, `ProviderUnavailable`, … |
@@ -128,6 +128,13 @@ trong `appsettings.Production.json`. Bỏ qua bước này thì việc nén/prob
 
 > **Vì sao production phải tắt.** Nếu credential thật hỏng mà provider giả vẫn còn trong danh sách,
 > nó sẽ **âm thầm nhận việc** và khách nhận về một video `testsrc2`. Thà job fail còn hơn.
+> Vì vậy mặc định trong code là `false`, và `AddAdVideoInfrastructure` **ném exception** nếu
+> `Enabled = true` khi `ASPNETCORE_ENVIRONMENT` là `Production` (hoặc để trống). Worker trong
+> `docker-compose.yml` chạy với `ASPNETCORE_ENVIRONMENT=DockerDev` vì lý do này.
+>
+> Khách cũng **không ép được** provider qua `options.provider` trừ khi tên đó nằm trong setting
+> `ForceableVideoProviders` (mặc định rỗng), và provider được ép vẫn phải qua kiểm năng lực như
+> provider tự chọn. Provider giả không bao giờ ép được ở Production.
 
 Mọi mặc định đều là "chạy trơn tru": bật lỗi phải là hành động cố ý của test. Đường thành công thì
 test nào cũng đi qua — thứ cần chứng minh là pipeline xử lý đúng khi một shot bị từ chối nội dung,

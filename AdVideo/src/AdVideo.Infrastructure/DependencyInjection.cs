@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace AdVideo.Infrastructure;
@@ -41,18 +42,26 @@ public static class DependencyInjection
     /// <summary>Thư mục giữ key ring DataProtection. Bỏ trống thì dùng chỗ mặc định của nền tảng.</summary>
     public const string KeyRingPathSetting = "AdVideo:DataProtection:KeyRingPath";
 
+    /// <param name="services">Container DI của host.</param>
+    /// <param name="configuration">Cấu hình của host.</param>
+    /// <param name="environmentName">
+    /// Tên môi trường của host (<c>builder.Environment.EnvironmentName</c>). Bắt buộc truyền vì
+    /// một số cấu hình bị cấm hẳn trên Production — xem <see cref="FakeProviderOptions.Enabled"/>.
+    /// </param>
     public static IServiceCollection AddAdVideoInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        string environmentName)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentException.ThrowIfNullOrWhiteSpace(environmentName);
 
         AddPersistence(services, configuration);
         AddStores(services);
         AddStorage(services, configuration);
         AddMedia(services, configuration);
-        AddProviders(services, configuration);
+        AddProviders(services, configuration, environmentName);
 
         return services;
     }
@@ -152,7 +161,7 @@ public static class DependencyInjection
         services.AddSingleton<IVideoComposer, FfmpegComposer>();
     }
 
-    private static void AddProviders(IServiceCollection services, IConfiguration configuration)
+    private static void AddProviders(IServiceCollection services, IConfiguration configuration, string environmentName)
     {
         services.Configure<FakeProviderOptions>(configuration.GetSection(FakeProviderOptions.SectionName));
 
@@ -178,6 +187,16 @@ public static class DependencyInjection
         // chi phí bằng 0. ProviderRegistry sẽ bỏ qua nó nếu có credential thật cùng tên.
         FakeProviderOptions fakeOptions = new();
         configuration.GetSection(FakeProviderOptions.SectionName).Bind(fakeOptions);
+
+        // Chết lúc khởi động, không phải cảnh báo trong log: provider giả trên production là
+        // khách trả tiền nhận về video testsrc2 mà job báo thành công.
+        if (fakeOptions.Enabled && string.Equals(environmentName, Environments.Production, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"{FakeProviderOptions.SectionName}:Enabled = true trên môi trường Production. " +
+                "Provider giả không bao giờ được chạy ở production — tắt nó, hoặc nếu đây là stack dev " +
+                "thì đặt ASPNETCORE_ENVIRONMENT khác Production.");
+        }
 
         if (fakeOptions.Enabled)
         {

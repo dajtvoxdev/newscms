@@ -65,6 +65,7 @@ public static class AdVideoEndpoints
         IProviderRegistry registry,
         ISettingsStore settings,
         IBackgroundJobClient backgroundJobs,
+        IHostEnvironment hostEnvironment,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
@@ -121,9 +122,34 @@ public static class AdVideoEndpoints
         // 3. Chọn provider. Khách không chọn provider (Luật 3) — trừ khi cố ý ép để chẩn đoán.
         IVideoProvider? videoProvider;
 
+        var requirements = new VideoRequirements
+        {
+            Tier = request.Tier,
+            HasPerson = request.HasPerson,
+            TargetDurationSeconds = request.DurationSeconds,
+            AspectRatio = request.AspectRatio,
+        };
+
         if (request.ForcedProvider is { } forced)
         {
-            videoProvider = await registry.FindVideoProviderAsync(forced, cancellationToken);
+            // Hai cửa, đúng thứ tự: allowlist trong DB trước (rẻ, và chặn luôn provider giả ở
+            // production), rồi mới tới kiểm năng lực như mọi provider tự chọn. Trước đây nhánh ép
+            // bỏ qua cả hai — khách ép được provider không hỗ trợ tỉ lệ khung hay không nhận người.
+            string? allowlistCsv = await settings.GetStringAsync(SettingKeys.ForceableVideoProviders, cancellationToken);
+
+            string? policyReason = ForcedProviderPolicy.Check(
+                forced,
+                ForcedProviderPolicy.ParseAllowlist(allowlistCsv),
+                hostEnvironment.IsProduction());
+
+            if (policyReason is not null)
+            {
+                return Problem(http, StatusCodes.Status422UnprocessableEntity, "Không được chỉ định provider này", policyReason);
+            }
+
+            IReadOnlyList<IVideoProvider> available = await registry.GetVideoProvidersAsync(cancellationToken);
+
+            videoProvider = available.FirstOrDefault(p => string.Equals(p.Name, forced, StringComparison.OrdinalIgnoreCase));
 
             if (videoProvider is null)
             {
@@ -133,18 +159,34 @@ public static class AdVideoEndpoints
                     "Provider không dùng được",
                     $"Provider \"{forced}\" không tồn tại hoặc đang tắt. Bỏ trống options.provider để hệ thống tự chọn.");
             }
+
+            CapabilityCheckResult check = ProviderCapabilityValidator.Check(
+                requirements,
+                videoProvider.Capability,
+                available.Select(p => p.Capability).ToList());
+
+            if (!check.IsSatisfied)
+            {
+                return Problem(
+                    http,
+                    StatusCodes.Status422UnprocessableEntity,
+                    "Provider được chỉ định không đáp ứng yêu cầu này",
+                    string.Join(" ", check.BlockingReasons),
+                    extensions: new Dictionary<string, object?>
+                    {
+                        ["suggestions"] = check.Suggestions.Select(s => new
+                        {
+                            provider = s.ProviderName,
+                            quality = s.Tier.ToString().ToLowerInvariant(),
+                            reason = s.Reason,
+                            estimated_cost_usd = s.EstimatedCostUsd,
+                        }),
+                    });
+            }
         }
         else
         {
-            ProviderSelectionResult selection = await registry.SelectVideoProviderAsync(
-                new VideoRequirements
-                {
-                    Tier = request.Tier,
-                    HasPerson = request.HasPerson,
-                    TargetDurationSeconds = request.DurationSeconds,
-                    AspectRatio = request.AspectRatio,
-                },
-                cancellationToken);
+            ProviderSelectionResult selection = await registry.SelectVideoProviderAsync(requirements, cancellationToken);
 
             if (!selection.IsSuccess)
             {

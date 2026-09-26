@@ -195,6 +195,14 @@ public sealed class SystemSettingSeeder
             SettingValueType.Bool,
             "Bật smoke test provider hằng ngày. Tắt ở Sprint 1 vì mỗi lần test là một lần tiêu tiền thật.",
             IsProvisional: false),
+
+        // Rỗng có chủ đích: Luật 3 — khách không chọn provider. Mở từng tên khi cần chẩn đoán.
+        new(
+            SettingKeys.ForceableVideoProviders,
+            "",
+            SettingValueType.String,
+            "Provider video khách được chỉ định qua options.provider, cách nhau bằng dấu phẩy. Rỗng = không cho ép. Provider giả không bao giờ ép được ở production.",
+            IsProvisional: false),
     ];
 
     /// <summary>Một dòng seed. Tách record để test đọc được danh sách mà không phải chạm DB.</summary>
