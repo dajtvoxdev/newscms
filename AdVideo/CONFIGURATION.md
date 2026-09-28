@@ -232,7 +232,7 @@ Seeder chỉ **thêm khoá còn thiếu, không bao giờ ghi đè**. Người v
 | `GlobalNegativePromptCode` | `global-negative` | | | Code prompt negative toàn cục |
 | `ProviderSmokeTestEnabled` | `false` | | | Smoke test hằng ngày — mỗi lần test là một lần tiêu tiền thật |
 | `ForceableVideoProviders` | *(rỗng)* | | | Provider khách được chỉ định qua `options.provider`. Rỗng = không cho ép (Luật 3) |
-| `ProviderHostAllowlist` | `queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io, http://127.0.0.1:8080` | | | Host được gọi khi nói chuyện với provider — xem 2.3 |
+| `ProviderHostAllowlist` | `queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io` | | | Host được gọi khi nói chuyện với provider — xem 2.3. **Không có host nội bộ nào trong mặc định** |
 
 Cột **Tạm** là cờ `IsProvisional`. Nó có nghĩa rất cụ thể: **số này là phỏng đoán bảo toàn, chưa được
 đo**. Sprint 0 (đo thật bằng key thật) bị bỏ qua vì chưa có API key và ngân sách, nên cờ này chính là
@@ -282,10 +282,20 @@ Mọi request tới provider (client `advideo-provider`) và mọi lần tải c
 tự động của .NET bị tắt vì nó xảy ra sau lưng handler).
 
 - `api.elevenlabs.io` — https, cổng 443. `*.fal.media` — mọi host con. `host:8443` — cổng khác.
-- `http://127.0.0.1:8080` — cách duy nhất cho phép http, dành cho engine tự host.
+- `http://host:cổng` — cách duy nhất cho phép http, dành cho engine tự host. **Mặc định không có
+  mục nào như vậy**; muốn dùng thì tự thêm (xem dưới).
 - **Rỗng hoặc thiếu = chặn hết.** Chạy `seed` sau khi nâng cấp để có giá trị mặc định.
 - Thêm provider mới (kể cả bằng descriptor) = thêm host của nó vào đây. Dán descriptor **không** tự
   cấp quyền gọi ra ngoài — đó là chủ đích.
+
+> **Loopback không nằm trong mặc định.** VieNeu tự host ở `127.0.0.1:8080`, nhưng seed sẵn host đó
+> nghĩa là **mọi** bản cài — kể cả máy không hề chạy VieNeu — đều mở sẵn một đường cho JSON dán vào
+> DB gọi vào mạng nội bộ, đúng thứ lớp chặn này sinh ra để bịt. Ai chạy VieNeu thì tự thêm host bằng
+> `set-setting` (allowlist đóng khi lỗi, nên bỏ mục này chỉ ảnh hưởng đúng máy đó):
+
+```bash
+dotnet run --project src/AdVideo.Api -- set-setting --key ProviderHostAllowlist --value "<danh sách hiện tại>, http://127.0.0.1:8080"
+```
 
 Key chỉ được gắn khi URL **cùng origin** với endpoint của credential; URL trong phản hồi trỏ sang host
 khác (CDN, link đã ký) được gọi không kèm key. Thân lỗi được che key (`****abcd`) trước khi vào
