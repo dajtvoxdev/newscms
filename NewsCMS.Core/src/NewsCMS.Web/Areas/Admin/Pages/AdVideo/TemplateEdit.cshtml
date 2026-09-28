@@ -1,0 +1,76 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.AdVideo.TemplateEditModel
+@using NewsCMS.Application.VideoStudio
+@{
+    ViewData["Title"] = Model.Id is null ? "AdVideo — Thêm mẫu video" : "AdVideo — Sửa mẫu video";
+    ViewData["AdVideoTab"] = "templates";
+}
+
+<partial name="_AdVideoNav" />
+
+<form method="post" class="admin-card max-w-4xl space-y-5 p-6" id="template-edit-form">
+    <div class="flex items-center justify-between">
+        <h3 class="font-bold text-slate-950">@(Model.Id is null ? "Thêm mẫu" : "Sửa mẫu")</h3>
+        <a asp-page="/AdVideo/Templates" class="admin-btn-secondary">Quay lại kho</a>
+    </div>
+
+    @if (Model.Existing is { IsTrend: true } trend)
+    {
+        <p class="rounded-xl bg-rose-50 px-4 py-3 text-xs text-rose-700">
+            Mẫu theo trend@(trend.TrendName is null ? "" : $" \"{trend.TrendName}\""), tự ẩn sau @trend.ExpiresAt?.ToLocalTime().ToString("dd/MM/yyyy"). Sửa nội dung không đổi hạn dùng.
+        </p>
+    }
+
+    <div asp-validation-summary="All" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 empty:hidden"></div>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div class="md:col-span-2">
+            <label class="admin-label" asp-for="Input.Title">Tiêu đề *</label>
+            <input asp-for="Input.Title" class="admin-input mt-1" />
+        </div>
+        <div>
+            <label class="admin-label" asp-for="Input.Category">Ngành hàng *</label>
+            <select asp-for="Input.Category" class="admin-input mt-1">
+                @foreach (var c in VideoPromptTemplateRules.Categories)
+                {
+                    <option value="@c">@c</option>
+                }
+            </select>
+        </div>
+    </div>
+    <div>
+        <label class="admin-label" asp-for="Input.Description">Mô tả ngắn</label>
+        <input asp-for="Input.Description" class="admin-input mt-1" placeholder="Hợp với sản phẩm nào, vì sao hiệu quả" />
+    </div>
+    <div>
+        <label class="admin-label" asp-for="Input.ScenePrompt">Cảnh quay *</label>
+        <textarea asp-for="Input.ScenePrompt" rows="3" class="admin-input mt-1"></textarea>
+    </div>
+    <div>
+        <label class="admin-label" asp-for="Input.ScriptTemplate">Lời thoại *</label>
+        <textarea asp-for="Input.ScriptTemplate" rows="4" class="admin-input mt-1"></textarea>
+        <p class="mt-1 text-xs text-slate-500">Viết <code>{san_pham}</code> ở chỗ tên sản phẩm — form tạo video thay bằng tên người dùng nhập. Không dùng cụm "tốt nhất", "số 1", "100%", "cam kết"…</p>
+    </div>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div>
+            <label class="admin-label" asp-for="Input.AspectRatio">Khung hình</label>
+            <select asp-for="Input.AspectRatio" class="admin-input mt-1">
+                <option value="9:16">Dọc 9:16</option>
+                <option value="1:1">Vuông 1:1</option>
+                <option value="16:9">Ngang 16:9</option>
+            </select>
+        </div>
+        <div>
+            <label class="admin-label" asp-for="Input.DurationSeconds">Thời lượng (giây)</label>
+            <input asp-for="Input.DurationSeconds" type="number" min="@VideoPromptTemplateRules.MinDuration" max="@VideoPromptTemplateRules.MaxDuration" class="admin-input mt-1" />
+        </div>
+        <div>
+            <label class="admin-label" asp-for="Input.SortOrder">Thứ tự</label>
+            <input asp-for="Input.SortOrder" type="number" class="admin-input mt-1" />
+        </div>
+        <label class="flex items-end gap-2 pb-2 text-sm font-semibold text-slate-700">
+            <input asp-for="Input.HasPerson" type="checkbox" class="h-4 w-4" /> Có người xuất hiện
+        </label>
+    </div>
+    <button type="submit" class="admin-btn-primary">Lưu mẫu</button>
+</form>

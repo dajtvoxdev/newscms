@@ -127,6 +127,9 @@ public class AppDbContext
     // AdVideo Studio
     public DbSet<NewsCMS.Domain.Entities.VideoStudio.AdVideoConnection> AdVideoConnections => Set<NewsCMS.Domain.Entities.VideoStudio.AdVideoConnection>();
     public DbSet<NewsCMS.Domain.Entities.VideoStudio.SiteAdVideoTenant> SiteAdVideoTenants => Set<NewsCMS.Domain.Entities.VideoStudio.SiteAdVideoTenant>();
+    public DbSet<NewsCMS.Domain.Entities.VideoStudio.VideoPromptTemplate> VideoPromptTemplates => Set<NewsCMS.Domain.Entities.VideoStudio.VideoPromptTemplate>();
+    public DbSet<NewsCMS.Domain.Entities.VideoStudio.VideoPromptTrendRun> VideoPromptTrendRuns => Set<NewsCMS.Domain.Entities.VideoStudio.VideoPromptTrendRun>();
+    public DbSet<NewsCMS.Domain.Entities.VideoStudio.VideoPromptLibrarySettings> VideoPromptLibrarySettings => Set<NewsCMS.Domain.Entities.VideoStudio.VideoPromptLibrarySettings>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

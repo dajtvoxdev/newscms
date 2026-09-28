@@ -244,6 +244,9 @@ public static class DependencyInjection
         services.AddScoped<NewsCMS.Application.VideoStudio.IAdVideoClient, NewsCMS.Infrastructure.VideoStudio.AdVideoClient>();
         services.AddScoped<NewsCMS.Application.VideoStudio.IAdVideoConnectionService, NewsCMS.Infrastructure.VideoStudio.AdVideoConnectionService>();
         services.AddScoped<NewsCMS.Application.VideoStudio.IVideoStudioService, NewsCMS.Infrastructure.VideoStudio.VideoStudioService>();
+        services.AddScoped<NewsCMS.Application.VideoStudio.IVideoPromptLibraryService, NewsCMS.Infrastructure.VideoStudio.VideoPromptLibraryService>();
+        services.AddScoped<NewsCMS.Application.VideoStudio.IVideoPromptTrendService, NewsCMS.Infrastructure.VideoStudio.VideoPromptTrendService>();
+        services.AddHostedService<NewsCMS.Infrastructure.VideoStudio.VideoPromptTrendWorker>();
 
         return services;
     }

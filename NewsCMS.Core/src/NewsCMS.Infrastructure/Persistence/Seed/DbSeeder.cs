@@ -39,6 +39,9 @@ public static class DbSeeder
         // trong màn hình phân quyền (Roles/Edit group theo Module đọc từ DB).
         await RemoveRetiredPermissionAsync(db, "Site.Page.Manage");
 
+        // Kho prompt VideoStudio (dùng chung mọi site) — chỉ thêm, không ghi đè chỉnh sửa của quản trị.
+        await VideoPromptLibrarySeeder.SeedAsync(db);
+
         await EnsureRole(roleManager, "SuperAdmin", "Toàn quyền hệ thống", isSystem: true);
         await EnsureRole(roleManager, "Admin", "Quản trị viên site");
         await EnsureRole(roleManager, "Editor", "Biên tập viên");

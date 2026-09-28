@@ -1,0 +1,205 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.AdVideo.TemplatesModel
+@{
+    ViewData["Title"] = "AdVideo — Kho mẫu video";
+    ViewData["AdVideoTab"] = "templates";
+    var sources = new (string? Value, string Label)[] { (null, "Mọi nguồn"), ("default", "Mặc định"), ("manual", "Tự viết"), ("trend", "Theo trend") };
+    var statuses = new (string? Value, string Label)[] { (null, "Mọi trạng thái"), ("published", "Đang hiện"), ("pending_review", "Chờ duyệt"), ("hidden", "Đã ẩn") };
+    string SourceLabel(string s) => s switch { "default" => "Mặc định", "manual" => "Tự viết", _ => "Trend" };
+    var lastRun = Model.Runs.FirstOrDefault();
+}
+
+<partial name="_AdVideoNav" />
+
+<div class="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-5">
+    <form method="post" asp-page-handler="Settings" class="admin-card space-y-4 p-6 xl:col-span-3" id="template-settings">
+        <div>
+            <h3 class="font-bold text-slate-950">Tự cập nhật theo xu hướng</h3>
+            <p class="mt-1 text-xs text-slate-500">
+                Dùng kết nối AI mặc định và skill <span class="font-mono">videostudio_trend_templates</span> (sửa prompt ở trang AI).
+                Bật một công cụ tìm web (9Router / Firecrawl) để AI tìm xu hướng thật — không có thì chỉ dựa trên hiểu biết của model.
+                Mỗi lần chạy là một lần gọi model có tính phí.
+            </p>
+        </div>
+        <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input asp-for="Settings.TrendAutoUpdateEnabled" type="checkbox" class="h-4 w-4" /> Bật tự cập nhật theo lịch
+        </label>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+                <label class="admin-label" asp-for="Settings.TrendIntervalHours">Chu kỳ (giờ)</label>
+                <input asp-for="Settings.TrendIntervalHours" type="number" min="6" max="720" class="admin-input mt-1" />
+            </div>
+            <div>
+                <label class="admin-label" asp-for="Settings.TemplatesPerRun">Số mẫu mỗi lần</label>
+                <input asp-for="Settings.TemplatesPerRun" type="number" min="1" max="20" class="admin-input mt-1" />
+            </div>
+            <div>
+                <label class="admin-label" asp-for="Settings.TrendLifetimeDays">Mẫu trend sống (ngày)</label>
+                <input asp-for="Settings.TrendLifetimeDays" type="number" min="1" max="180" class="admin-input mt-1" />
+            </div>
+        </div>
+        <div>
+            <label class="admin-label" asp-for="Settings.Focus">Trọng tâm</label>
+            <textarea asp-for="Settings.Focus" rows="2" class="admin-input mt-1" placeholder="Thị trường Việt Nam; TikTok, Reels; mỹ phẩm và ăn uống"></textarea>
+        </div>
+        <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input asp-for="Settings.RequireReview" type="checkbox" class="h-4 w-4" /> Mẫu trend phải được duyệt ở đây trước khi hiện trong form tạo video
+        </label>
+        <button type="submit" class="admin-btn-primary">Lưu cấu hình</button>
+    </form>
+
+    <div class="admin-card space-y-4 p-6 xl:col-span-2">
+        <div class="flex items-center justify-between">
+            <h3 class="font-bold text-slate-950">Lần chạy gần đây</h3>
+            <form method="post" asp-page-handler="Refresh" id="refresh-form">
+                <button type="submit" class="admin-btn-secondary" id="refresh-button">Cập nhật ngay</button>
+            </form>
+        </div>
+        @if (Model.Runs.Count == 0)
+        {
+            <p class="text-sm text-slate-500">Chưa chạy lần nào.</p>
+        }
+        else
+        {
+            <ul class="divide-y divide-slate-100 text-sm" id="trend-runs">
+                @foreach (var r in Model.Runs)
+                {
+                    <li class="py-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-slate-700">@r.StartedAt.ToLocalTime().ToString("dd/MM HH:mm") · @(r.Trigger == "schedule" ? "theo lịch" : r.Trigger)</span>
+                            @if (r.Status == "succeeded")
+                            {
+                                <span class="admin-badge bg-emerald-100 text-emerald-700">+@r.Added · loại @r.Rejected</span>
+                            }
+                            else if (r.Status == "running")
+                            {
+                                <span class="admin-badge bg-sky-100 text-sky-700">Đang chạy</span>
+                            }
+                            else
+                            {
+                                <span class="admin-badge bg-red-100 text-red-700">Lỗi</span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(r.Notes))
+                        {
+                            <details class="mt-1 text-xs text-slate-500">
+                                <summary class="cursor-pointer">Chi tiết@(r.UsedWebSearch ? "" : " · không tìm web")</summary>
+                                <pre class="mt-1 whitespace-pre-wrap font-sans">@r.Notes</pre>
+                            </details>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+<div class="admin-card overflow-hidden">
+    <div class="flex flex-col gap-3 px-6 py-4 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h3 class="font-bold text-slate-950">Mẫu trong kho</h3>
+            @if (Model.PendingCount > 0)
+            {
+                <a asp-page="/AdVideo/Templates" asp-route-status="pending_review" class="text-xs font-semibold text-amber-700">@Model.PendingCount mẫu chờ duyệt →</a>
+            }
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <form method="get" class="flex gap-2">
+                <select name="source" class="admin-input text-sm" onchange="this.form.submit()">
+                    @foreach (var s in sources)
+                    {
+                        <option value="@s.Value" selected="@(s.Value == Model.Source)">@s.Label</option>
+                    }
+                </select>
+                <select name="status" class="admin-input text-sm" onchange="this.form.submit()">
+                    @foreach (var s in statuses)
+                    {
+                        <option value="@s.Value" selected="@(s.Value == Model.Status)">@s.Label</option>
+                    }
+                </select>
+            </form>
+            <a asp-page="/AdVideo/TemplateEdit" class="admin-btn-primary">Thêm mẫu</a>
+        </div>
+    </div>
+    <table class="w-full text-left text-sm" id="template-table">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-6 py-3">Mẫu</th>
+                <th class="px-6 py-3 w-32">Nguồn</th>
+                <th class="px-6 py-3 w-32">Trạng thái</th>
+                <th class="px-6 py-3 w-20">Đã dùng</th>
+                <th class="px-6 py-3 w-72"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Templates.Count == 0)
+            {
+                <tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">Không có mẫu nào.</td></tr>
+            }
+            @foreach (var t in Model.Templates)
+            {
+                <tr class="bg-white align-top">
+                    <td class="px-6 py-3">
+                        <div class="font-semibold text-slate-900">@t.Title</div>
+                        <div class="text-xs text-slate-500">@t.Category · @t.AspectRatio · @(t.DurationSeconds)s@(t.TrendName is null ? "" : " · " + t.TrendName)</div>
+                        <details class="mt-1 text-xs text-slate-600">
+                            <summary class="cursor-pointer text-slate-500">Xem nội dung</summary>
+                            <p class="mt-1"><strong>Cảnh:</strong> @t.ScenePrompt</p>
+                            <p class="mt-1"><strong>Lời:</strong> @t.ScriptTemplate</p>
+                            @foreach (var url in t.SourceUrls)
+                            {
+                                <a href="@url" target="_blank" rel="noopener noreferrer" class="block truncate text-indigo-600">@url</a>
+                            }
+                        </details>
+                    </td>
+                    <td class="px-6 py-3">
+                        <span class="admin-badge @(t.IsTrend ? "bg-rose-100 text-rose-700" : "bg-slate-100 text-slate-600")">@SourceLabel(t.Source)</span>
+                        @if (t.ExpiresAt is { } exp)
+                        {
+                            <div class="mt-1 text-xs @(t.IsExpired ? "text-red-600" : "text-slate-400")">@(t.IsExpired ? "hết hạn" : "đến") @exp.ToLocalTime().ToString("dd/MM")</div>
+                        }
+                    </td>
+                    <td class="px-6 py-3">
+                        @switch (t.Status)
+                        {
+                            case "published": <span class="admin-badge whitespace-nowrap bg-emerald-100 text-emerald-700">Đang hiện</span> break;
+                            case "pending_review": <span class="admin-badge whitespace-nowrap bg-amber-100 text-amber-700">Chờ duyệt</span> break;
+                            default: <span class="admin-badge whitespace-nowrap bg-slate-100 text-slate-500">Đã ẩn</span> break;
+                        }
+                    </td>
+                    <td class="px-6 py-3 text-slate-700">@t.UsageCount</td>
+                    <td class="px-6 py-3">
+                        <div class="flex gap-2 whitespace-nowrap">
+                            @if (t.Status != "published")
+                            {
+                                <form method="post" asp-page-handler="Status" asp-route-id="@t.Id" asp-route-newStatus="published" asp-route-source="@Model.Source" asp-route-status="@Model.Status">
+                                    <button type="submit" class="admin-btn-secondary text-emerald-700">@(t.Status == "pending_review" ? "Duyệt" : "Hiện")</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form method="post" asp-page-handler="Status" asp-route-id="@t.Id" asp-route-newStatus="hidden" asp-route-source="@Model.Source" asp-route-status="@Model.Status">
+                                    <button type="submit" class="admin-btn-secondary">Ẩn</button>
+                                </form>
+                            }
+                            <a asp-page="/AdVideo/TemplateEdit" asp-route-id="@t.Id" class="admin-btn-secondary">Sửa</a>
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@t.Id" asp-route-source="@Model.Source" asp-route-status="@Model.Status" onsubmit="return confirm('Xoá mẫu này khỏi kho?');">
+                                <button type="submit" class="admin-btn-secondary text-red-600">Xoá</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('refresh-form')?.addEventListener('submit', function () {
+            const b = document.getElementById('refresh-button');
+            b.disabled = true;
+            b.textContent = 'Đang hỏi AI… (tới 1–2 phút)';
+        });
+    </script>
+}

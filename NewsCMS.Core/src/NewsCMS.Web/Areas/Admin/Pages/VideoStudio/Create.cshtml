@@ -21,8 +21,62 @@
     return;
 }
 
+@if (Model.Templates.Count > 0)
+{
+    var categories = Model.Templates.Select(t => t.Category).Distinct().OrderBy(c => c).ToList();
+    <details class="admin-card mb-6 p-6" id="template-picker" open="@(Model.Input.TemplateId is null && string.IsNullOrEmpty(Model.Input.Prompt))">
+        <summary class="cursor-pointer select-none font-bold text-slate-950">
+            Bắt đầu từ mẫu có sẵn
+            <span class="ml-2 text-xs font-normal text-slate-500">@Model.Templates.Count mẫu · @Model.Templates.Count(t => t.IsTrend) mẫu theo xu hướng</span>
+        </summary>
+        <div class="mt-4 flex flex-wrap items-center gap-2">
+            <input type="search" id="template-search" placeholder="Tìm mẫu…" class="admin-input max-w-xs text-sm" />
+            <button type="button" data-template-filter="" class="template-filter rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white">Tất cả</button>
+            @if (Model.Templates.Any(t => t.IsTrend))
+            {
+                <button type="button" data-template-filter="__trend" class="template-filter rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">Đang trend</button>
+            }
+            @foreach (var c in categories)
+            {
+                <button type="button" data-template-filter="@c" class="template-filter rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">@c</button>
+            }
+        </div>
+        <div class="mt-4 grid max-h-[28rem] grid-cols-1 gap-3 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3" id="template-list">
+            @foreach (var t in Model.Templates)
+            {
+                <div class="template-card flex flex-col rounded-xl p-4 ring-1 ring-slate-200"
+                     data-id="@t.Id" data-category="@t.Category" data-trend="@(t.IsTrend ? "1" : "0")"
+                     data-search="@($"{t.Title} {t.Category} {t.Description} {t.TrendName}".ToLowerInvariant())">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="font-semibold text-slate-900">@t.Title</div>
+                        @if (t.IsTrend)
+                        {
+                            <span class="shrink-0 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700">Đang trend</span>
+                        }
+                    </div>
+                    <div class="mt-1 text-xs text-slate-500">@t.Category · @t.AspectRatio · @(t.DurationSeconds)s@(t.HasPerson ? " · có người" : "")</div>
+                    @if (!string.IsNullOrWhiteSpace(t.Description))
+                    {
+                        <p class="mt-2 text-xs text-slate-600">@t.Description</p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(t.TrendName))
+                    {
+                        <p class="mt-1 text-xs text-rose-700">Xu hướng: @t.TrendName</p>
+                    }
+                    <button type="button" class="template-use admin-btn-secondary mt-3 self-start text-xs">Dùng mẫu này</button>
+                </div>
+            }
+        </div>
+        <p class="mt-3 text-xs text-slate-500">Mẫu chỉ điền sẵn cảnh quay, lời thoại, khung hình và thời lượng — sửa thoải mái trước khi tạo. Chỗ <code>{san_pham}</code> được thay bằng Tên sản phẩm.</p>
+    </details>
+    <script type="application/json" id="template-data">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Templates.ToDictionary(t => t.Id.ToString(), t => new { scene = t.ScenePrompt, script = t.ScriptTemplate, aspect = t.AspectRatio, duration = t.DurationSeconds, person = t.HasPerson }),
+        new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Default }))</script>
+}
+
 <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 gap-6 xl:grid-cols-5" id="videostudio-form">
     <input type="hidden" asp-for="Input.IdempotencyKey" />
+    <input type="hidden" asp-for="Input.TemplateId" id="Input_TemplateId" />
 
     <div class="admin-card space-y-5 p-6 xl:col-span-3">
         <div asp-validation-summary="All" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 empty:hidden"></div>
@@ -142,6 +196,56 @@
 
 @section Scripts {
     <script>
+        (function () {
+            const dataEl = document.getElementById('template-data');
+            if (!dataEl) return;
+            const templates = JSON.parse(dataEl.textContent);
+            const $ = id => document.getElementById(id);
+            const fill = (text) => {
+                const name = ($('Input_ProductName')?.value || '').trim();
+                return name ? text.split('{san_pham}').join(name) : text;
+            };
+
+            document.querySelectorAll('.template-use').forEach(btn => btn.addEventListener('click', () => {
+                const card = btn.closest('.template-card');
+                const t = templates[card.dataset.id];
+                const hasText = ($('Input_Prompt').value || $('Input_Script').value).trim().length > 0;
+                if (hasText && !confirm('Thay cảnh quay và lời thoại đang viết bằng mẫu này?')) return;
+                $('Input_Prompt').value = fill(t.scene);
+                $('Input_Script').value = fill(t.script);
+                $('Input_AspectRatio').value = t.aspect;
+                $('Input_DurationSeconds').value = t.duration;
+                $('Input_HasPerson').checked = t.person;
+                $('Input_TemplateId').value = card.dataset.id;
+                document.querySelectorAll('.template-card').forEach(c => c.classList.remove('ring-2', 'ring-indigo-600'));
+                card.classList.add('ring-2', 'ring-indigo-600');
+                $('Input_Prompt').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }));
+
+            let active = '';
+            const apply = () => {
+                const q = ($('template-search').value || '').trim().toLowerCase();
+                document.querySelectorAll('.template-card').forEach(c => {
+                    const byFilter = !active || (active === '__trend' ? c.dataset.trend === '1' : c.dataset.category === active);
+                    const byText = !q || c.dataset.search.includes(q);
+                    c.style.display = byFilter && byText ? '' : 'none';
+                });
+            };
+            document.querySelectorAll('.template-filter').forEach(b => b.addEventListener('click', () => {
+                active = b.dataset.templateFilter;
+                document.querySelectorAll('.template-filter').forEach(x => {
+                    const on = x === b;
+                    x.classList.toggle('bg-indigo-600', on);
+                    x.classList.toggle('text-white', on);
+                    x.classList.toggle('bg-white', !on);
+                    x.classList.toggle('text-slate-600', !on);
+                    x.classList.toggle('ring-1', !on);
+                });
+                apply();
+            }));
+            $('template-search').addEventListener('input', apply);
+        })();
+
         document.getElementById('videostudio-form')?.addEventListener('submit', function () {
             const b = document.getElementById('videostudio-submit');
             b.disabled = true;

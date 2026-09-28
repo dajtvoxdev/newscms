@@ -21,13 +21,18 @@ public class CreateModel : PageModel
     private readonly IVideoStudioService _studio;
     private readonly IAdVideoConnectionService _connection;
     private readonly IAdVideoClient _advideo;
+    private readonly IVideoPromptLibraryService _library;
 
-    public CreateModel(IVideoStudioService studio, IAdVideoConnectionService connection, IAdVideoClient advideo)
+    public CreateModel(IVideoStudioService studio, IAdVideoConnectionService connection, IAdVideoClient advideo, IVideoPromptLibraryService library)
     {
         _studio = studio;
         _connection = connection;
         _advideo = advideo;
+        _library = library;
     }
+
+    /// <summary>Mẫu brief chọn được (kho prompt). Trend mới nhất đứng đầu.</summary>
+    public IReadOnlyList<VideoPromptTemplateDto> Templates { get; private set; } = Array.Empty<VideoPromptTemplateDto>();
 
     public bool IsLinked { get; private set; }
     public IReadOnlyList<VideoStudioLibraryImage> Library { get; private set; } = Array.Empty<VideoStudioLibraryImage>();
@@ -65,6 +70,8 @@ public class CreateModel : PageModel
             ModelState.AddModelError(string.Empty, $"Ảnh \"{tooBig.FileName}\" nặng quá 15 MB.");
         }
 
+        FillProductPlaceholder();
+
         if (!ModelState.IsValid)
         {
             await LoadAsync();
@@ -93,9 +100,43 @@ public class CreateModel : PageModel
             return Page();
         }
 
+        if (Input.TemplateId is { } templateId)
+        {
+            await _library.RecordUsageAsync(templateId);
+        }
+
         TempData["Success"] = "Đã gửi yêu cầu dựng video. Trang này tự cập nhật tiến độ.";
 
         return RedirectToPage("/VideoStudio/Detail", new { id = result.Value!.JobId });
+    }
+
+    /// <summary>
+    /// Mẫu viết <c>{san_pham}</c> ở chỗ tên sản phẩm. Điền bằng tên người dùng nhập; chưa nhập tên thì
+    /// báo lỗi thay vì để AI đọc nguyên chữ "{san_pham}" thành tiếng.
+    /// </summary>
+    private void FillProductPlaceholder()
+    {
+        const string placeholder = NewsCMS.Domain.Entities.VideoStudio.VideoPromptTemplate.ProductPlaceholder;
+
+        bool inPrompt = Input.Prompt?.Contains(placeholder, StringComparison.Ordinal) == true;
+        bool inScript = Input.Script?.Contains(placeholder, StringComparison.Ordinal) == true;
+
+        if (!inPrompt && !inScript)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Input.ProductName))
+        {
+            ModelState.AddModelError("Input.ProductName", $"Mẫu có chỗ {placeholder} — điền Tên sản phẩm, hoặc sửa chỗ đó trong cảnh quay/lời thoại.");
+            return;
+        }
+
+        string name = Input.ProductName.Trim();
+        Input.Prompt = Input.Prompt?.Replace(placeholder, name, StringComparison.Ordinal);
+        Input.Script = Input.Script?.Replace(placeholder, name, StringComparison.Ordinal);
+        ModelState.Remove("Input.Prompt");
+        ModelState.Remove("Input.Script");
     }
 
     private async Task LoadAsync()
@@ -105,6 +146,8 @@ public class CreateModel : PageModel
 
         if (IsLinked)
         {
+            Templates = await _library.GetPublishedAsync();
+
             Result<IReadOnlyList<AdVideoVoiceDto>> voices = await _advideo.ListVoicesAsync();
 
             if (voices.Succeeded)
@@ -150,5 +193,8 @@ public class CreateModel : PageModel
 
         /// <summary>Null = giọng mặc định của hệ thống.</summary>
         public Guid? VoiceId { get; set; }
+
+        /// <summary>Mẫu đã chọn trong kho prompt (để đếm lượt dùng). Null = tự viết.</summary>
+        public Guid? TemplateId { get; set; }
     }
 }

@@ -22,4 +22,6 @@ public static class AiTaskKeys
     public const string ArticleChat = "article_chat";
     public const string KeoBiaExpertAnalysis = "keobia_expert_analysis";
     public const string KeoBiaCorrectScoreOdds = "keobia_correct_score_odds";
+    /// <summary>Sinh mẫu brief video quảng cáo theo xu hướng — tác vụ nền của kho prompt VideoStudio.</summary>
+    public const string VideoStudioTrendTemplates = "videostudio_trend_templates";
 }
