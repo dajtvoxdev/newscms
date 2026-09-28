@@ -95,7 +95,10 @@ public interface IStorageService
 
     Task DeleteAsync(string bucket, string objectKey, CancellationToken cancellationToken = default);
 
-    /// <summary>Tạo bucket nếu chưa có, kèm lifecycle rule. Idempotent — chạy mỗi lần khởi động.</summary>
+    /// <summary>
+    /// Tạo bucket nếu chưa có, và áp rule tự xoá theo <see cref="Buckets.RetentionDays"/>. Idempotent —
+    /// chạy mỗi lần khởi động, nên bucket có sẵn từ trước cũng nhận rule.
+    /// </summary>
     Task EnsureBucketAsync(string bucket, CancellationToken cancellationToken = default);
 
     /// <summary>Dựng khoá object theo quy ước <c>{tenant}/{jobId}/{kind}/{filename}</c>.</summary>

@@ -37,11 +37,17 @@ services:
     restart: unless-stopped
 
   minio:
-    image: minio/minio:latest
+    # Đổi được bằng biến MINIO_IMAGE: ngày 28/09/2026 máy build của Claude không kéo được
+    # minio/minio từ Docker Hub ("pull access denied"). Nếu gặp lỗi đó, đặt MINIO_IMAGE tới một
+    # bản MinIO dựng sẵn khác — xem CONFIGURATION.md.
+    image: ${MINIO_IMAGE:-minio/minio:latest}
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+      # CORS của MinIO là cấu hình TOÀN MÁY CHỦ, không theo bucket (MinIO không làm PutBucketCors).
+      # Mặc định của MinIO là "*". Production đặt đúng origin của NewsCMS admin, cách nhau dấu phẩy.
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ALLOW_ORIGIN:-*}
     ports:
       - "9000:9000"
       - "9001:9001"
