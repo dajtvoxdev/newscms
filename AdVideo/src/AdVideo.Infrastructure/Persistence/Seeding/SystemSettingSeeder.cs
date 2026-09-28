@@ -206,10 +206,15 @@ public sealed class SystemSettingSeeder
 
         // Chỉ những host mà adapter viết tay hôm nay thật sự gọi. Provider khai báo mới thì người
         // vận hành thêm host của nó vào đây — đó là chủ đích: dán descriptor KHÔNG tự cấp quyền
-        // gọi ra ngoài. fal trả clip qua CDN *.fal.media; VieNeu tự host ở máy nội bộ.
+        // gọi ra ngoài. fal trả clip qua CDN *.fal.media.
+        //
+        // KHÔNG seed host loopback. VieNeu tự host ở 127.0.0.1:8080, nhưng máy không chạy nó vẫn
+        // thừa hưởng mục đó — và thế là mọi bản cài đều mở sẵn một đường cho JSON dán vào DB gọi
+        // vào mạng nội bộ, đúng thứ lớp SSRF sinh ra để chặn. Ai chạy VieNeu thì tự thêm host bằng
+        // set-setting. Allowlist đóng khi lỗi nên bỏ mục này chỉ ảnh hưởng đúng máy đó.
         new(
             SettingKeys.ProviderHostAllowlist,
-            "queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io, http://127.0.0.1:8080",
+            "queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io",
             SettingValueType.String,
             "Host được gọi khi nói chuyện với provider (baseUrl, URL trong phản hồi, URL tải file). Cách nhau bằng dấu phẩy. *.domain = mọi host con. http chỉ được khi ghi đủ http://host:cổng. Rỗng = chặn hết.",
             IsProvisional: false),
