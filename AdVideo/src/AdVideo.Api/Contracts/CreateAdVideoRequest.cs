@@ -50,8 +50,17 @@ public sealed class BriefDto
 
 public sealed class AssetsDto
 {
-    /// <summary>Bắt buộc ít nhất một ảnh sản phẩm.</summary>
+    /// <summary>
+    /// URL ảnh sản phẩm (http/https). Cần ít nhất một ảnh, tính gộp với <see cref="ProductImageIds"/>.
+    /// </summary>
     public IList<string>? ProductImages { get; set; }
+
+    /// <summary>
+    /// Id ảnh đã tải lên bằng <c>POST /v1/uploads</c>. Cách nên dùng từ app: ảnh đã nằm trong kho của
+    /// hệ thống, không phụ thuộc link ngoài có còn sống lúc worker chạy hay không.
+    /// </summary>
+    /// <remarks>Chuỗi chứ không phải Guid: id sai dạng thì trả lỗi đọc được, không phải lỗi của bộ đọc JSON.</remarks>
+    public IList<string>? ProductImageIds { get; set; }
 
     public TalentDto? Talent { get; set; }
 

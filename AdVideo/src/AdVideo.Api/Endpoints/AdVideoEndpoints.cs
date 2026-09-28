@@ -51,9 +51,19 @@ public static class AdVideoEndpoints
             .WithName("CreateAdVideo")
             .WithSummary("Tạo một job dựng video quảng cáo.");
 
+        group.MapGet("/", ListAsync)
+            .WithName("ListAdVideos")
+            .WithSummary("Danh sách job của tenant, mới nhất trước. Lọc ?status=, phân trang ?page=&page_size=.");
+
         group.MapGet("/{id:guid}", GetAsync)
             .WithName("GetAdVideo")
             .WithSummary("Trạng thái, tiến độ và link tải của một job.");
+
+        group.MapPost("/{id:guid}/cancel", CancelAsync)
+            .WithName("CancelAdVideo")
+            .WithSummary("Huỷ job chưa xong. Dừng ở ranh giới bước kế tiếp; tiền của bước đang chạy vẫn tính.");
+
+        app.MapUploadEndpoints();
 
         return app;
     }
@@ -117,6 +127,29 @@ public static class AdVideoEndpoints
                 errors,
                 title: "Request không hợp lệ",
                 detail: "Sửa các trường bên dưới rồi gửi lại. Có thể dùng lại Idempotency-Key cũ vì chưa job nào được tạo.");
+        }
+
+        // 2b. Ảnh đã tải lên phải tồn tại và thuộc tenant này. Global filter lo phần "thuộc tenant":
+        //     id của tenant khác trông y như id không tồn tại — đúng như phải thế.
+        if (request.ProductImageIds.Count > 0)
+        {
+            List<Guid> ids = request.ProductImageIds.ToList();
+
+            List<Guid> found = await db.MediaAssets
+                .AsNoTracking()
+                .Where(a => ids.Contains(a.Id) && a.Kind == AssetKind.ProductImage)
+                .Select(a => a.Id)
+                .ToListAsync(cancellationToken);
+
+            string[] missing = ids.Except(found).Select(id => $"Không có ảnh {id} trong tài khoản này. Tải lại bằng POST /v1/uploads.").ToArray();
+
+            if (missing.Length > 0)
+            {
+                return Results.ValidationProblem(
+                    new Dictionary<string, string[]> { ["assets.product_image_ids"] = missing },
+                    title: "Request không hợp lệ",
+                    detail: "Có id ảnh không dùng được. Chưa job nào được tạo.");
+            }
         }
 
         // 3. Chọn provider. Khách không chọn provider (Luật 3) — trừ khi cố ý ép để chẩn đoán.
@@ -397,6 +430,102 @@ public static class AdVideoEndpoints
         }
 
         return TypedResults.Ok(AdVideoJobResponse.From(job, downloadUrl));
+    }
+
+    /// <summary>Trần số job một trang — đủ cho một màn hình danh sách, không đủ để kéo cả bảng về.</summary>
+    public const int MaxPageSize = 100;
+
+    /// <remarks>
+    /// Không ký <c>download_url</c> trong danh sách: ký URL cho hàng trăm job mỗi lần mở màn hình là
+    /// việc thừa (người dùng tải một video, không tải trăm video). UI gọi <c>GET /{id}</c> khi cần tải.
+    /// </remarks>
+    private static async Task<IResult> ListAsync(
+        HttpContext http,
+        string? status,
+        int? page,
+        [FromQuery(Name = "page_size")] int? pageSize,
+        AdVideoDbContext db,
+        CancellationToken cancellationToken)
+    {
+        int size = Math.Clamp(pageSize ?? 20, 1, MaxPageSize);
+        int number = Math.Max(page ?? 1, 1);
+
+        IQueryable<AdVideoJob> query = db.Jobs.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (!AdVideoJobResponse.TryParseApiStatus(status, out JobStatus parsed))
+            {
+                return Results.ValidationProblem(
+                    new Dictionary<string, string[]>
+                    {
+                        ["status"] = [$"\"{status}\" không phải trạng thái. Dùng: {string.Join(", ", AdVideoJobResponse.ApiStatuses)}."],
+                    });
+            }
+
+            query = query.Where(j => j.Status == parsed);
+        }
+
+        int total = await query.CountAsync(cancellationToken);
+
+        List<AdVideoJob> jobs = await query
+            .OrderByDescending(j => j.CreatedAt)
+            .Skip((number - 1) * size)
+            .Take(size)
+            .ToListAsync(cancellationToken);
+
+        return Results.Ok(new AdVideoJobPage(jobs.Select(j => AdVideoJobResponse.From(j)).ToList(), number, size, total));
+    }
+
+    /// <remarks>
+    /// <para>
+    /// <b>Cập nhật có điều kiện, không đọc-rồi-ghi.</b> Worker có thể vừa kết thúc job trong lúc
+    /// request này đang chạy; đọc trạng thái rồi ghi đè <c>Cancelled</c> sẽ biến một video đã xong
+    /// (và đã tính tiền) thành "đã huỷ". <c>WHERE Status NOT IN (xong, lỗi, huỷ)</c> để DB làm trọng tài.
+    /// </para>
+    /// <para>
+    /// Worker nhận ra ở ranh giới bước kế tiếp (<c>AdVideoJobRunner.IsCancelledAsync</c>). Bước đang
+    /// chạy — ví dụ một shot đang render — chạy nốt và vẫn tính tiền: provider không hoàn tiền cho
+    /// lời gọi bị bỏ dở.
+    /// </para>
+    /// </remarks>
+    private static async Task<IResult> CancelAsync(
+        HttpContext http,
+        Guid id,
+        AdVideoDbContext db,
+        CancellationToken cancellationToken)
+    {
+        DateTime now = DateTime.UtcNow;
+
+        int updated = await db.Jobs
+            .Where(j => j.Id == id
+                && j.Status != JobStatus.Completed
+                && j.Status != JobStatus.Failed
+                && j.Status != JobStatus.Cancelled)
+            .ExecuteUpdateAsync(
+                set => set
+                    .SetProperty(j => j.Status, JobStatus.Cancelled)
+                    .SetProperty(j => j.CompletedAt, now)
+                    .SetProperty(j => j.UpdatedAt, now),
+                cancellationToken);
+
+        AdVideoJob? job = await db.Jobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id, cancellationToken);
+
+        if (job is null)
+        {
+            return ApiProblem.NotFound(http, $"Không có job {id} thuộc về tenant này.");
+        }
+
+        if (updated == 0)
+        {
+            return Problem(
+                http,
+                StatusCodes.Status409Conflict,
+                "Job đã kết thúc, không huỷ được",
+                $"Job đang ở trạng thái \"{AdVideoJobResponse.ToApiStatus(job.Status)}\".");
+        }
+
+        return Results.Ok(AdVideoJobResponse.From(job));
     }
 
     /// <summary>Tổng tiền đã tiêu hôm nay, tính trên TOÀN hệ thống chứ không theo tenant.</summary>

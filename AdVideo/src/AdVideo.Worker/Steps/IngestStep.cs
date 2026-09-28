@@ -1,7 +1,9 @@
 using System.Net;
 using AdVideo.Core.Entities;
 using AdVideo.Core.Enums;
+using AdVideo.Core.Media;
 using AdVideo.Core.Pipeline;
+using AdVideo.Core.Storage;
 using AdVideo.Infrastructure.Persistence;
 using AdVideo.Worker.Jobs;
 using Microsoft.EntityFrameworkCore;
@@ -30,8 +32,8 @@ public sealed class IngestStep : IPipelineStep
     /// <summary>Tên HttpClient dành riêng cho việc tải ảnh của khách.</summary>
     public const string HttpClientName = "advideo-ingest";
 
-    /// <summary>Trần kích thước một ảnh. Lớn hơn thì gần như chắc chắn là nhầm file, không phải ảnh sản phẩm.</summary>
-    private const long MaxImageBytes = 15L * 1024 * 1024;
+    /// <summary>Trần kích thước một ảnh — cùng một con số với cửa upload (<see cref="ProductImageFormat.MaxBytes"/>).</summary>
+    private const long MaxImageBytes = ProductImageFormat.MaxBytes;
 
     private readonly AdVideoDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -81,6 +83,18 @@ public sealed class IngestStep : IPipelineStep
         context.SetBrief(brief);
         context.NarrationText = brief.Script;
         context.VoiceId = brief.VoiceProfileId;
+
+        // Ảnh đã tải lên trước (POST /v1/uploads): đã nằm trong adv-uploads nên dùng thẳng object
+        // đó, không tải lại, không chép. Đi TRƯỚC ảnh URL để thứ tự ảnh ổn định giữa các lần chạy.
+        if (brief.ProductImageIds.Count > 0)
+        {
+            StepResult? uploaded = await UseUploadedImagesAsync(context, job, brief.ProductImageIds, cancellationToken);
+
+            if (uploaded is not null)
+            {
+                return uploaded;
+            }
+        }
 
         HttpClient http = _httpClientFactory.CreateClient(HttpClientName);
 
@@ -174,6 +188,46 @@ public sealed class IngestStep : IPipelineStep
             context.NarrationText?.Length ?? 0);
 
         return StepResult.Ok();
+    }
+
+    /// <summary>Gắn ảnh đã tải lên vào job. Null = xong; khác null = lý do dừng.</summary>
+    /// <remarks>
+    /// <b>Lọc tenant bằng tay, tường minh</b>, dù runner đã ghim tenant cho global filter: bước này
+    /// quyết định ảnh nào được gửi cho provider, và "filter đang bật" là một điều kiện nằm ở
+    /// file khác. Dòng <c>TenantId == job.TenantId</c> đọc thấy ngay tại chỗ. API đã kiểm lúc nhận
+    /// job; kiểm lại ở đây vì brief trong DB mới là thứ worker chạy theo.
+    /// </remarks>
+    private async Task<StepResult?> UseUploadedImagesAsync(
+        PipelineContext context, AdVideoJob job, IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
+    {
+        List<Guid> wanted = ids.ToList();
+
+        Dictionary<Guid, MediaAsset> assets = await _db.MediaAssets
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(a => wanted.Contains(a.Id)
+                && a.TenantId == job.TenantId
+                && !a.IsDeleted
+                && a.Kind == AssetKind.ProductImage)
+            .ToDictionaryAsync(a => a.Id, cancellationToken);
+
+        for (int i = 0; i < wanted.Count; i++)
+        {
+            if (!assets.TryGetValue(wanted[i], out MediaAsset? asset))
+            {
+                // Không retry: ảnh đã bị xoá sẽ không tự quay lại.
+                return StepResult.Fail($"Ảnh đã tải lên {wanted[i]} không còn (bị xoá hoặc không thuộc tài khoản này).");
+            }
+
+            if (asset.Bucket != Buckets.Uploads)
+            {
+                return StepResult.Fail($"Ảnh {asset.Id} nằm ở bucket {asset.Bucket}, không phải {Buckets.Uploads} — dữ liệu không nhất quán.");
+            }
+
+            context.ProductImageKeys.Add(asset.ObjectKey);
+        }
+
+        return null;
     }
 
     private static string ExtensionFor(string contentType) => contentType.ToLowerInvariant() switch

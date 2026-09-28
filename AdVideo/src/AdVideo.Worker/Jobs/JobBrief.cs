@@ -28,6 +28,10 @@ public sealed record JobBrief
     public string? ProductName { get; init; }
     public string Script { get; init; } = string.Empty;
     public IReadOnlyList<string> ProductImages { get; init; } = [];
+
+    /// <summary>Id <c>MediaAsset</c> của ảnh đã tải lên qua <c>POST /v1/uploads</c>. Id sai dạng bị bỏ.</summary>
+    public IReadOnlyList<Guid> ProductImageIds { get; init; } = [];
+
     public IReadOnlyList<string> SceneReferences { get; init; } = [];
     public string? TalentImageUrl { get; init; }
 
@@ -70,6 +74,11 @@ public sealed record JobBrief
                 ProductName = Text(brief, "product_name"),
                 Script = Text(voice, "script") ?? string.Empty,
                 ProductImages = Urls(assets, "product_images"),
+                ProductImageIds = Urls(assets, "product_image_ids")
+                    .Select(raw => Guid.TryParse(raw, out Guid id) ? id : Guid.Empty)
+                    .Where(id => id != Guid.Empty)
+                    .Distinct()
+                    .ToList(),
                 SceneReferences = Urls(assets, "scene_reference"),
                 TalentImageUrl = Text(Child(assets, "talent"), "image_url"),
                 WantsSoundEffects = Text(audio, "native_sound") is { } native
@@ -95,9 +104,9 @@ public sealed record JobBrief
             problems.Add("brief không có lời thoại (voice.script) — sprint này chưa có bước LLM tự viết lời.");
         }
 
-        if (ProductImages.Count == 0)
+        if (ProductImages.Count == 0 && ProductImageIds.Count == 0)
         {
-            problems.Add("brief không có ảnh sản phẩm (assets.product_images).");
+            problems.Add("brief không có ảnh sản phẩm (assets.product_images hoặc assets.product_image_ids).");
         }
 
         if (string.IsNullOrWhiteSpace(Prompt))

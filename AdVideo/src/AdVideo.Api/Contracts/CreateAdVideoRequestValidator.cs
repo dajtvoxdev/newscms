@@ -13,6 +13,7 @@ public sealed record ValidatedRequest(
     bool HasPerson,
     bool WantsSoundEffects,
     IReadOnlyList<string> ProductImages,
+    IReadOnlyList<Guid> ProductImageIds,
     IReadOnlyList<string> SceneReferences,
     string? TalentImageUrl,
     string? ConsentRef,
@@ -108,14 +109,34 @@ public static class CreateAdVideoRequestValidator
 
         // --- assets ---
         IReadOnlyList<string> productImages = NormalizeUrls(request.Assets?.ProductImages);
+        var productImageIds = new List<Guid>();
 
-        if (productImages.Count == 0)
+        foreach (string raw in NormalizeUrls(request.Assets?.ProductImageIds))
         {
-            AddError("assets.product_images", "Bắt buộc ít nhất một ảnh sản phẩm (URL http/https).");
+            if (Guid.TryParse(raw, out Guid id))
+            {
+                if (!productImageIds.Contains(id))
+                {
+                    productImageIds.Add(id);
+                }
+            }
+            else
+            {
+                AddError("assets.product_image_ids", $"\"{raw}\" không phải id ảnh. Dùng asset_id do POST /v1/uploads trả về.");
+            }
         }
-        else if (productImages.Count > MaxProductImages)
+
+        int imageCount = productImages.Count + productImageIds.Count;
+
+        if (imageCount == 0 && !errors.ContainsKey("assets.product_image_ids"))
         {
-            AddError("assets.product_images", $"Tối đa {MaxProductImages} ảnh.");
+            AddError(
+                "assets.product_images",
+                "Bắt buộc ít nhất một ảnh sản phẩm: URL http/https, hoặc product_image_ids của ảnh đã tải lên bằng POST /v1/uploads.");
+        }
+        else if (imageCount > MaxProductImages)
+        {
+            AddError("assets.product_images", $"Tối đa {MaxProductImages} ảnh (tính gộp URL và ảnh đã tải lên).");
         }
 
         foreach (string url in productImages.Where(u => !IsHttpUrl(u)))
@@ -226,6 +247,7 @@ public static class CreateAdVideoRequestValidator
                 request.Options?.HasPerson ?? !string.IsNullOrEmpty(talentImage),
                 wantsSfx,
                 productImages,
+                productImageIds,
                 NormalizeUrls(request.Assets?.SceneReference),
                 string.IsNullOrEmpty(talentImage) ? null : talentImage,
                 string.IsNullOrEmpty(consentRef) ? null : consentRef,

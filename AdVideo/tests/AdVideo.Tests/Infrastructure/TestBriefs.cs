@@ -65,6 +65,29 @@ public static class TestBriefs
     public static string WithLocalFileImage() =>
         Valid(productImages: ["file:///etc/passwd"]);
 
+    /// <summary>Brief chỉ dùng ảnh đã tải lên (<c>assets.product_image_ids</c>), không có URL nào.</summary>
+    public static string WithUploadedImages(params Guid[] assetIds) =>
+        Build(new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["brief"] = new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["prompt"] = "Cận cảnh ly cà phê phin trên bàn gỗ, ánh sáng buổi sáng.",
+                ["product_name"] = "Cà phê CHU",
+            },
+            ["voice"] = new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["script"] = ShortScript,
+            },
+            ["assets"] = new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["product_image_ids"] = assetIds.Select(id => id.ToString()).ToArray(),
+            },
+            ["audio"] = new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["native_sound"] = "off",
+            },
+        });
+
     private static string Build(Dictionary<string, object?> root) =>
         JsonSerializer.Serialize(root);
 }

@@ -97,6 +97,28 @@ public sealed record AdVideoJobResponse
         _ => "unknown",
     };
 
+    /// <summary>Mọi trạng thái công khai, theo thứ tự pipeline.</summary>
+    public static IReadOnlyList<string> ApiStatuses { get; } =
+        Enum.GetValues<JobStatus>().Select(ToApiStatus).Where(s => s != "unknown").ToList();
+
+    /// <summary>Đọc ngược tên trạng thái công khai về enum — cho bộ lọc <c>?status=</c>.</summary>
+    public static bool TryParseApiStatus(string value, out JobStatus status)
+    {
+        foreach (JobStatus candidate in Enum.GetValues<JobStatus>())
+        {
+            if (string.Equals(ToApiStatus(candidate), value.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                status = candidate;
+
+                return true;
+            }
+        }
+
+        status = default;
+
+        return false;
+    }
+
     private static string? StepDisplayName(JobStatus status) => status switch
     {
         JobStatus.Queued => "Đang chờ tới lượt",
@@ -142,6 +164,9 @@ public sealed record AdVideoJobResponse
         _ => 0,
     };
 }
+
+/// <summary>Một trang của <c>GET /v1/ad-videos</c>.</summary>
+public sealed record AdVideoJobPage(IReadOnlyList<AdVideoJobResponse> Items, int Page, int PageSize, int Total);
 
 /// <summary>Phản hồi <c>GET /healthz</c>.</summary>
 public sealed record HealthResponse(string Status, IDictionary<string, string> Checks);
