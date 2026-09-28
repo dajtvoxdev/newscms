@@ -1,9 +1,11 @@
+using System.Text.Json;
 using AdVideo.Core.Configuration;
 using AdVideo.Core.Entities;
 using AdVideo.Core.Enums;
 using AdVideo.Core.Providers;
 using AdVideo.Core.Providers.Descriptors;
 using AdVideo.Infrastructure.Persistence;
+using AdVideo.Infrastructure.Providers;
 using AdVideo.Infrastructure.Providers.Declarative;
 using AdVideo.Tests.Infrastructure;
 using FluentAssertions;
@@ -114,6 +116,122 @@ public class DescriptorStoreAndRegistryTests
 
             (await registry.FindVideoProviderAsync("nova-grok-video-15")).Should().BeNull(
                 "tắt descriptor mà không có adapter viết tay thì provider biến khỏi danh sách");
+        });
+    }
+
+    [Fact]
+    public async Task Tat_descriptor_thi_tra_capability_goc_cho_provider_co_adapter()
+    {
+        await using PipelineTestHost host = await PipelineTestHost.StartAsync();
+
+        await host.InScopeAsync(async sp =>
+        {
+            ICredentialStore credentials = sp.GetRequiredService<ICredentialStore>();
+            IDescriptorStore descriptors = sp.GetRequiredService<IDescriptorStore>();
+
+            // Descriptor của kling nhưng đơn giá khác hẳn manifest gốc: bật lên là thấy ngay trong credential.
+            string json = DescriptorTestKit.Read(DescriptorTestKit.FalKling)
+                .Replace("\"costPerSecondUsd\": 0.11", "\"costPerSecondUsd\": 0.33");
+
+            ProviderDescriptorRow row = await descriptors.AddVersionAsync(json, "thử giá khác");
+
+            await credentials.UpsertAsync(
+                new ProviderCredential
+                {
+                    Provider = "kling",
+                    ModelId = "fal-ai/kling-video/v3/pro/image-to-video",
+                    Category = ProviderCategory.Video,
+                    EncryptedApiKey = string.Empty,
+                    CapabilityJson = "{}",
+                },
+                "fal-key-0123456789");
+
+            await descriptors.ActivateVersionAsync("kling", row.Version);
+
+            (await credentials.GetVideoCapabilityAsync("kling"))!.CostPerSecondUsd.Should().Be(
+                0.33m,
+                "descriptor đang bật là nguồn sự thật của capability");
+
+            await descriptors.DeactivateAsync("kling");
+
+            VideoProviderCapability builtIn = ProviderCapabilityCatalog.Video("kling")!;
+            VideoProviderCapability restored = (await credentials.GetVideoCapabilityAsync("kling"))!;
+
+            restored.CostPerSecondUsd.Should().Be(
+                builtIn.CostPerSecondUsd,
+                "tắt descriptor là quay về adapter fal, nên đơn giá phải là giá của chính adapter đó");
+            restored.ModelId.Should().Be(builtIn.ModelId, "adapter fal chạy bằng model id của nó, không phải của descriptor");
+        });
+    }
+
+    [Fact]
+    public async Task Tat_khi_khong_co_descriptor_dang_bat_thi_khong_dung_capability_tu_dat()
+    {
+        await using PipelineTestHost host = await PipelineTestHost.StartAsync();
+
+        await host.InScopeAsync(async sp =>
+        {
+            ICredentialStore credentials = sp.GetRequiredService<ICredentialStore>();
+            IDescriptorStore descriptors = sp.GetRequiredService<IDescriptorStore>();
+
+            // Người vận hành tự đặt đơn giá bằng set-credential, chưa từng bật descriptor nào.
+            VideoProviderCapability custom = ProviderCapabilityCatalog.Video("kling")! with { CostPerSecondUsd = 0.5m };
+            await credentials.UpsertAsync(
+                new ProviderCredential
+                {
+                    Provider = "kling",
+                    ModelId = "fal-ai/kling-video/v3/pro/image-to-video",
+                    Category = ProviderCategory.Video,
+                    EncryptedApiKey = string.Empty,
+                    CapabilityJson = JsonSerializer.Serialize(custom, AdVideoJson.Indented),
+                },
+                "fal-key-0123456789");
+
+            await descriptors.DeactivateAsync("kling");
+
+            (await credentials.GetVideoCapabilityAsync("kling"))!.CostPerSecondUsd.Should().Be(
+                0.5m,
+                "không có descriptor nào đang bật thì capability không phải do descriptor ghi — không có gì để trả về");
+        });
+    }
+
+    [Fact]
+    public async Task Tat_descriptor_cua_provider_chi_co_descriptor_thi_de_yen_capability()
+    {
+        await using PipelineTestHost host = await PipelineTestHost.StartAsync();
+
+        await host.InScopeAsync(async sp =>
+        {
+            ICredentialStore credentials = sp.GetRequiredService<ICredentialStore>();
+            IDescriptorStore descriptors = sp.GetRequiredService<IDescriptorStore>();
+            AdVideoDbContext db = sp.GetRequiredService<AdVideoDbContext>();
+
+            string json = DescriptorTestKit.Read(DescriptorTestKit.Nova);
+            ProviderDescriptorRow row = await descriptors.AddVersionAsync(json, null);
+
+            await credentials.UpsertAsync(
+                new ProviderCredential
+                {
+                    Provider = "nova-grok-video-15",
+                    ModelId = "xai/grok-imagine-video-1.5",
+                    Category = ProviderCategory.Video,
+                    EncryptedApiKey = string.Empty,
+                    CapabilityJson = "{}",
+                },
+                "nova-key-0123456789");
+
+            await descriptors.ActivateVersionAsync("nova-grok-video-15", row.Version);
+
+            string fromDescriptor = ProviderDescriptorParser.Parse(json).CapabilityJson!;
+
+            // Không ném, và cột CapabilityJson giữ nguyên: không có adapter viết tay thì không có gì
+            // để quay về, mà đoán một manifest mặc định còn tệ hơn để nguyên (kèm cảnh báo trong log).
+            await descriptors.DeactivateAsync("nova-grok-video-15");
+
+            ProviderCredential credential = await db.ProviderCredentials.AsNoTracking().SingleAsync();
+
+            credential.CapabilityJson.Should().Be(fromDescriptor);
+            (await descriptors.GetActiveAsync("nova-grok-video-15")).Should().BeNull();
         });
     }
 
