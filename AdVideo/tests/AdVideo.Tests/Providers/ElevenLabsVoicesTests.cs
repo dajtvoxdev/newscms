@@ -1,5 +1,6 @@
 using System.Net;
 using AdVideo.Core.Configuration;
+using AdVideo.Core.Entities;
 using AdVideo.Core.Providers;
 using AdVideo.Infrastructure.Providers.ElevenLabs;
 using AdVideo.Tests.Infrastructure;

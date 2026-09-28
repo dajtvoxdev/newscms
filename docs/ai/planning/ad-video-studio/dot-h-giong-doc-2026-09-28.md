@@ -1,6 +1,6 @@
 ---
 phase: planning
-status: in-progress-2026-09-28
+status: done-2026-09-28
 title: "AdVideo — Đợt H: chọn giọng có sẵn và clone giọng riêng"
 description: Khách chọn giọng đọc khi tạo video, hoặc clone giọng của chính họ từ ghi âm mẫu (có xác nhận của chủ giọng)
 ---
@@ -68,3 +68,6 @@ Engine hỗ trợ clone: ElevenLabs (Instant Voice Cloning, `POST /v1/voices/add
   - API: danh sách, clone kèm bằng chứng, cách ly tenant, thiếu xác nhận, trần số giọng, xoá, tạo job có giọng, id sai dạng, quản trị, thư viện bỏ giọng clone.
   - pipeline: giọng clone chạy trọn; giọng của tenant khác bị chặn; giọng bị xoá sau khi tạo job.
 - NewsCMS, test mới: client gửi `voice_profile_id`, clone multipart đủ trường, không có file thì không gọi mạng, hiện lỗi 422, xoá, quản trị bằng operator key.
+
+**Kết quả (28/09):** AdVideo.Core.Tests 510, AdVideo.Tests 185 (3 skip — cần MinIO thật), NewsCMS.Tests 335 — tất cả xanh.
+Chưa chạy thật với ElevenLabs (chưa có key); clone qua engine giả.
