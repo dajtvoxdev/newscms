@@ -88,7 +88,7 @@
                         <label class="relative block cursor-pointer overflow-hidden rounded-lg ring-1 ring-slate-200 has-[:checked]:ring-2 has-[:checked]:ring-indigo-600">
                             <input type="checkbox" name="Input.LibraryMediaIds" value="@img.MediaId" class="absolute left-1.5 top-1.5 h-4 w-4"
                                    @(Model.Input.LibraryMediaIds.Contains(img.MediaId) ? "checked" : null) />
-                            <img src="@img.Url" alt="@(img.Title ?? img.FileName)" loading="lazy" class="aspect-square w-full object-cover" />
+                            <img src="@img.Url" alt="@(img.Title ?? img.FileName)" title="@(img.Title ?? img.FileName)" loading="lazy" class="aspect-square w-full overflow-hidden bg-slate-100 object-cover text-[0px]" />
                         </label>
                     }
                 </div>

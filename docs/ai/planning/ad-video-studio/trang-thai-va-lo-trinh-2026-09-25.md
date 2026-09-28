@@ -39,9 +39,10 @@ chạy thật. Kế hoạch và kết quả: [dot-f-cau-hinh-qua-app-2026-09-28.
 
 Tổng test: **672 xanh** (500 Core + 172 integration/API), trước đợt là 585.
 
-**Tiếp theo — Đợt G:** màn hình cấu hình AdVideo + VideoStudio trong NewsCMS admin, gọi đúng các API
-của Đợt F (hợp đồng đã chốt, có test). Sau G mới tới C (gọi provider thật) — lúc đó key, font, ảnh
-thật đều nhập qua màn hình G.
+**Đợt G — xong cùng ngày** ([dot-g-man-hinh-newscms-2026-09-28.md](dot-g-man-hinh-newscms-2026-09-28.md)):
+màn hình *Cấu hình AdVideo* (SuperAdmin) và *Video quảng cáo AI* (theo site) trong NewsCMS admin, chạy
+thật trọn vòng qua trình duyệt. Sprint 4 coi như xong phần không phụ thuộc Sprint 2 (duyệt storyboard,
+render lại shot, webhook vẫn chờ). **Tiếp theo là Đợt C** — gọi provider thật, mọi thứ nhập qua màn hình.
 Nguồn sự thật là code, không phải checkbox — mọi checkbox trong repo này đều để trống kể cả việc đã
 xong, nên đọc plan một mình sẽ ra kết luận sai ở cả hai chiều.
 
