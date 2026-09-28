@@ -1,5 +1,6 @@
 ---
 phase: planning
+status: done-2026-09-28
 title: "AdVideo — Đợt F: cấu hình qua app, lưu vào DB và MinIO"
 description: Chuyển toàn bộ cấu hình vận hành (key provider, setting, descriptor, prompt, font, nhãn AI, ảnh sản phẩm) sang API quản trị ghi vào DB + MinIO, để app (NewsCMS admin) cấu hình trực tiếp thay vì sửa appsettings hay gõ CLI trên máy chủ
 ---
@@ -111,7 +112,46 @@ Key có tiền tố riêng `advop_` để một key lọt ra ngoài nhìn là bi
 - Webhook + HMAC, duyệt storyboard, regenerate, `GET /v1/formats` — đi cùng Sprint 2 (Đợt D).
 - Hạn mức theo tenant (`TenantQuota`) — Sprint 5.
 
-## 5. Xong khi
+## 5. Kết quả (28/09)
+
+| Việc | Trạng thái |
+|---|---|
+| F0.1–F0.3 | ✅ |
+| F0.4 CI | ⏸ chờ quyết định |
+| F1, F2, F3, F4 | ✅ |
+| F5.1 lifecycle | ✅ test trên MinIO thật |
+| F5.2 CORS | ✅ biến môi trường trong compose + tài liệu |
+| F5.3 test MinIO thật | ✅ — bắt hai lỗi production (xem dưới) |
+
+**Lỗi thật tìm ra trong đợt này** (đều đã sửa, có test giữ):
+
+1. `MinioStorageService` **không dựng được**: gán `RegionEndpoint = null` sau `ServiceURL` làm SDK xoá
+   `ServiceURL`. Mọi host `Provider = Minio` chết khi resolve storage.
+2. Mọi upload lên MinIO **nổ sau khi đã gửi**: SDK tự đóng stream (`AutoCloseStream`), code đọc lại
+   độ dài sau đó.
+3. 401/403 trả `application/json` chứ không phải `application/problem+json` như comment nói.
+4. `set-credential` đổi key thì **reset priority về 0**.
+5. `"0,5"` trong setting số được đọc thành **5** (dấu phẩy = phân cách nghìn) — trần chi phí lệch 10×.
+6. `CONFIGURATION.md` nói `appsettings.Production.json` "đã có sẵn" — file bị gitignore, chưa từng vào repo.
+
+**Kiểm chứng ngoài test:** SQL Server 2022 + MinIO trong Docker, API và Worker chạy như hai tiến trình
+thật. Qua HTTP: operator đổi chữ nhãn → tải font DejaVu lên → tạo tenant → tenant tải ảnh → tạo job
+bằng `product_image_ids` → job `completed` sau ~13 giây → tải `download_url` → `ffprobe`: h264
+1080×1920 + AAC + metadata AI; khung hình trích ra có nhãn "Video tạo bởi AI — CHU Kafe" đúng dấu.
+Idempotency trả 200, huỷ job trong hàng đợi thì worker không chạy nó, huỷ job đã xong trả 409.
+
+## 6. Đợt G — ngay sau
+
+Màn hình trong NewsCMS admin gọi các API trên (Sprint 4 thu gọn):
+
+- `IAdVideoAdminClient` (operator key) + `IAdVideoClient` (tenant key) trong `NewsCMS.Application`,
+  cài đặt trong `NewsCMS.Infrastructure`; key lưu trong setting của NewsCMS, không trong appsettings.
+- Trang **Cấu hình AdVideo** (quyền riêng, chỉ quản trị hệ thống): setting có cờ "tạm", credential
+  (nhập key, chỉ thấy bản che), descriptor (dán + chạy khô + bật), prompt, font nhãn.
+- Trang **VideoStudio**: tải ảnh (dùng lại module media của NewsCMS rồi đẩy sang `POST /v1/uploads`),
+  brief, danh sách job, chi tiết + huỷ.
+
+## 7. Xong khi
 
 - Người vận hành có operator key làm được **mọi** việc mà CLI làm hôm nay, qua HTTP, trừ việc sinh
   operator key đầu tiên và `migrate`.

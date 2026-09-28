@@ -8,7 +8,40 @@ description: Kiểm kê code so với 7 sprint plan, năm lỗ hổng chặn đ�
 
 > Kế hoạch tổng: [../2026-09-15-feature-ad-video-studio.md](../2026-09-15-feature-ad-video-studio.md)
 
+> **Cập nhật 28/09/2026** — xem mục 0 ngay dưới. Phần còn lại giữ nguyên như ngày 25/09 để đối chiếu.
+
 Tài liệu này **không** thay các file sprint. Nó trả lời hai câu: *đang ở đâu thật* và *làm gì tiếp*.
+
+## 0. Cập nhật 28/09 — sau Đợt F
+
+Quyết định 28/09: cấu hình vận hành đi qua **app → API quản trị → DB/MinIO**, không qua appsettings.
+Năm mục "chặn ngoài code" ở mục 5 không còn chặn việc viết code — chúng là dữ liệu nhập qua app lúc
+chạy thật. Kế hoạch và kết quả: [dot-f-cau-hinh-qua-app-2026-09-28.md](dot-f-cau-hinh-qua-app-2026-09-28.md).
+
+| Mục 25/09 | Trạng thái 28/09 |
+|---|---|
+| L1 / A1 migration | ✅ `InitialCreate` + `AddOperatorKeys`, **áp thật trên SQL Server 2022** |
+| A2 chạy trọn stack | ✅ *tương đương*: SQL Server + MinIO trong Docker, API và Worker là hai tiến trình thật, job đi `queued → completed`, tải `download_url` về `ffprobe` được. **Chưa** chạy bằng `docker compose` (image `minio/minio` không kéo được — compose nay đọc `MINIO_IMAGE`) |
+| A3 kiểm nhãn bằng mắt | ⚠️ khung **9:16** đã xem: chữ tiếng Việt có dấu đúng, font lấy từ MinIO. Khung ngang chưa xem |
+| A4 `.gitignore` | ✅ |
+| A5 `appsettings.Production.json` | ↪ **thay bằng biến môi trường** (file bị gitignore, đã mất một lần). Font rời khỏi danh sách: tải lên qua API |
+| A6 lifecycle + CORS | ✅ `adv-work` tự xoá 7 ngày, áp mỗi lần khởi động, có test trên MinIO thật. CORS = `MINIO_API_CORS_ALLOW_ORIGIN` (MinIO không có CORS theo bucket) |
+| L5 / A7 | ✅ (26/09) |
+| L3 / B5 tiền bằng 0 | ✅ giá giả khác 0 cho mọi test; bỏ dòng cộng dồn thì test đỏ (đã thử); test trần khác 0 |
+| B3 test API | ✅ `ApiTestHost` dựng `Program` thật; 45 test HTTP |
+| B4 cách ly tenant chiều phủ định | ✅ qua HTTP: GET, idempotency, danh sách, huỷ, id ảnh |
+| B8 `MinioStorageService` | ✅ bật bằng `ADVIDEO_TEST_MINIO_URL`. **Bắt hai lỗi làm lớp storage production không dùng được** (client không dựng nổi; mọi upload nổ sau khi gửi) |
+| B7 CI | ⏸ chờ quyết định — `ci.yml` ghi unit test bị bỏ khỏi CI theo yêu cầu 07/09 |
+| B1 / B2 / B6 | ◻ chưa làm (adapter fal/ElevenLabs cũ, `PollyPolicies`, `TestBriefs` serialize DTO) |
+| Lệch #5 chữ nhãn là hằng số | ✅ đọc từ setting `AiLabelOverlayText` |
+| Lệch #7 thiếu endpoint | ◑ có `cancel`, danh sách, upload; còn thiếu `assets`, `providers`, `voices` |
+| Đợt C / D / E | ◻ chưa bắt đầu |
+
+Tổng test: **672 xanh** (500 Core + 172 integration/API), trước đợt là 585.
+
+**Tiếp theo — Đợt G:** màn hình cấu hình AdVideo + VideoStudio trong NewsCMS admin, gọi đúng các API
+của Đợt F (hợp đồng đã chốt, có test). Sau G mới tới C (gọi provider thật) — lúc đó key, font, ảnh
+thật đều nhập qua màn hình G.
 Nguồn sự thật là code, không phải checkbox — mọi checkbox trong repo này đều để trống kể cả việc đã
 xong, nên đọc plan một mình sẽ ra kết luận sai ở cả hai chiều.
 

@@ -8,8 +8,11 @@ Có hai nơi, và ranh giới giữa chúng là quyết định **D10**:
 |---|---|---|
 | Chứa gì | Những thứ phải biết **trước khi** đọc được DB | Mọi thứ còn lại |
 | Ví dụ | Chuỗi kết nối, endpoint MinIO, đường dẫn ffmpeg | API key, trần chi tiêu, tên provider, prompt |
-| Đổi bằng cách nào | Sửa file → **khởi động lại** tiến trình | Lệnh CLI hoặc SQL → **có hiệu lực trong vòng vài giây**, không restart |
-| Ai đổi | Người deploy | Người vận hành |
+| Đổi bằng cách nào | Sửa file → **khởi động lại** tiến trình | **API quản trị `/v1/admin`** (app NewsCMS gọi) hoặc lệnh CLI → **có hiệu lực trong vòng vài giây**, không restart |
+| Ai đổi | Người deploy | Người vận hành, qua app |
+
+Tài sản nhị phân của cấu hình (font vẽ nhãn AI) và ảnh sản phẩm của khách nằm trong **MinIO**, không
+nằm trên đĩa máy chủ và không nằm trong file cấu hình — xem Phần 3.
 
 > **Vì sao chia như vậy.** Toàn bộ cấu hình vận hành nằm trong DB (D10) để đổi provider, đổi trần
 > chi tiêu hay xoay API key không cần deploy lại — và để API với Worker, hai tiến trình riêng, không
@@ -74,8 +77,21 @@ export AdVideo__Storage__AccessKey=...
 export AdVideo__Storage__SecretKey=...
 ```
 
-Bốn bucket được tạo tự động nếu chưa có: `adv-uploads` (file khách tải lên), `adv-work` (shot trung
-gian), `adv-final` (video giao khách), `adv-voice` (giọng đọc).
+Năm bucket được tạo tự động nếu chưa có: `adv-uploads` (ảnh khách tải lên), `adv-work` (shot trung
+gian), `adv-final` (video giao khách), `adv-voice` (giọng đọc), `adv-system` (font nhãn AI tải lên qua
+API quản trị).
+
+**Vòng đời:** mỗi lần khởi động, API và Worker áp rule tự xoá **7 ngày** lên `adv-work` (rule tên
+`advideo-expire`; PUT lifecycle thay toàn bộ cấu hình lifecycle của bucket đó, nên đừng đặt tay rule
+khác lên `adv-work`). Các bucket còn lại không bị đụng tới — "sang lớp lạnh sau 90 ngày" của
+`adv-final` cần MinIO có tầng lưu trữ thứ hai, là việc của hạ tầng, đặt bằng `mc ilm`.
+
+**CORS:** MinIO không có CORS theo bucket; đó là cấu hình toàn máy chủ qua biến môi trường
+`MINIO_API_CORS_ALLOW_ORIGIN` (mặc định của MinIO là `*`). Production đặt đúng origin của NewsCMS
+admin. Trong `docker-compose.yml`: `MINIO_CORS_ALLOW_ORIGIN=https://admin.example.vn docker compose up`.
+
+**Image MinIO:** ngày 28/09/2026 `minio/minio` không kéo được từ Docker Hub trên máy build
+(`pull access denied`). Compose đọc `MINIO_IMAGE` để đổi image mà không sửa file.
 
 ### 1.3. FFmpeg — `AdVideo:Ffmpeg`
 
@@ -85,32 +101,27 @@ gian), `adv-final` (video giao khách), `adv-voice` (giọng đọc).
 | `FfprobePath` | `ffprobe` | |
 | `TimeoutSeconds` | `300` | Một lần gọi ffmpeg/ffprobe |
 | `Threads` | `0` | `0` = để FFmpeg tự quyết |
-| `FontFile` | *(trống)* | **Đường dẫn file font có dấu tiếng Việt** |
+| `FontFile` | *(trống)* | Font **dự phòng** có dấu tiếng Việt, khi chưa tải font lên qua API |
 
-> **`FontFile` phải trỏ tới một file có thật.** Thiếu font thì FFmpeg **vẫn chạy, vẫn thoát 0, vẫn
-> xuất ra video** — chỉ có điều mọi chữ tiếng Việt hiện thành ô vuông. `FfmpegComposer` từ chối ngay
-> khi font trống hoặc file không tồn tại, trước khi tốn một lần encode. Nhãn AI bắt buộc (D9) được vẽ
-> bằng chính font này, nên không có font nghĩa là không có video hợp lệ.
+> **Font vẽ nhãn AI nên tải lên qua app** (`POST /v1/admin/assets/label-font`, Phần 3): nó được kiểm
+> có đủ glyph tiếng Việt rồi mới dùng, nằm trong MinIO nên mọi worker dùng chung, và đổi font không
+> cần đụng tới máy chủ. `FontFile` chỉ còn là đường lùi. Không có cả hai thì bước 8 dừng job với lời
+> chỉ đường — vì thiếu font thì FFmpeg **vẫn chạy, vẫn thoát 0, vẫn xuất ra video**, chỉ có điều mọi
+> chữ tiếng Việt hiện thành ô vuông.
 
 `FfmpegPath`/`FfprobePath` viết theo kiểu Windows trên máy dev, nhưng **khi deploy Linux phải ghi đè**
 trong `appsettings.Production.json`. Bỏ qua bước này thì việc nén/probe hỏng âm thầm.
 
-`src/AdVideo.Api/appsettings.Production.json` và `src/AdVideo.Worker/appsettings.Production.json` đã có
-sẵn bốn khoá cho VPS Ubuntu (`FfmpegPath`, `FfprobePath`, `FontFile` DejaVu, `KeyRingPath =
-/var/lib/advideo/keys`) và tắt provider giả. File này chỉ được nạp khi `ASPNETCORE_ENVIRONMENT` là
-`Production` **hoặc để trống**; biến môi trường vẫn đè lên nó như mọi khi.
+**`appsettings.Production.json` KHÔNG nằm trong repo** — `.gitignore` chặn tên file này (nó từng được
+tạo ở một phiên làm việc rồi mất theo container, 26/09). Trên VPS, đặt các khoá máy bằng biến môi
+trường của service (systemd `Environment=` hoặc `docker-compose.yml`):
 
-```jsonc
-// appsettings.Production.json trên VPS Ubuntu
-{
-  "AdVideo": {
-    "Ffmpeg": {
-      "FfmpegPath": "/usr/bin/ffmpeg",
-      "FfprobePath": "/usr/bin/ffprobe",
-      "FontFile": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-    }
-  }
-}
+```bash
+AdVideo__Ffmpeg__FfmpegPath=/usr/bin/ffmpeg
+AdVideo__Ffmpeg__FfprobePath=/usr/bin/ffprobe
+AdVideo__Ffmpeg__FontFile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf   # dự phòng, xem trên
+AdVideo__DataProtection__KeyRingPath=/var/lib/advideo/keys
+AdVideo__FakeProviders__Enabled=false
 ```
 
 > **Đường dẫn Windows trong JSON phải dùng gạch chéo XUÔI** (`C:/ffmpeg/bin/ffmpeg.exe`). Gõ gạch
@@ -233,6 +244,10 @@ Seeder chỉ **thêm khoá còn thiếu, không bao giờ ghi đè**. Người v
 | `ProviderSmokeTestEnabled` | `false` | | | Smoke test hằng ngày — mỗi lần test là một lần tiêu tiền thật |
 | `ForceableVideoProviders` | *(rỗng)* | | | Provider khách được chỉ định qua `options.provider`. Rỗng = không cho ép (Luật 3) |
 | `ProviderHostAllowlist` | `queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io` | | | Host được gọi khi nói chuyện với provider — xem 2.3. **Không có host nội bộ nào trong mặc định** |
+| `AiLabelOverlayText` | `Nội dung tạo bằng AI` | ≤ 60 ký tự | ⚠️ | Chữ trong nhãn AI. **Rỗng bị từ chối** — đổi được chữ, không tắt được nhãn (D9). Tạm vì chờ pháp chế |
+| `AiLabelFontObjectKey` | *(rỗng)* | | | Font nhãn trong `adv-system`. **Chỉ ghi qua `POST /v1/admin/assets/label-font`**; sửa tay bị từ chối. Rỗng = dùng `FontFile` |
+
+Giá trị số đọc theo **dấu chấm thập phân** (`0.5`). `0,5` bị từ chối chứ không bị đọc thành `5`.
 
 Cột **Tạm** là cờ `IsProvisional`. Nó có nghĩa rất cụ thể: **số này là phỏng đoán bảo toàn, chưa được
 đo**. Sprint 0 (đo thật bằng key thật) bị bỏ qua vì chưa có API key và ngân sách, nên cờ này chính là
@@ -336,7 +351,39 @@ và số phiên bản; sửa prompt là thêm phiên bản mới, không đè l�
 
 ---
 
-## Phần 3 — Xem và sửa
+## Phần 3 — API quản trị `/v1/admin` (app cấu hình)
+
+Mọi thứ ở Phần 2 sửa được qua HTTP để app (NewsCMS admin) làm màn hình cấu hình — không ai phải SSH
+vào máy chủ gõ CLI. Xác thực bằng **operator key**, header `X-AdVideo-Operator-Key`.
+
+**Operator key đầu tiên chỉ sinh được bằng CLI** trên máy chủ (gốc của quyền):
+
+```bash
+dotnet AdVideo.Api.dll create-operator-key --name "NewsCMS admin"   # in key advop_… MỘT lần
+dotnet AdVideo.Api.dll list-operator-keys
+dotnet AdVideo.Api.dll revoke-operator-key --id <guid> --reason "lộ key"
+```
+
+Tenant key (`adv_…`) không mở được `/v1/admin`; operator key không mở được `/v1/ad-videos` — hai
+policy gắn hai scheme, không key nào qua được cả hai cửa.
+
+| Nhóm | Endpoint | Ghi chú |
+|---|---|---|
+| Setting | `GET /v1/admin/settings` · `PUT /v1/admin/settings/{key}` `{"value": "3"}` | Kiểm kiểu + khoảng; khoá lạ → 404 (không tạo mới) |
+| Credential | `GET /v1/admin/credentials` · `PUT /v1/admin/credentials/{provider}` · `POST …/{provider}/deactivate` | Chỉ trả key đã che `****abcd`. PUT: trường bỏ trống = giữ nguyên, `api_key` bỏ trống = giữ key cũ |
+| Descriptor | `GET /v1/admin/descriptors[?provider=]` · `GET …/{provider}/versions/{v}` · `POST /v1/admin/descriptors` · `POST …/{provider}/versions/{v}/activate` · `POST …/{provider}/deactivate` · `POST /v1/admin/descriptors/preview` | POST nhận `descriptor` (object) hoặc `descriptor_json` (nguyên văn file, giữ comment) |
+| Prompt | `GET /v1/admin/prompts[?code=]` · `POST /v1/admin/prompts/{code}/versions` · `POST …/versions/{v}/activate` | `change_note` bắt buộc; bật bản cũ = rollback |
+| Tenant | `GET /v1/admin/tenants` · `POST /v1/admin/tenants` · `POST …/{id}/rotate-key` · `POST …/{id}/activate` · `/deactivate` | API key trả đúng một lần, kèm `Cache-Control: no-store` |
+| Font nhãn | `GET/POST/DELETE /v1/admin/assets/label-font` | POST multipart `file` (.ttf/.otf/.ttc ≤ 25 MB): kiểm glyph tiếng Việt + chữ nhãn đang dùng, lưu `adv-system/fonts/{sha256}.{ext}` |
+
+Đổi `AiLabelOverlayText` khi đang dùng font tải lên: API kiểm font đó vẽ được chữ mới, không thì 422
+kèm danh sách ký tự thiếu.
+
+Hai việc cố ý **không** có endpoint: sinh operator key, và `migrate`.
+
+---
+
+## Phần 4 — CLI (trên máy chủ)
 
 ```bash
 # Liệt kê toàn bộ setting, kèm cờ provisional
@@ -351,10 +398,12 @@ và phát tín hiệu huỷ cache (SQL thì phải đợi cache hết hạn).
 
 ---
 
-## Phần 4 — Danh sách kiểm trước khi chạy production
+## Phần 5 — Danh sách kiểm trước khi chạy production
 
 - [ ] `AdVideo:FakeProviders:Enabled` = `false`
-- [ ] `AdVideo:Ffmpeg:FontFile` trỏ tới file font **có thật** và **có dấu tiếng Việt**
+- [ ] Font nhãn AI đã tải lên qua `POST /v1/admin/assets/label-font`, **hoặc** `AdVideo:Ffmpeg:FontFile` trỏ tới file font có thật, có dấu tiếng Việt
+- [ ] Đã sinh operator key cho app và cất vào nơi app lưu secret; key thử nghiệm đã `revoke-operator-key`
+- [ ] `MINIO_API_CORS_ALLOW_ORIGIN` là origin của NewsCMS admin, không phải `*`
 - [ ] `FfmpegPath`/`FfprobePath` là đường dẫn Linux, không phải đường dẫn Windows của máy dev
 - [ ] `AdVideo:Storage:Provider` = `Minio`, có `AccessKey`/`SecretKey` từ biến môi trường
 - [ ] `PublicServiceUrl` đặt đúng host công khai nếu MinIO nằm sau nginx

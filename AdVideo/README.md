@@ -83,9 +83,32 @@ docker compose logs -f worker
 ```
 
 > `assets.product_images` phải là URL **http/https mà container worker gọi tới được**. File
-> `samples/minimal-request.json` dùng một ảnh trên Internet; nếu máy không ra mạng được thì upload
-> một ảnh qua MinIO console rồi dùng link của nó. `file://` bị từ chối ngay ở bước 1 — đó là cách
-> bắt máy chủ đọc hộ file của chính nó.
+> `samples/minimal-request.json` dùng một ảnh trên Internet. `file://` bị từ chối ngay ở bước 1 — đó
+> là cách bắt máy chủ đọc hộ file của chính nó.
+
+### Tải ảnh lên trước (cách app nên dùng)
+
+```bash
+curl -X POST http://localhost:5080/v1/uploads -H "X-AdVideo-Key: $KEY" -F "file=@san-pham.jpg"
+# → {"asset_id": "…", "content_type": "image/jpeg", "reused": false, …}
+```
+
+Rồi gửi `"assets": {"product_image_ids": ["<asset_id>"]}` thay cho `product_images`. Ảnh nằm trong
+MinIO (`adv-uploads`) từ lúc tải lên, nên job không phụ thuộc link ngoài còn sống hay không. Chỉ nhận
+JPEG/PNG/WebP ≤ 15 MB, nhận dạng theo nội dung file. Tải lại cùng ảnh thì nhận lại `asset_id` cũ.
+
+### Endpoint cho khách (header `X-AdVideo-Key`)
+
+| | |
+|---|---|
+| `POST /v1/ad-videos` | Tạo job (bắt buộc `Idempotency-Key`) |
+| `GET /v1/ad-videos?status=&page=&page_size=` | Danh sách job, mới nhất trước |
+| `GET /v1/ad-videos/{id}` | Trạng thái, tiến độ, `download_url` khi xong |
+| `POST /v1/ad-videos/{id}/cancel` | Huỷ job chưa xong (`409` nếu đã kết thúc) |
+| `POST /v1/uploads` | Tải ảnh sản phẩm |
+
+Cấu hình hệ thống (key provider, setting, descriptor, prompt, tenant, font nhãn AI) đi qua
+**API quản trị `/v1/admin`** với operator key — xem [CONFIGURATION.md](CONFIGURATION.md), Phần 3.
 
 ### Gửi lại cùng một `Idempotency-Key`
 
@@ -136,7 +159,8 @@ Hai chỗ, và ranh giới giữa chúng là cố ý (D10):
 | File / biến môi trường | Chuỗi kết nối, MinIO, đường dẫn FFmpeg, key ring DataProtection, số job song song | Đặc tính của **máy** đang chạy |
 | DB | API key provider (đã mã hoá), trần chi phí, provider mặc định, ngưỡng QC, prompt | Đổi được lúc đang chạy, không cần deploy, và giống nhau ở mọi máy |
 
-**Không có API key nào trong `appsettings.json`.** Nạp bằng CLI:
+**Không có API key nào trong `appsettings.json`.** Nạp qua API quản trị (`PUT /v1/admin/credentials/{provider}`)
+từ app, hoặc bằng CLI:
 
 ```bash
 docker compose exec api dotnet AdVideo.Api.dll set-credential --provider kling --key <fal key>
@@ -177,6 +201,16 @@ skip là một test không bao giờ chạy trên CI mà không ai biết. Đư�
 export ADVIDEO_TEST_FFMPEG_DIR=/opt/ffmpeg/bin
 export ADVIDEO_TEST_FONTFILE=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
 ```
+
+Ngoại lệ duy nhất là `MinioStorageServiceTests` — lớp lưu trữ production chạy trên **MinIO thật**,
+cần một máy chủ đang chạy nên được đánh dấu **Skipped** (hiện rõ trong kết quả) khi thiếu biến:
+
+```bash
+export ADVIDEO_TEST_MINIO_URL=http://127.0.0.1:9000   # + ADVIDEO_TEST_MINIO_ACCESS_KEY / _SECRET_KEY nếu khác minioadmin
+```
+
+Đọc số Skipped sau mỗi lần chạy: khác 0 nghĩa là lớp storage production hôm đó không được kiểm. Hai
+lỗi làm `MinioStorageService` không dùng được (28/09) chỉ lộ ra khi các test này chạy.
 
 ## Những thứ chưa có ở Sprint 1
 
