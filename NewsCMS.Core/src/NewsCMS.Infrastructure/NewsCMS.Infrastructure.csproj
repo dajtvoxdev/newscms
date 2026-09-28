@@ -45,6 +45,7 @@
     <Compile Include="KeoBia\*.cs" />
     <Compile Include="Ai\*.cs" />
     <Compile Include="Ai\Tools\*.cs" />
+    <Compile Include="VideoStudio\*.cs" />
   </ItemGroup>
 
 </Project>

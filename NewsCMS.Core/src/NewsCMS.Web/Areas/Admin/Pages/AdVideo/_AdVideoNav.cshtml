@@ -1,0 +1,24 @@
+@* Thanh tab chung của khu Cấu hình AdVideo. Truyền tên trang đang mở qua ViewData["AdVideoTab"]. *@
+@{
+    var current = ViewData["AdVideoTab"] as string ?? "";
+    var tabs = new (string Key, string Page, string Label)[]
+    {
+        ("index", "/AdVideo/Index", "Kết nối & site"),
+        ("providers", "/AdVideo/Providers", "Provider & key"),
+        ("settings", "/AdVideo/Settings", "Tham số vận hành"),
+        ("label", "/AdVideo/Label", "Nhãn AI"),
+        ("prompts", "/AdVideo/Prompts", "Prompt"),
+    };
+}
+<div class="mb-6">
+    <p class="text-sm font-semibold text-indigo-600">Quản lý nền tảng</p>
+    <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Cấu hình AdVideo</h2>
+    <p class="mt-1 text-sm text-slate-500">Dịch vụ dựng video quảng cáo AI. Mọi thay đổi ở đây ghi thẳng vào AdVideo và có hiệu lực trong vài giây, không cần khởi động lại.</p>
+    <nav class="mt-4 flex flex-wrap gap-2">
+        @foreach (var tab in tabs)
+        {
+            <a asp-area="Admin" asp-page="@tab.Page"
+               class="rounded-xl px-3 py-2 text-sm font-semibold @(tab.Key == current ? "bg-indigo-600 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-950")">@tab.Label</a>
+        }
+    </nav>
+</div>

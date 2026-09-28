@@ -1,0 +1,131 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.AdVideo.IndexModel
+@{
+    ViewData["Title"] = "Cấu hình AdVideo";
+    ViewData["AdVideoTab"] = "index";
+}
+
+<partial name="_AdVideoNav" />
+
+<div class="grid grid-cols-1 gap-6 xl:grid-cols-5">
+    <form method="post" asp-page-handler="Save" class="admin-card space-y-5 p-6 xl:col-span-2">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-950">Kết nối</h3>
+            <span class="admin-badge @(Model.Connection.IsConfigured ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")">
+                @(Model.Connection.IsConfigured ? "Đã cấu hình" : "Chưa cấu hình")
+            </span>
+        </div>
+        <div>
+            <label class="admin-label" asp-for="Input.BaseUrl">Địa chỉ AdVideo.Api *</label>
+            <input asp-for="Input.BaseUrl" class="admin-input mt-1" placeholder="http://127.0.0.1:5080" required />
+        </div>
+        <div>
+            <label class="admin-label" asp-for="Input.OperatorKey">Operator key</label>
+            <input asp-for="Input.OperatorKey" type="password" autocomplete="off" class="admin-input mt-1"
+                   placeholder="@(Model.Connection.HasOperatorKey ? $"Đang dùng {Model.Connection.OperatorKeyPrefix}… — để trống nếu giữ nguyên" : "advop_…")" />
+            <p class="mt-1 text-xs text-slate-500">Sinh trên máy chủ AdVideo: <code>dotnet AdVideo.Api.dll create-operator-key --name "NewsCMS"</code>. Key được mã hoá khi lưu và không hiện lại.</p>
+        </div>
+        <div>
+            <label class="admin-label" asp-for="Input.TimeoutSeconds">Timeout (giây)</label>
+            <input asp-for="Input.TimeoutSeconds" type="number" min="5" max="600" class="admin-input mt-1" />
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <button type="submit" class="admin-btn-primary">Lưu</button>
+            @if (Model.Connection.IsConfigured)
+            {
+                <button type="button" id="advideo-test" class="admin-btn-secondary !text-indigo-600">Kiểm tra kết nối</button>
+            }
+        </div>
+        <p id="advideo-test-result" class="hidden rounded-xl px-4 py-3 text-sm"></p>
+    </form>
+
+    <div class="admin-card overflow-hidden xl:col-span-3">
+        <div class="px-6 pt-6">
+            <h3 class="text-lg font-bold text-slate-950">Site dùng AdVideo</h3>
+            <p class="mt-1 text-sm text-slate-500">Mỗi site là một tenant bên AdVideo, có key riêng. NewsCMS tự xin và cất key — không ai phải chép dán.</p>
+        </div>
+        <table class="mt-4 w-full text-left text-sm">
+            <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+                <tr>
+                    <th class="px-6 py-3">Site</th>
+                    <th class="px-6 py-3">Trạng thái</th>
+                    <th class="px-6 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @if (Model.Sites.Count == 0)
+                {
+                    <tr><td colspan="3" class="px-6 py-8 text-center text-slate-500">Chưa có site nào.</td></tr>
+                }
+                @foreach (var site in Model.Sites)
+                {
+                    <tr class="bg-white">
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-slate-950">@site.SiteName</div>
+                            <div class="text-xs text-slate-500">@site.SiteSlug</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            @if (site.IsLinked)
+                            {
+                                <span class="admin-badge bg-emerald-100 text-emerald-700">Đã kết nối</span>
+                                <div class="mt-1 font-mono text-xs text-slate-500">@site.ApiKeyPrefix… · @site.LinkedAt?.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                            }
+                            else
+                            {
+                                <span class="admin-badge bg-slate-100 text-slate-600">Chưa kết nối</span>
+                            }
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex flex-wrap items-center justify-end gap-2">
+                                @if (site.IsLinked)
+                                {
+                                    <form method="post" asp-page-handler="Rotate" asp-route-siteId="@site.SiteId"
+                                          data-confirm="Cấp key mới cho @site.SiteName? Key cũ hết hiệu lực ngay.">
+                                        <button type="submit" class="admin-btn-secondary">Cấp lại key</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="Unlink" asp-route-siteId="@site.SiteId"
+                                          data-confirm="Bỏ kết nối @site.SiteName? Tenant bên AdVideo bị tạm ngừng; video cũ vẫn giữ." data-confirm-danger="true">
+                                        <button type="submit" class="admin-btn-secondary !border-red-200 !text-red-700">Bỏ kết nối</button>
+                                    </form>
+                                }
+                                else if (Model.Connection.IsConfigured)
+                                {
+                                    <form method="post" asp-page-handler="Link" asp-route-siteId="@site.SiteId">
+                                        <button type="submit" class="admin-btn-primary">Kết nối</button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const button = document.getElementById('advideo-test');
+            const box = document.getElementById('advideo-test-result');
+            if (!button) return;
+            button.addEventListener('click', async function () {
+                button.disabled = true;
+                box.className = 'rounded-xl px-4 py-3 text-sm bg-slate-50 text-slate-600';
+                box.textContent = 'Đang kiểm tra…';
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                try {
+                    const res = await fetch('?handler=Test', { method: 'POST', headers: { 'RequestVerificationToken': token } });
+                    const data = await res.json();
+                    box.className = 'rounded-xl px-4 py-3 text-sm ' + (data.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700');
+                    box.textContent = data.message;
+                } catch (e) {
+                    box.className = 'rounded-xl px-4 py-3 text-sm bg-red-50 text-red-700';
+                    box.textContent = 'Không gọi được trang kiểm tra: ' + e;
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        })();
+    </script>
+}

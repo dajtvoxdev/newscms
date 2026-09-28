@@ -1,0 +1,195 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.AdVideo.ProvidersModel
+@{
+    ViewData["Title"] = "AdVideo — Provider & key";
+    ViewData["AdVideoTab"] = "providers";
+}
+
+<partial name="_AdVideoNav" />
+
+@if (Model.LoadError is not null)
+{
+    <div class="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">@Model.LoadError</div>
+}
+
+<div class="admin-card mb-6 overflow-hidden">
+    <div class="px-6 pt-6">
+        <h3 class="text-lg font-bold text-slate-950">Key provider</h3>
+        <p class="mt-1 text-sm text-slate-500">Key được AdVideo mã hoá khi lưu. Màn hình này chỉ thấy 4 ký tự cuối — không có cách nào đọc lại key gốc.</p>
+    </div>
+    <table class="mt-4 w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-6 py-3">Provider</th>
+                <th class="px-6 py-3">Loại</th>
+                <th class="px-6 py-3">Key</th>
+                <th class="px-6 py-3">Ưu tiên</th>
+                <th class="px-6 py-3">Trạng thái</th>
+                <th class="px-6 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Credentials.Count == 0)
+            {
+                <tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">Chưa có key provider nào — AdVideo đang chạy bằng provider giả.</td></tr>
+            }
+            @foreach (var c in Model.Credentials)
+            {
+                <tr class="bg-white">
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-slate-950">@c.Provider</div>
+                        <div class="font-mono text-xs text-slate-500">@c.ModelId</div>
+                        @if (!string.IsNullOrWhiteSpace(c.Notes))
+                        {
+                            <div class="mt-1 text-xs text-slate-500">@c.Notes</div>
+                        }
+                    </td>
+                    <td class="px-6 py-4 text-slate-600">@(c.Category == "video" ? "Video" : "Giọng đọc")</td>
+                    <td class="px-6 py-4 font-mono text-xs">@(c.HasKey ? c.MaskedKey : "—")</td>
+                    <td class="px-6 py-4 text-slate-600">@c.Priority</td>
+                    <td class="px-6 py-4">
+                        <span class="admin-badge @(c.IsActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")">@(c.IsActive ? "Bật" : "Tắt")</span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <form method="post" asp-page-handler="ToggleCredential" asp-route-provider="@c.Provider" asp-route-modelId="@c.ModelId" asp-route-activate="@(!c.IsActive)">
+                            <button type="submit" class="admin-btn-secondary">@(c.IsActive ? "Tắt" : "Bật")</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <form method="post" asp-page-handler="SaveCredential" class="space-y-4 border-t border-slate-100 p-6">
+        <h4 class="font-bold text-slate-950">Nạp hoặc sửa key</h4>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+                <label class="admin-label" asp-for="Credential.Provider">Provider *</label>
+                <input asp-for="Credential.Provider" class="admin-input mt-1" placeholder="kling, elevenlabs, nova-grok-video-15…" list="advideo-providers" />
+                <datalist id="advideo-providers">
+                    <option value="kling"></option>
+                    <option value="seedance"></option>
+                    <option value="vidu"></option>
+                    <option value="elevenlabs"></option>
+                    <option value="vieneu"></option>
+                    @foreach (var code in Model.Descriptors.Select(d => d.Code).Distinct())
+                    {
+                        <option value="@code"></option>
+                    }
+                </datalist>
+            </div>
+            <div>
+                <label class="admin-label" asp-for="Credential.ApiKey">API key</label>
+                <input asp-for="Credential.ApiKey" type="password" autocomplete="off" class="admin-input mt-1" placeholder="Để trống = giữ key cũ" />
+            </div>
+            <div>
+                <label class="admin-label" asp-for="Credential.ModelId">Model</label>
+                <input asp-for="Credential.ModelId" class="admin-input mt-1" placeholder="Để trống = theo manifest" />
+            </div>
+            <div>
+                <label class="admin-label" asp-for="Credential.EndpointUrl">Endpoint</label>
+                <input asp-for="Credential.EndpointUrl" class="admin-input mt-1" placeholder="Để trống = mặc định" />
+            </div>
+            <div>
+                <label class="admin-label" asp-for="Credential.Priority">Ưu tiên</label>
+                <input asp-for="Credential.Priority" type="number" class="admin-input mt-1" placeholder="Để trống = giữ nguyên" />
+            </div>
+            <div>
+                <label class="admin-label" asp-for="Credential.Note">Ghi chú</label>
+                <input asp-for="Credential.Note" class="admin-input mt-1" />
+            </div>
+        </div>
+        <details>
+            <summary class="cursor-pointer text-sm font-semibold text-slate-600">Capability (JSON, nâng cao)</summary>
+            <textarea asp-for="Credential.CapabilityJson" rows="6" class="admin-input mt-2 font-mono text-xs" placeholder="Để trống = lấy từ descriptor hoặc manifest viết tay"></textarea>
+        </details>
+        <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input asp-for="Credential.IsActive" type="checkbox" class="h-4 w-4" /> Bật ngay
+        </label>
+        <button type="submit" class="admin-btn-primary">Lưu key</button>
+    </form>
+</div>
+
+<div class="admin-card overflow-hidden">
+    <div class="px-6 pt-6">
+        <h3 class="text-lg font-bold text-slate-950">Provider khai báo (descriptor)</h3>
+        <p class="mt-1 text-sm text-slate-500">Thêm nhà cung cấp mới bằng JSON, không cần viết code. Bản mới luôn nằm TẮT: chạy khô → thêm host vào <em>ProviderHostAllowlist</em> → nạp key → bật.</p>
+    </div>
+
+    @if (Model.Preview is { } p)
+    {
+        <div class="mx-6 mt-4 rounded-xl bg-slate-50 p-4 text-sm">
+            <div class="font-bold text-slate-950">Chạy khô @Model.PreviewOf (không gọi mạng)</div>
+            <div class="mt-2 font-mono text-xs text-slate-700">@p.Method @p.Url</div>
+            @foreach (var h in p.Headers)
+            {
+                <div class="font-mono text-xs text-slate-500">@h.Key: @h.Value</div>
+            }
+            @if (p.Body is not null)
+            {
+                <pre class="mt-2 overflow-x-auto rounded-lg bg-white p-3 text-xs text-slate-700">@p.Body</pre>
+            }
+            @foreach (var w in p.Warnings)
+            {
+                <div class="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">⚠ @w</div>
+            }
+        </div>
+    }
+
+    <table class="mt-4 w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-6 py-3">Provider</th>
+                <th class="px-6 py-3">Bản</th>
+                <th class="px-6 py-3">Ghi chú</th>
+                <th class="px-6 py-3">Trạng thái</th>
+                <th class="px-6 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Descriptors.Count == 0)
+            {
+                <tr><td colspan="5" class="px-6 py-8 text-center text-slate-500">Chưa có descriptor nào.</td></tr>
+            }
+            @foreach (var d in Model.Descriptors)
+            {
+                <tr class="bg-white">
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-slate-950">@d.Code</div>
+                        <div class="text-xs text-slate-500">@(d.Kind == "video" ? "Video" : "Giọng đọc") · <span class="font-mono">@d.Sha256[..12]</span></div>
+                    </td>
+                    <td class="px-6 py-4 text-slate-600">v@(d.Version) · @d.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                    <td class="px-6 py-4 text-slate-600">@d.ChangeNote</td>
+                    <td class="px-6 py-4">
+                        <span class="admin-badge @(d.IsActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")">@(d.IsActive ? "Đang bật" : "Tắt")</span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex flex-wrap items-center justify-end gap-2">
+                            <a asp-page="/AdVideo/Providers" asp-route-preview="@d.Code" asp-route-version="@d.Version" class="admin-btn-secondary">Chạy khô</a>
+                            @if (d.IsActive)
+                            {
+                                <form method="post" asp-page-handler="DeactivateDescriptor" asp-route-provider="@d.Code">
+                                    <button type="submit" class="admin-btn-secondary">Tắt</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form method="post" asp-page-handler="ActivateDescriptor" asp-route-provider="@d.Code" asp-route-version="@d.Version"
+                                      data-confirm="Bật @d.Code bản @d.Version? Bản đang bật (nếu có) sẽ tắt.">
+                                    <button type="submit" class="admin-btn-primary">Bật</button>
+                                </form>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <form method="post" asp-page-handler="AddDescriptor" class="space-y-4 border-t border-slate-100 p-6">
+        <h4 class="font-bold text-slate-950">Thêm bản descriptor</h4>
+        <textarea asp-for="Descriptor.Json" rows="10" class="admin-input font-mono text-xs" placeholder="Dán nguyên file từ AdVideo/samples/providers/*.json — comment được giữ lại"></textarea>
+        <input asp-for="Descriptor.Note" class="admin-input" placeholder="Ghi chú thay đổi (vì sao thêm bản này)" />
+        <button type="submit" class="admin-btn-primary">Kiểm và lưu (TẮT)</button>
+    </form>
+</div>

@@ -236,6 +236,15 @@ public static class DependencyInjection
         services.AddScoped<IAiTool, SiteBuilderPreviewTool>();
         services.AddHttpClient("ai-tools", c => c.Timeout = TimeSpan.FromSeconds(30));
 
+        // AdVideo Studio — dịch vụ video riêng; NewsCMS là app cấu hình + mặt tiền của nó.
+        // Timeout đặt theo từng kết nối (AdVideoConnection.TimeoutSeconds), không ở đây.
+        services.AddHttpClient(NewsCMS.Infrastructure.VideoStudio.AdVideoHttp.HttpClientName);
+        services.AddScoped<NewsCMS.Infrastructure.VideoStudio.AdVideoKeyStore>();
+        services.AddScoped<NewsCMS.Application.VideoStudio.IAdVideoAdminClient, NewsCMS.Infrastructure.VideoStudio.AdVideoAdminClient>();
+        services.AddScoped<NewsCMS.Application.VideoStudio.IAdVideoClient, NewsCMS.Infrastructure.VideoStudio.AdVideoClient>();
+        services.AddScoped<NewsCMS.Application.VideoStudio.IAdVideoConnectionService, NewsCMS.Infrastructure.VideoStudio.AdVideoConnectionService>();
+        services.AddScoped<NewsCMS.Application.VideoStudio.IVideoStudioService, NewsCMS.Infrastructure.VideoStudio.VideoStudioService>();
+
         return services;
     }
 

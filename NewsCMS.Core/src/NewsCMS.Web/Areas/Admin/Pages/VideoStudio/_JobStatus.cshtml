@@ -1,0 +1,12 @@
+@model NewsCMS.Application.VideoStudio.AdVideoJobDto
+@{
+    var (css, label) = Model.Status switch
+    {
+        "completed" => ("bg-emerald-100 text-emerald-700", "Đã xong"),
+        "failed" => ("bg-red-100 text-red-700", "Lỗi"),
+        "cancelled" => ("bg-slate-100 text-slate-600", "Đã huỷ"),
+        "queued" => ("bg-slate-100 text-slate-600", "Đang chờ"),
+        _ => ("bg-indigo-100 text-indigo-700", Model.StepName ?? "Đang dựng"),
+    };
+}
+<span class="admin-badge @css">@label</span>

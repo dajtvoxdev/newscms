@@ -128,6 +128,21 @@ public static class Permissions
         public const string UseAssist = "Ai.Assist.Use";
     }
 
+    /// <summary>
+    /// Làm video quảng cáo bằng AdVideo, theo site. Cấu hình AdVideo (key provider, trần chi phí,
+    /// nhãn AI) là việc của nền tảng — trang đó dùng <c>Roles = "SuperAdmin"</c>, không có mã ở đây.
+    /// </summary>
+    /// <remarks>
+    /// Tách <see cref="Create"/> khỏi <see cref="View"/>: tạo video là lúc tiền bắt đầu tiêu, nên
+    /// người được xem tiến độ chưa chắc được bấm nút tạo.
+    /// </remarks>
+    public static class VideoStudio
+    {
+        public const string View = "VideoStudio.Video.View";
+        public const string Create = "VideoStudio.Video.Create";
+        public const string Cancel = "VideoStudio.Video.Cancel";
+    }
+
     public static class KeoBia
     {
         public const string ViewPlayers = "KeoBia.Player.View";
@@ -200,6 +215,10 @@ public static class Permissions
         yield return (Ai.ManageConnection, "Ai", "Quản lý kết nối AI");
         yield return (Ai.ManageSkill, "Ai", "Quản lý kỹ năng AI");
         yield return (Ai.UseAssist, "Ai", "Sử dụng trợ lý AI");
+
+        yield return (VideoStudio.View, "VideoStudio", "Xem video quảng cáo AI");
+        yield return (VideoStudio.Create, "VideoStudio", "Tạo video quảng cáo AI (tốn chi phí)");
+        yield return (VideoStudio.Cancel, "VideoStudio", "Huỷ video đang dựng");
 
         yield return (KeoBia.ViewPlayers, "KeoBia", "Xem tracking người chơi Kèo Bia");
         yield return (KeoBia.ManageMatches, "KeoBia", "Quản lý lịch và kết quả Kèo Bia");

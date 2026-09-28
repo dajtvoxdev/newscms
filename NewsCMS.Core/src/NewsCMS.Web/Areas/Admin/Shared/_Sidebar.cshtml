@@ -33,6 +33,8 @@
     var canBuilder = Can(Permissions.Builder.PageView);
     var showInterface = canMenus || canBanners || canBuilder;
 
+    var canVideoStudio = Can(Permissions.VideoStudio.View);
+
     var canAiConnection = Can(Permissions.Ai.ManageConnection);
     var canAiSkill = Can(Permissions.Ai.ManageSkill);
     var showAi = canAiConnection || canAiSkill;
@@ -61,6 +63,23 @@
                 <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/Sites")" href="/Admin/Sites">
                     <span class="h-2 w-2 rounded-full bg-slate-500"></span>
                     Sites
+                </a>
+                <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/AdVideo")" href="/Admin/AdVideo">
+                    <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+                    Cấu hình AdVideo
+                </a>
+            </div>
+        </div>
+    }
+
+    @if (canVideoStudio)
+    {
+        <div>
+            <div class="px-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Marketing</div>
+            <div class="mt-2 space-y-1">
+                <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/VideoStudio")" href="/Admin/VideoStudio">
+                    <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+                    Video quảng cáo AI
                 </a>
             </div>
         </div>

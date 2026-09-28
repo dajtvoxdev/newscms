@@ -1,0 +1,67 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.AdVideo.SettingsModel
+@{
+    ViewData["Title"] = "AdVideo — Tham số vận hành";
+    ViewData["AdVideoTab"] = "settings";
+    var provisional = Model.Settings.Count(s => s.IsProvisional);
+}
+
+<partial name="_AdVideoNav" />
+
+@if (Model.LoadError is not null)
+{
+    <div class="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">@Model.LoadError</div>
+}
+else if (provisional > 0)
+{
+    <div class="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        @provisional giá trị đang là <strong>phỏng đoán</strong> (cờ Tạm) — chưa đo bằng provider thật. Lưu một giá trị là coi như đã chốt nó.
+    </div>
+}
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-6 py-3">Tham số</th>
+                <th class="px-6 py-3 w-80">Giá trị</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @foreach (var s in Model.Settings)
+            {
+                <tr class="bg-white align-top">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-sm font-bold text-slate-950">@s.Key</span>
+                            @if (s.IsProvisional)
+                            {
+                                <span class="admin-badge bg-amber-100 text-amber-700">Tạm</span>
+                            }
+                        </div>
+                        <p class="mt-1 text-xs text-slate-500">@s.Description</p>
+                        @if (s.MinValue is not null || s.MaxValue is not null)
+                        {
+                            <p class="mt-1 text-xs text-slate-400">Khoảng hợp lệ: @(s.MinValue ?? "…") – @(s.MaxValue ?? "…") · kiểu @s.ValueType</p>
+                        }
+                    </td>
+                    <td class="px-6 py-4">
+                        @if (NewsCMS.Web.Areas.Admin.Pages.AdVideo.SettingsModel.ManagedElsewhere.Contains(s.Key))
+                        {
+                            <div class="font-mono text-xs text-slate-600">@(string.IsNullOrEmpty(s.Value) ? "(trống)" : s.Value)</div>
+                            <a asp-page="/AdVideo/Label" class="mt-1 inline-block text-xs font-semibold text-indigo-600">Sửa ở trang Nhãn AI →</a>
+                        }
+                        else
+                        {
+                            <form method="post" class="flex gap-2">
+                                <input type="hidden" name="key" value="@s.Key" />
+                                <input name="value" value="@s.Value" class="admin-input font-mono text-xs" />
+                                <button type="submit" class="admin-btn-secondary">Lưu</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

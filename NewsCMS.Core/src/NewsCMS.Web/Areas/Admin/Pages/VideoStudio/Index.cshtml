@@ -1,0 +1,93 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.VideoStudio.IndexModel
+@{
+    ViewData["Title"] = "Video quảng cáo AI";
+    var canCreate = User.IsInRole("SuperAdmin") || User.HasClaim(Permissions.Prefix, Permissions.VideoStudio.Create);
+    var filters = new (string? Value, string Label)[] { (null, "Tất cả"), ("queued", "Đang chờ"), ("rendering_shots", "Đang dựng hình"), ("completed", "Đã xong"), ("failed", "Lỗi"), ("cancelled", "Đã huỷ") };
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Marketing</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Video quảng cáo AI</h2>
+    </div>
+    @if (Model.IsLinked && canCreate)
+    {
+        <a asp-area="Admin" asp-page="/VideoStudio/Create" class="admin-btn-primary">Tạo video</a>
+    }
+</div>
+
+@if (!Model.IsLinked)
+{
+    <div class="admin-card p-8 text-center">
+        <p class="font-semibold text-slate-950">Site này chưa được bật dịch vụ video AI.</p>
+        <p class="mt-1 text-sm text-slate-500">Quản trị nền tảng bật ở <em>Cấu hình AdVideo → Kết nối &amp; site</em>.</p>
+    </div>
+}
+else
+{
+    @if (Model.Error is not null)
+    {
+        <div class="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">@Model.Error</div>
+    }
+
+    <nav class="mb-4 flex flex-wrap gap-2">
+        @foreach (var f in filters)
+        {
+            <a asp-page="/VideoStudio/Index" asp-route-status="@f.Value"
+               class="rounded-xl px-3 py-1.5 text-xs font-semibold @(f.Value == Model.Status ? "bg-indigo-600 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200")">@f.Label</a>
+        }
+    </nav>
+
+    <div class="admin-card overflow-hidden">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+                <tr>
+                    <th class="px-5 py-3">Tạo lúc</th>
+                    <th class="px-5 py-3">Trạng thái</th>
+                    <th class="px-5 py-3">Khung · thời lượng</th>
+                    <th class="px-5 py-3">Chi phí</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @if (Model.Jobs is null || Model.Jobs.Items.Count == 0)
+                {
+                    <tr><td colspan="5" class="px-5 py-10 text-center text-slate-500">Chưa có video nào.</td></tr>
+                }
+                else
+                {
+                    @foreach (var job in Model.Jobs.Items)
+                    {
+                        <tr class="bg-white">
+                            <td class="px-5 py-4 text-slate-700">@job.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="px-5 py-4"><partial name="_JobStatus" model="job" /></td>
+                            <td class="px-5 py-4 text-slate-600">@job.AspectRatio · @job.DurationSeconds giây</td>
+                            <td class="px-5 py-4 font-mono text-xs text-slate-600">$@job.ActualCostUsd.ToString("0.###")</td>
+                            <td class="px-5 py-4 text-right">
+                                <a asp-page="/VideoStudio/Detail" asp-route-id="@job.JobId" class="admin-btn-secondary">Xem</a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.Jobs is { TotalPages: > 1 } pager)
+    {
+        <div class="mt-4 flex items-center justify-between text-sm text-slate-600">
+            <span>Trang @pager.Page / @pager.TotalPages · @pager.Total video</span>
+            <div class="flex gap-2">
+                @if (pager.Page > 1)
+                {
+                    <a asp-page="/VideoStudio/Index" asp-route-status="@Model.Status" asp-route-page="@(pager.Page - 1)" class="admin-btn-secondary">Trước</a>
+                }
+                @if (pager.Page < pager.TotalPages)
+                {
+                    <a asp-page="/VideoStudio/Index" asp-route-status="@Model.Status" asp-route-page="@(pager.Page + 1)" class="admin-btn-secondary">Sau</a>
+                }
+            </div>
+        </div>
+    }
+}

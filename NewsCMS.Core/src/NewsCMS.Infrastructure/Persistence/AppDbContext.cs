@@ -124,6 +124,10 @@ public class AppDbContext
     public DbSet<NewsCMS.Domain.Entities.Ai.AiConnection> AiConnections => Set<NewsCMS.Domain.Entities.Ai.AiConnection>();
     public DbSet<NewsCMS.Domain.Entities.Ai.AiSkill> AiSkills => Set<NewsCMS.Domain.Entities.Ai.AiSkill>();
 
+    // AdVideo Studio
+    public DbSet<NewsCMS.Domain.Entities.VideoStudio.AdVideoConnection> AdVideoConnections => Set<NewsCMS.Domain.Entities.VideoStudio.AdVideoConnection>();
+    public DbSet<NewsCMS.Domain.Entities.VideoStudio.SiteAdVideoTenant> SiteAdVideoTenants => Set<NewsCMS.Domain.Entities.VideoStudio.SiteAdVideoTenant>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

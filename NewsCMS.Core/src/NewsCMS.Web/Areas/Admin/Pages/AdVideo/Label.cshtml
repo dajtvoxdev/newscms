@@ -1,0 +1,57 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.AdVideo.LabelModel
+@{
+    ViewData["Title"] = "AdVideo — Nhãn AI";
+    ViewData["AdVideoTab"] = "label";
+}
+
+<partial name="_AdVideoNav" />
+
+@if (Model.LoadError is not null)
+{
+    <div class="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">@Model.LoadError</div>
+}
+
+<div class="mb-6 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+    Mọi video AdVideo dựng ra đều có nhãn "nội dung tạo bằng AI" trên hình và trong metadata — nghĩa vụ của bên triển khai theo Luật TTNT 2025.
+    Ở đây đổi được <strong>chữ</strong> và <strong>font</strong>; không có cách nào tắt nhãn.
+</div>
+
+<div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+    <form method="post" asp-page-handler="Text" class="admin-card space-y-4 p-6">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-950">Chữ trên nhãn</h3>
+            @if (Model.LabelIsProvisional)
+            {
+                <span class="admin-badge bg-amber-100 text-amber-700">Chờ pháp chế chốt</span>
+            }
+        </div>
+        <input name="text" value="@Model.LabelText" maxlength="60" class="admin-input" required />
+        <p class="text-xs text-slate-500">Tối đa 60 ký tự. Nếu đang dùng font tải lên, AdVideo kiểm font vẽ được mọi ký tự trước khi nhận.</p>
+        <button type="submit" class="admin-btn-primary">Lưu chữ nhãn</button>
+    </form>
+
+    <div class="admin-card space-y-4 p-6">
+        <h3 class="text-lg font-bold text-slate-950">Font vẽ nhãn</h3>
+        @if (Model.Font is { Source: "minio" } f)
+        {
+            <div class="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                Đang dùng font đã tải lên (@f.Format?.ToUpperInvariant()) — <span class="font-mono text-xs">@f.Sha256?[..12]</span>
+            </div>
+            <form method="post" asp-page-handler="ResetFont" data-confirm="Quay về font cấu hình trên máy chủ AdVideo?">
+                <button type="submit" class="admin-btn-secondary">Bỏ font đã tải lên</button>
+            </form>
+        }
+        else
+        {
+            <div class="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Đang dùng font cấu hình trên máy chủ AdVideo (<code>AdVideo:Ffmpeg:FontFile</code>). Nên tải font có bản quyền thương mại lên đây.
+            </div>
+        }
+        <form method="post" asp-page-handler="Font" enctype="multipart/form-data" class="space-y-3">
+            <input type="file" name="font" accept=".ttf,.otf,.ttc" class="admin-input" required />
+            <p class="text-xs text-slate-500">.ttf / .otf / .ttc, tối đa 25 MB. Font thiếu chữ tiếng Việt có dấu bị từ chối kèm danh sách ký tự thiếu.</p>
+            <button type="submit" class="admin-btn-primary">Tải font lên</button>
+        </form>
+    </div>
+</div>

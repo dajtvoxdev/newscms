@@ -1,0 +1,106 @@
+@page "{id:guid}"
+@model NewsCMS.Web.Areas.Admin.Pages.VideoStudio.DetailModel
+@{
+    ViewData["Title"] = "Video quảng cáo AI";
+    var canCancel = User.IsInRole("SuperAdmin") || User.HasClaim(Permissions.Prefix, Permissions.VideoStudio.Cancel);
+    var job = Model.Job;
+}
+
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Marketing</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Video quảng cáo AI</h2>
+    </div>
+    <a asp-area="Admin" asp-page="/VideoStudio/Index" class="admin-btn-secondary">Danh sách</a>
+</div>
+
+@if (job is null)
+{
+    <div class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">@(Model.Error ?? "Không tìm thấy video.")</div>
+    return;
+}
+
+<div class="grid grid-cols-1 gap-6 xl:grid-cols-5">
+    <div class="admin-card space-y-4 p-6 xl:col-span-2">
+        <div class="flex items-center justify-between">
+            <partial name="_JobStatus" model="job" />
+            <span class="text-xs text-slate-500">@job.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+        </div>
+
+        @if (!job.IsTerminal)
+        {
+            <div>
+                <div class="flex justify-between text-sm">
+                    <span id="vs-step" class="font-semibold text-slate-700">@job.StepName</span>
+                    <span id="vs-progress-text" class="text-slate-500">@job.ProgressPercent%</span>
+                </div>
+                <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div id="vs-progress" class="h-2 rounded-full bg-indigo-600 transition-all" style="width: @(job.ProgressPercent)%"></div>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">Trang tự cập nhật. Có thể đóng trang — video vẫn tiếp tục dựng.</p>
+            </div>
+        }
+
+        @if (job.Status == "failed" && job.FailureReason is not null)
+        {
+            <div class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">@job.FailureReason</div>
+        }
+
+        <dl class="grid grid-cols-2 gap-3 text-sm">
+            <dt class="text-slate-500">Khung hình</dt><dd class="font-semibold text-slate-900">@job.AspectRatio</dd>
+            <dt class="text-slate-500">Thời lượng</dt><dd class="font-semibold text-slate-900">@job.DurationSeconds giây</dd>
+            <dt class="text-slate-500">Chất lượng</dt><dd class="font-semibold text-slate-900">@(job.Quality == "draft" ? "Nháp" : "Thành phẩm")</dd>
+            <dt class="text-slate-500">Chi phí</dt><dd class="font-mono text-slate-900">$@job.ActualCostUsd.ToString("0.###")</dd>
+        </dl>
+
+        @if (!job.IsTerminal && canCancel)
+        {
+            <form method="post" asp-page-handler="Cancel" asp-route-id="@job.JobId"
+                  data-confirm="Huỷ video này? Bước đang chạy dở vẫn tính phí." data-confirm-danger="true">
+                <button type="submit" class="admin-btn-secondary !border-red-200 !text-red-700">Huỷ video</button>
+            </form>
+        }
+    </div>
+
+    <div class="admin-card flex items-center justify-center p-6 xl:col-span-3">
+        @if (job.Status == "completed" && job.DownloadUrl is not null)
+        {
+            <div class="w-full space-y-4">
+                <video src="@job.DownloadUrl" controls playsinline class="mx-auto max-h-[70vh] rounded-xl bg-black"></video>
+                <div class="text-center">
+                    <a href="@job.DownloadUrl" download class="admin-btn-primary">Tải video</a>
+                    <p class="mt-2 text-xs text-slate-500">Link tải có hạn — mở lại trang này để lấy link mới.</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <p class="text-sm text-slate-400">Video sẽ hiện ở đây khi dựng xong.</p>
+        }
+    </div>
+</div>
+
+@if (!job.IsTerminal)
+{
+    @section Scripts {
+        <script>
+            (function () {
+                const url = '?handler=Status';
+                async function tick() {
+                    try {
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        if (res.ok) {
+                            const d = await res.json();
+                            if (d.terminal) { location.reload(); return; }
+                            document.getElementById('vs-progress').style.width = d.progress + '%';
+                            document.getElementById('vs-progress-text').textContent = d.progress + '%';
+                            if (d.step) document.getElementById('vs-step').textContent = d.step;
+                        }
+                    } catch (e) { /* mạng chập chờn: thử lại lượt sau */ }
+                    setTimeout(tick, 5000);
+                }
+                setTimeout(tick, 5000);
+            })();
+        </script>
+    }
+}
