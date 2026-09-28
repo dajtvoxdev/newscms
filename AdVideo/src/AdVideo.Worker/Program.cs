@@ -140,7 +140,7 @@ static async Task InitializeAsync(WebApplication app)
 
     IStorageService storage = sp.GetRequiredService<IStorageService>();
 
-    foreach (string bucket in new[] { Buckets.Uploads, Buckets.Work, Buckets.Final, Buckets.Voice })
+    foreach (string bucket in Buckets.All)
     {
         await storage.EnsureBucketAsync(bucket);
     }

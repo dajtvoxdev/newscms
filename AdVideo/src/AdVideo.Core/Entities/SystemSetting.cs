@@ -120,4 +120,23 @@ public static class SettingKeys
     /// Áp cho baseUrl, URL provider trả về trong phản hồi, và URL tải file. Thiếu setting = chặn hết.
     /// </remarks>
     public const string ProviderHostAllowlist = "ProviderHostAllowlist";
+
+    /// <summary>
+    /// Chữ vẽ lên video trong nhãn AI (D9).
+    /// </summary>
+    /// <remarks>
+    /// Đổi được chữ, KHÔNG tắt được nhãn: giá trị rỗng bị từ chối lúc ghi
+    /// (<see cref="Configuration.SettingValueValidator"/>) và QC bước 9 vẫn fail cứng nếu nhãn rỗng.
+    /// Chờ pháp chế chốt nội dung nên seed ở trạng thái tạm.
+    /// </remarks>
+    public const string AiLabelOverlayText = "AiLabelOverlayText";
+
+    /// <summary>
+    /// Khoá object của font vẽ nhãn AI trong bucket <c>adv-system</c>. Rỗng = dùng <c>AdVideo:Ffmpeg:FontFile</c>.
+    /// </summary>
+    /// <remarks>
+    /// Không sửa tay: ghi bằng <c>POST /v1/admin/assets/label-font</c>, là endpoint duy nhất kiểm
+    /// file có đúng là font không trước khi worker đem nó đi vẽ.
+    /// </remarks>
+    public const string AiLabelFontObjectKey = "AiLabelFontObjectKey";
 }

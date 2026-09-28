@@ -45,7 +45,7 @@ public static class AdVideoEndpoints
 
     public static IEndpointRouteBuilder MapAdVideoEndpoints(this IEndpointRouteBuilder app)
     {
-        RouteGroupBuilder group = app.MapGroup("/v1/ad-videos").RequireAuthorization();
+        RouteGroupBuilder group = app.MapGroup("/v1/ad-videos").RequireAuthorization(AuthPolicies.Tenant);
 
         group.MapPost("/", CreateAsync)
             .WithName("CreateAdVideo")
@@ -445,25 +445,6 @@ public static class AdVideoEndpoints
         int status,
         string title,
         string? detail,
-        IDictionary<string, object?>? extensions = null)
-    {
-        var problem = new ProblemDetails
-        {
-            Status = status,
-            Title = title,
-            Detail = detail,
-            Instance = http.Request.Path,
-            Type = $"https://advideo/errors/{status}",
-        };
-
-        if (extensions is not null)
-        {
-            foreach (KeyValuePair<string, object?> pair in extensions)
-            {
-                problem.Extensions[pair.Key] = pair.Value;
-            }
-        }
-
-        return Results.Problem(problem);
-    }
+        IDictionary<string, object?>? extensions = null) =>
+        ApiProblem.Create(http, status, title, detail, extensions);
 }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AdVideo.Api.Admin;
 using AdVideo.Core.Configuration;
 using AdVideo.Core.Entities;
 using AdVideo.Core.Providers;
@@ -35,6 +36,7 @@ public static class AdminCommands
         [
             "create-tenant", "rotate-key", "set-credential", "list-settings", "set-setting", "seed", "migrate",
             "set-descriptor", "list-descriptors", "activate-descriptor", "deactivate-descriptor", "test-descriptor",
+            "create-operator-key", "list-operator-keys", "revoke-operator-key",
         ];
 
     public static bool IsCommand(string[] args) =>
@@ -62,6 +64,9 @@ public static class AdminCommands
                 "activate-descriptor" => await ActivateDescriptorAsync(args, sp),
                 "deactivate-descriptor" => await DeactivateDescriptorAsync(args, sp),
                 "test-descriptor" => await TestDescriptorAsync(args, sp),
+                "create-operator-key" => await CreateOperatorKeyAsync(args, sp),
+                "list-operator-keys" => await ListOperatorKeysAsync(sp),
+                "revoke-operator-key" => await RevokeOperatorKeyAsync(args, sp),
                 _ => Usage(),
             };
         }
@@ -91,24 +96,11 @@ public static class AdminCommands
             return 1;
         }
 
-        AdVideoDbContext db = sp.GetRequiredService<AdVideoDbContext>();
+        IssuedTenantKey issued = await sp.GetRequiredService<TenantAdmin>().CreateAsync(name, Arg(args, "--note"));
 
-        string apiKey = ApiKeyHasher.Generate();
-
-        var tenant = new Tenant
-        {
-            Name = name.Trim(),
-            ApiKeyPrefix = ApiKeyHasher.LookupPrefix(apiKey),
-            ApiKeyHash = ApiKeyHasher.Hash(apiKey),
-            Note = Arg(args, "--note"),
-        };
-
-        db.Tenants.Add(tenant);
-        await db.SaveChangesAsync();
-
-        Console.WriteLine($"Đã tạo tenant {tenant.Name}");
-        Console.WriteLine($"  id      : {tenant.Id}");
-        Console.WriteLine($"  api key : {apiKey}");
+        Console.WriteLine($"Đã tạo tenant {issued.Tenant.Name}");
+        Console.WriteLine($"  id      : {issued.Tenant.Id}");
+        Console.WriteLine($"  api key : {issued.ApiKey}");
         Console.WriteLine();
         Console.WriteLine("Chép key ngay. Hệ thống chỉ lưu bản băm nên không in lại được lần thứ hai;");
         Console.WriteLine("mất thì dùng lệnh rotate-key để cấp key mới.");
@@ -127,37 +119,123 @@ public static class AdminCommands
             return 1;
         }
 
-        AdVideoDbContext db = sp.GetRequiredService<AdVideoDbContext>();
-        Tenant? tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId);
+        IssuedTenantKey? issued = await sp.GetRequiredService<TenantAdmin>().RotateKeyAsync(tenantId);
 
-        if (tenant is null)
+        if (issued is null)
         {
             Console.Error.WriteLine($"Không có tenant {tenantId}.");
 
             return 1;
         }
 
-        string apiKey = ApiKeyHasher.Generate();
+        // Key cũ mất hiệu lực NGAY, không có thời gian chuyển tiếp. Nếu sau này cần chuyển tiếp
+        // êm thì phải là hai dòng key cùng sống, không phải một cột mới cho "key cũ".
+        Console.WriteLine($"Đã cấp key mới cho {issued.Tenant.Name}. Key cũ đã hết hiệu lực ngay lập tức.");
+        Console.WriteLine($"  api key : {issued.ApiKey}");
 
-        tenant.ApiKeyPrefix = ApiKeyHasher.LookupPrefix(apiKey);
-        tenant.ApiKeyHash = ApiKeyHasher.Hash(apiKey);
-        tenant.ApiKeyRotatedAt = DateTime.UtcNow;
-        tenant.UpdatedAt = DateTime.UtcNow;
+        return 0;
+    }
+
+    /// <summary>
+    /// Sinh operator key — gốc của mọi quyền quản trị qua API.
+    /// </summary>
+    /// <remarks>
+    /// Không có endpoint nào làm được việc này, cố ý: xem remarks của <see cref="OperatorKey"/>.
+    /// </remarks>
+    private static async Task<int> CreateOperatorKeyAsync(string[] args, IServiceProvider sp)
+    {
+        string? name = Arg(args, "--name");
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            Console.Error.WriteLine("Thiếu --name. Ví dụ: create-operator-key --name \"NewsCMS admin\"");
+
+            return 1;
+        }
+
+        AdVideoDbContext db = sp.GetRequiredService<AdVideoDbContext>();
+
+        string key = ApiKeyHasher.Generate(ApiKeyHasher.OperatorKeyPrefix);
+
+        var row = new OperatorKey
+        {
+            Name = name.Trim(),
+            ApiKeyPrefix = ApiKeyHasher.LookupPrefix(key),
+            ApiKeyHash = ApiKeyHasher.Hash(key),
+            Note = Arg(args, "--note"),
+        };
+
+        db.OperatorKeys.Add(row);
+        await db.SaveChangesAsync();
+
+        Console.WriteLine($"Đã tạo operator key \"{row.Name}\"");
+        Console.WriteLine($"  id           : {row.Id}");
+        Console.WriteLine($"  operator key : {key}");
+        Console.WriteLine();
+        Console.WriteLine("Key này mở toàn bộ /v1/admin: nạp key provider, đổi trần chi tiêu, tạo tenant.");
+        Console.WriteLine("Chép ngay vào nơi app lưu secret — hệ thống chỉ giữ bản băm, không in lại được.");
+
+        return 0;
+    }
+
+    private static async Task<int> ListOperatorKeysAsync(IServiceProvider sp)
+    {
+        List<OperatorKey> rows = await sp.GetRequiredService<AdVideoDbContext>().OperatorKeys
+            .AsNoTracking()
+            .OrderByDescending(k => k.CreatedAt)
+            .ToListAsync();
+
+        if (rows.Count == 0)
+        {
+            Console.WriteLine("Chưa có operator key nào. Tạo bằng create-operator-key --name \"...\".");
+
+            return 0;
+        }
+
+        foreach (OperatorKey row in rows)
+        {
+            string state = row.IsActive ? "đang dùng" : $"thu hồi {row.RevokedAt:yyyy-MM-dd HH:mm}";
+            string lastUsed = row.LastUsedAt is { } at ? at.ToString("yyyy-MM-dd HH:mm") : "chưa dùng";
+
+            Console.WriteLine($"{row.Id}  {row.ApiKeyPrefix}…  {row.Name,-30} {state,-24} lần cuối: {lastUsed}");
+        }
+
+        return 0;
+    }
+
+    private static async Task<int> RevokeOperatorKeyAsync(string[] args, IServiceProvider sp)
+    {
+        if (!Guid.TryParse(Arg(args, "--id"), out Guid id))
+        {
+            Console.Error.WriteLine("Thiếu hoặc sai --id <guid>. Xem list-operator-keys.");
+
+            return 1;
+        }
+
+        AdVideoDbContext db = sp.GetRequiredService<AdVideoDbContext>();
+        OperatorKey? row = await db.OperatorKeys.FirstOrDefaultAsync(k => k.Id == id);
+
+        if (row is null)
+        {
+            Console.Error.WriteLine($"Không có operator key {id}.");
+
+            return 1;
+        }
+
+        row.IsActive = false;
+        row.RevokedAt ??= DateTime.UtcNow;
+        row.Note = string.IsNullOrWhiteSpace(Arg(args, "--reason")) ? row.Note : $"{row.Note} | thu hồi: {Arg(args, "--reason")}".Trim(' ', '|');
 
         await db.SaveChangesAsync();
 
-        // Key cũ mất hiệu lực NGAY, không có thời gian chuyển tiếp. Nếu sau này cần chuyển tiếp
-        // êm thì phải là hai dòng key cùng sống, không phải một cột mới cho "key cũ".
-        Console.WriteLine($"Đã cấp key mới cho {tenant.Name}. Key cũ đã hết hiệu lực ngay lập tức.");
-        Console.WriteLine($"  api key : {apiKey}");
+        Console.WriteLine($"Đã thu hồi operator key \"{row.Name}\" ({row.ApiKeyPrefix}…). Có hiệu lực ngay ở request kế tiếp.");
 
         return 0;
     }
 
     private static async Task<int> SetCredentialAsync(string[] args, IServiceProvider sp)
     {
-        string? provider = Arg(args, "--provider")?.Trim().ToLowerInvariant();
-        string key = Arg(args, "--key") ?? string.Empty;
+        string? provider = Arg(args, "--provider");
 
         if (string.IsNullOrWhiteSpace(provider))
         {
@@ -166,128 +244,47 @@ public static class AdminCommands
             return 1;
         }
 
-        ProviderCategory? category = ProviderCapabilityCatalog.CategoryOf(provider);
-
-        // Provider khai báo: tên không có trong catalog viết tay, nhưng có descriptor trong DB. Loại
-        // và capability lấy từ descriptor mới nhất — trước đây set-credential từ chối mọi tên lạ,
-        // nên dán descriptor xong vẫn không nạp được key.
-        ProviderDescriptor? descriptor = await LatestDescriptorAsync(provider, sp);
-
-        if (category is null && descriptor is not null)
-        {
-            category = descriptor.Kind == DescriptorKind.Video ? ProviderCategory.Video : ProviderCategory.TextToSpeech;
-        }
-
-        if (category is null)
-        {
-            Console.Error.WriteLine(
-                $"Không nhận ra provider \"{provider}\". Các tên viết tay: kling, seedance, vidu, elevenlabs, vieneu; " +
-                "provider khác phải nạp descriptor trước bằng set-descriptor.");
-
-            return 1;
-        }
-
-        string? capabilityJson = null;
-        string? modelId = Arg(args, "--model");
-
         string? capabilityFile = Arg(args, "--capability-file");
 
-        if (capabilityFile is not null)
+        var input = new CredentialInput
         {
-            capabilityJson = await File.ReadAllTextAsync(capabilityFile);
-        }
-        else if (descriptor?.Capability is { } fromDescriptor)
+            Provider = provider,
+            ApiKey = Arg(args, "--key"),
+            ModelId = Arg(args, "--model"),
+            EndpointUrl = Arg(args, "--endpoint"),
+            CapabilityJson = capabilityFile is null ? null : await File.ReadAllTextAsync(capabilityFile),
+            Priority = int.TryParse(Arg(args, "--priority"), out int priority) ? priority : null,
+
+            // Chạy lại set-credential mà không có --disabled là BẬT lại — đúng thói quen khi nạp key
+            // mới cho một credential vừa bị tắt tự động vì hết tiền (402).
+            IsActive = !args.Contains("--disabled", StringComparer.Ordinal),
+            Note = Arg(args, "--note"),
+        };
+
+        CredentialAdminResult result = await sp.GetRequiredService<CredentialAdmin>().UpsertAsync(input);
+
+        if (result.Error is not null)
         {
-            capabilityJson = fromDescriptor.ToJsonString(ProviderDescriptorParser.JsonOptions);
-        }
-        else if (category == ProviderCategory.Video)
-        {
-            VideoProviderCapability? template = ProviderCapabilityCatalog.Video(provider);
-
-            if (template is not null)
-            {
-                if (modelId is not null)
-                {
-                    template = template with { ModelId = modelId };
-                }
-
-                capabilityJson = JsonSerializer.Serialize(template, AdVideoJson.Indented);
-            }
-        }
-        else
-        {
-            TtsProviderCapability? template = ProviderCapabilityCatalog.Tts(provider);
-
-            if (template is not null)
-            {
-                if (modelId is not null)
-                {
-                    template = template with { ModelId = modelId };
-                }
-
-                capabilityJson = JsonSerializer.Serialize(template, AdVideoJson.Indented);
-            }
-        }
-
-        if (capabilityJson is null)
-        {
-            Console.Error.WriteLine(
-                $"Chưa có manifest mẫu cho \"{provider}\". Truyền --capability-file <đường dẫn json>.");
+            Console.Error.WriteLine(result.Error);
 
             return 1;
         }
 
-        string resolvedModelId = modelId ?? ReadModelId(capabilityJson) ?? provider;
+        ProviderCredential saved = result.Credential!;
 
-        ICredentialStore store = sp.GetRequiredService<ICredentialStore>();
+        Console.WriteLine($"Đã lưu credential {saved.Provider}/{saved.ModelId} ({saved.Category}).");
 
-        await store.UpsertAsync(
-            new ProviderCredential
-            {
-                Provider = provider,
-                ModelId = resolvedModelId,
-                Category = category.Value,
-                Scope = CredentialScope.System,
-                TenantId = null,
-                EndpointUrl = Arg(args, "--endpoint") ?? descriptor?.Transport.BaseUrl ?? ProviderCapabilityCatalog.DefaultEndpoint(provider),
-                EncryptedApiKey = string.Empty,
-                CapabilityJson = capabilityJson,
-                IsActive = !args.Contains("--disabled", StringComparer.Ordinal),
-                Priority = int.TryParse(Arg(args, "--priority"), out int p) ? p : 0,
-                Notes = Arg(args, "--note"),
-            },
-            key);
+        Console.WriteLine(result.KeyChanged
+            ? $"  key: {CredentialAdmin.Mask(input.ApiKey)} — đã mã hoá bằng DataProtection trước khi ghi."
+            : "Không truyền --key nên giữ nguyên key cũ (nếu đã có).");
 
-        Console.WriteLine($"Đã lưu credential {provider}/{resolvedModelId} ({category}).");
-
-        if (string.IsNullOrEmpty(key))
-        {
-            Console.WriteLine("Không truyền --key nên giữ nguyên key cũ (nếu đã có).");
-        }
-        else
-        {
-            Console.WriteLine($"  key: {ApiKeyHasher.Mask(key)} — đã mã hoá bằng DataProtection trước khi ghi.");
-        }
-
-        VideoProviderCapability? check = ProviderCapabilityCatalog.Video(provider);
-
-        if (check is not null && capabilityFile is null)
+        foreach (string notice in result.Notices)
         {
             Console.WriteLine();
-            Console.WriteLine($"Đơn giá đang dùng: {check.CostPerSecondUsd} USD/giây — số tham khảo từ bảng so sánh,");
-            Console.WriteLine("KHÔNG phải số đo. Kiểm lại bảng giá của nhà cung cấp trước khi bật provider này.");
+            Console.WriteLine(notice);
         }
 
         return 0;
-    }
-
-    private static async Task<ProviderDescriptor?> LatestDescriptorAsync(string provider, IServiceProvider sp)
-    {
-        IReadOnlyList<ProviderDescriptorRow> rows = await sp.GetRequiredService<IDescriptorStore>().ListAsync(provider);
-
-        ProviderDescriptorRow? row = rows.FirstOrDefault(r => r.IsActive) ?? rows.FirstOrDefault();
-
-        return row is null ? null : ProviderDescriptorParser.Parse(row.Json).Descriptor;
     }
 
     private static async Task<int> SetDescriptorAsync(string[] args, IServiceProvider sp)
@@ -527,30 +524,18 @@ public static class AdminCommands
             return 1;
         }
 
-        AdVideoDbContext db = sp.GetRequiredService<AdVideoDbContext>();
-        SystemSetting? setting = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == key);
+        // Kiểm kiểu + khoảng hợp lệ ở SettingAdmin chứ không để người gõ tự nhớ: min/max nằm sẵn
+        // trong DB, và một MaxConcurrentShots = 64 gõ nhầm sẽ đốt hạn mức provider trong vài phút.
+        SettingUpdateResult result = await sp.GetRequiredService<SettingAdmin>().UpdateAsync(key, value, isProvisional: false);
 
-        if (setting is null)
+        if (result.Error is not null)
         {
-            Console.Error.WriteLine($"Không có setting \"{key}\". Xem danh sách bằng list-settings.");
+            Console.Error.WriteLine(result.NotFound ? $"{result.Error} Xem danh sách bằng list-settings." : result.Error);
 
             return 1;
         }
 
-        // Kiểm khoảng hợp lệ ở đây chứ không để người gõ tự nhớ: min/max nằm sẵn trong DB, và
-        // một MaxConcurrentShots = 64 gõ nhầm sẽ đốt hạn mức provider trong vài phút.
-        if (!IsWithinRange(setting, value, out string? problem))
-        {
-            Console.Error.WriteLine(problem);
-
-            return 1;
-        }
-
-        ISettingsStore store = sp.GetRequiredService<ISettingsStore>();
-
-        await store.SetAsync(key, value, setting.ValueType, setting.Description, isProvisional: false);
-
-        Console.WriteLine($"{key}: {setting.Value} → {value}");
+        Console.WriteLine($"{key}: {result.PreviousValue} → {result.Setting!.Value}");
         Console.WriteLine("Cache đã được làm mới; API và Worker nhận giá trị mới mà không cần khởi động lại.");
 
         return 0;
@@ -578,48 +563,6 @@ public static class AdminCommands
         return 0;
     }
 
-    private static bool IsWithinRange(SystemSetting setting, string value, out string? problem)
-    {
-        problem = null;
-
-        if (setting.ValueType is not (SettingValueType.Int or SettingValueType.Decimal))
-        {
-            return true;
-        }
-
-        if (!decimal.TryParse(value, out decimal parsed))
-        {
-            problem = $"\"{value}\" không phải số, trong khi {setting.Key} có kiểu {setting.ValueType}.";
-
-            return false;
-        }
-
-        if (decimal.TryParse(setting.MinValue, out decimal min) && parsed < min)
-        {
-            problem = $"{setting.Key} phải ≥ {min}. {setting.Description}";
-
-            return false;
-        }
-
-        if (decimal.TryParse(setting.MaxValue, out decimal max) && parsed > max)
-        {
-            problem = $"{setting.Key} phải ≤ {max}. {setting.Description}";
-
-            return false;
-        }
-
-        return true;
-    }
-
-    private static string? ReadModelId(string capabilityJson)
-    {
-        using JsonDocument doc = JsonDocument.Parse(capabilityJson);
-
-        return doc.RootElement.TryGetProperty("modelId", out JsonElement element)
-            ? element.GetString()
-            : null;
-    }
-
     private static string? Arg(string[] args, string name)
     {
         int index = Array.IndexOf(args, name);
@@ -637,6 +580,15 @@ public static class AdminCommands
 
               seed
                   Nạp setting và prompt còn thiếu. Không ghi đè giá trị đã sửa.
+
+              create-operator-key --name "Tên" [--note "..."]
+                  Sinh operator key cho API quản trị /v1/admin. In MỘT LẦN DUY NHẤT.
+
+              list-operator-keys
+                  Liệt kê operator key, lần dùng cuối, key nào đã thu hồi.
+
+              revoke-operator-key --id <guid> [--reason "..."]
+                  Thu hồi operator key. Có hiệu lực ngay.
 
               create-tenant --name "Tên khách" [--note "..."]
                   Tạo tenant và in API key MỘT LẦN DUY NHẤT.

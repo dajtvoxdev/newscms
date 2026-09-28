@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text.Json;
 using AdVideo.Api;
 using AdVideo.Core.Entities;
@@ -186,6 +184,60 @@ public sealed class ApiTestHost : IAsyncDisposable
         });
 
         return (tenant.Id, apiKey);
+    }
+
+    /// <summary>Client mang operator key.</summary>
+    public HttpClient CreateOperatorClient(string operatorKey)
+    {
+        HttpClient client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-AdVideo-Operator-Key", operatorKey);
+
+        return client;
+    }
+
+    /// <summary>Tạo operator key trực tiếp trong DB (như lệnh CLI create-operator-key), trả về (id, key).</summary>
+    public async Task<(Guid Id, string Key)> CreateOperatorKeyAsync(string name = "Operator test", bool isActive = true)
+    {
+        string key = ApiKeyHasher.Generate(ApiKeyHasher.OperatorKeyPrefix);
+
+        var row = new OperatorKey
+        {
+            Name = name,
+            ApiKeyPrefix = ApiKeyHasher.LookupPrefix(key),
+            ApiKeyHash = ApiKeyHasher.Hash(key),
+            IsActive = isActive,
+        };
+
+        await InScopeAsync(async sp =>
+        {
+            AdVideoDbContext db = sp.GetRequiredService<AdVideoDbContext>();
+            db.OperatorKeys.Add(row);
+            await db.SaveChangesAsync();
+        });
+
+        return (row.Id, key);
+    }
+
+    /// <summary>Client operator dựng sẵn — phần lớn test quản trị chỉ cần một cái.</summary>
+    public async Task<HttpClient> CreateOperatorClientAsync()
+    {
+        (_, string key) = await CreateOperatorKeyAsync();
+
+        return CreateOperatorClient(key);
+    }
+
+    /// <summary>Gửi JSON với phương thức tuỳ ý.</summary>
+    public static Task<HttpResponseMessage> SendJsonAsync(HttpClient client, HttpMethod method, string url, object? body)
+    {
+        var request = new HttpRequestMessage(method, url);
+
+        if (body is not null)
+        {
+            string json = body as string ?? JsonSerializer.Serialize(body, ApiJson.Canonical);
+            request.Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        }
+
+        return client.SendAsync(request);
     }
 
     /// <summary>Mở scope DI với filter tenant tắt — để test đọc/ghi dữ liệu của mọi tenant.</summary>

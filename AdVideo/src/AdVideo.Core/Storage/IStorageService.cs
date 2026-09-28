@@ -24,6 +24,31 @@ public static class Buckets
     /// <summary>File giọng đọc và mốc thời gian.</summary>
     public const string Voice = "adv-voice";
 
+    /// <summary>
+    /// Tài sản của hệ thống, không thuộc khách nào: font vẽ nhãn AI tải lên qua API quản trị.
+    /// </summary>
+    /// <remarks>
+    /// Tách khỏi <see cref="Uploads"/> vì khoá ở đó bắt đầu bằng tenant — một font dùng chung cho
+    /// mọi khách mà nằm dưới thư mục của một tenant là một font biến mất khi dọn dữ liệu tenant đó.
+    /// Không có lifecycle rule: xoá font đang dùng là video tiếp theo không vẽ được nhãn.
+    /// </remarks>
+    public const string System = "adv-system";
+
+    /// <summary>Mọi bucket hệ thống cần. API và Worker đều tạo đủ lúc khởi động.</summary>
+    public static IReadOnlyList<string> All { get; } = [Uploads, Work, Final, Voice, System];
+
+    /// <summary>Số ngày giữ object trước khi kho tự xoá. Null = giữ vô thời hạn.</summary>
+    /// <remarks>
+    /// Chỉ <see cref="Work"/> tự xoá: file trung gian không ai xem lại, và đó là bucket phình nhanh
+    /// nhất. <see cref="Final"/> "sang lớp lạnh sau 90 ngày" cần MinIO có tầng lưu trữ thứ hai, là
+    /// việc cấu hình hạ tầng chứ không phải một rule xoá — đặt rule xoá ở đó là xoá video của khách.
+    /// </remarks>
+    public static int? RetentionDays(string bucket) => bucket switch
+    {
+        Work => 7,
+        _ => null,
+    };
+
     /// <summary>Bucket nên dùng cho một loại asset. Video cuối và thumbnail đi theo video cuối.</summary>
     public static string ForKind(AssetKind kind) => kind switch
     {

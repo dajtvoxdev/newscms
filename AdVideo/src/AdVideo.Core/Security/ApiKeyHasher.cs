@@ -27,6 +27,15 @@ public static class ApiKeyHasher
     /// <summary>Tiền tố cố định, để một key lọt ra ngoài thì nhìn là biết nó của hệ thống nào.</summary>
     public const string KeyPrefix = "adv_";
 
+    /// <summary>
+    /// Tiền tố của operator key (quyền quản trị toàn hệ thống).
+    /// </summary>
+    /// <remarks>
+    /// Khác tiền tố với key của tenant để một key lọt ra ngoài nhìn là biết nó mở được cửa nào — và
+    /// để người vận hành không dán nhầm key quản trị vào cấu hình của một site khách.
+    /// </remarks>
+    public const string OperatorKeyPrefix = "advop_";
+
     /// <summary>Độ dài phần dùng để tra cứu, tính cả <see cref="KeyPrefix"/>.</summary>
     public const int LookupPrefixLength = 12;
 
@@ -34,13 +43,18 @@ public static class ApiKeyHasher
     private const int SecretBytes = 32;
 
     /// <summary>Sinh một key mới. Đây là lần duy nhất giá trị này tồn tại ở dạng đọc được.</summary>
-    public static string Generate()
+    public static string Generate() => Generate(KeyPrefix);
+
+    /// <summary>Sinh một key mới với tiền tố cho trước — <see cref="KeyPrefix"/> hoặc <see cref="OperatorKeyPrefix"/>.</summary>
+    public static string Generate(string prefix)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
         // Base64Url: không có ký tự '+', '/', '=' nên copy-paste vào biến môi trường, URL hay
         // file YAML đều không bị biến dạng.
         string secret = Base64UrlEncode(RandomNumberGenerator.GetBytes(SecretBytes));
 
-        return KeyPrefix + secret;
+        return prefix + secret;
     }
 
     /// <summary>Băm key để lưu vào DB. Trả về chuỗi hex thường.</summary>

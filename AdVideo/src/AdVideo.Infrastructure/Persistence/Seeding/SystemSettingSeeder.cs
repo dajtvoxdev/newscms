@@ -1,4 +1,5 @@
 using AdVideo.Core.Entities;
+using AdVideo.Core.Media;
 using AdVideo.Core.Providers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -217,6 +218,23 @@ public sealed class SystemSettingSeeder
             "queue.fal.run, fal.media, *.fal.media, api.elevenlabs.io",
             SettingValueType.String,
             "Host được gọi khi nói chuyện với provider (baseUrl, URL trong phản hồi, URL tải file). Cách nhau bằng dấu phẩy. *.domain = mọi host con. http chỉ được khi ghi đủ http://host:cổng. Rỗng = chặn hết.",
+            IsProvisional: false),
+
+        // Tạm: nội dung nhãn chờ pháp chế chốt. Trước đây là hằng số trong code dù comment của
+        // AiLabelStamper nói đọc từ DB (lệch #5 trong file trạng thái 25/09).
+        new(
+            SettingKeys.AiLabelOverlayText,
+            AiLabelStamper.DefaultOverlayText,
+            SettingValueType.String,
+            "Chữ vẽ lên video trong nhãn AI. Đổi được chữ, không tắt được nhãn — rỗng bị từ chối. Tối đa 60 ký tự.",
+            IsProvisional: true),
+
+        // Rỗng = dùng font trong cấu hình máy (AdVideo:Ffmpeg:FontFile). Chỉ ghi qua endpoint upload.
+        new(
+            SettingKeys.AiLabelFontObjectKey,
+            "",
+            SettingValueType.String,
+            "Font vẽ nhãn AI trong bucket adv-system. Không sửa tay — tải font bằng POST /v1/admin/assets/label-font. Rỗng = dùng AdVideo:Ffmpeg:FontFile.",
             IsProvisional: false),
     ];
 

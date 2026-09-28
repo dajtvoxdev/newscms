@@ -48,6 +48,7 @@ public class AdVideoDbContext : DbContext
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
     public DbSet<PromptTemplate> PromptTemplates => Set<PromptTemplate>();
     public DbSet<ProviderDescriptorRow> ProviderDescriptors => Set<ProviderDescriptorRow>();
+    public DbSet<OperatorKey> OperatorKeys => Set<OperatorKey>();
 
     /// <summary>
     /// Khoá cache model: model gắn converter mã hoá giữ <see cref="IApiKeyProtector"/>, nên mỗi
@@ -120,6 +121,9 @@ public class AdVideoDbContext : DbContext
 
         // Shot: không soft-delete. Shot là bằng chứng của một lần render đã tiêu tiền; xoá nó là
         // làm mất khả năng đối soát chi phí. Muốn "xoá" thì đổi Status.
+
+        // OperatorKey: không filter. Key đã thu hồi vẫn phải tra được (IsActive = false) để handler
+        // trả đúng lý do, và để lịch sử cấp quyền không biến mất khỏi mọi truy vấn.
 
         // ProviderCall: CỐ Ý KHÔNG có filter nào. Đây là sổ cái chi phí, append-only.
         // Một bảng sổ cái mà có thể lọc bớt dòng là một bảng sổ cái không dùng để đối chiếu được.

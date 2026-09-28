@@ -49,10 +49,19 @@ public class BucketsTests
     [Fact]
     public void Moi_bucket_co_mot_ten_rieng()
     {
-        var names = new[] { Buckets.Uploads, Buckets.Work, Buckets.Final, Buckets.Voice };
+        Buckets.All.Should().OnlyHaveUniqueItems();
+        Buckets.All.Should().OnlyContain(n => n.StartsWith("adv-", StringComparison.Ordinal));
+        Buckets.All.Should().Contain([Buckets.Uploads, Buckets.Work, Buckets.Final, Buckets.Voice, Buckets.System]);
+    }
 
-        names.Should().OnlyHaveUniqueItems();
-        names.Should().OnlyContain(n => n.StartsWith("adv-", StringComparison.Ordinal));
+    [Fact]
+    public void Chi_bucket_trung_gian_tu_xoa_sau_7_ngay()
+    {
+        Buckets.RetentionDays(Buckets.Work).Should().Be(7);
+
+        // Rule xoá trên bất kỳ bucket nào khác là xoá dữ liệu phải giữ: ảnh khách, video giao
+        // khách, giọng đọc để tái hiện job, font đang vẽ nhãn.
+        Buckets.All.Where(b => b != Buckets.Work).Should().OnlyContain(b => Buckets.RetentionDays(b) == null);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using AdVideo.Api;
+using AdVideo.Api.Admin;
 using AdVideo.Api.Auth;
 using AdVideo.Api.Cli;
 using AdVideo.Api.Contracts;
@@ -29,15 +30,33 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
 builder.Services.AddAdVideoInfrastructure(builder.Configuration, builder.Environment.EnvironmentName);
 
+// Logic quản trị dùng chung cho CLI và /v1/admin — hai lớp vỏ, một bộ quy tắc.
+builder.Services.AddScoped<CredentialAdmin>();
+builder.Services.AddScoped<SettingAdmin>();
+builder.Services.AddScoped<TenantAdmin>();
+
 builder.Services.ConfigureHttpJsonOptions(options => ApiJson.Apply(options.SerializerOptions));
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services
     .AddAuthentication(ApiKeyAuthHandler.SchemeName)
-    .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthHandler>(ApiKeyAuthHandler.SchemeName, null);
+    .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthHandler>(ApiKeyAuthHandler.SchemeName, null)
+    .AddScheme<AuthenticationSchemeOptions, OperatorKeyAuthHandler>(OperatorKeyAuthHandler.SchemeName, null);
 
-builder.Services.AddAuthorization();
+// Mỗi policy gắn đúng MỘT scheme và đòi đúng claim của scheme đó. Policy mặc định (chỉ cần "đã xác
+// thực") thì bất kỳ key hợp lệ nào cũng qua — operator key vào được route của khách và làm endpoint
+// ném vì thiếu claim tenant, còn tenant key thì vào được route quản trị.
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AuthPolicies.Tenant, policy => policy
+        .AddAuthenticationSchemes(ApiKeyAuthHandler.SchemeName)
+        .RequireClaim(ApiKeyAuthHandler.TenantIdClaim));
+
+    options.AddPolicy(AuthPolicies.Operator, policy => policy
+        .AddAuthenticationSchemes(OperatorKeyAuthHandler.SchemeName)
+        .RequireClaim(OperatorKeyAuthHandler.OperatorIdClaim));
+});
 
 // API chỉ là CLIENT của Hangfire — nó đẩy việc vào hàng đợi, Worker mới chạy. Gọi AddHangfireServer
 // ở đây sẽ biến tiến trình phục vụ HTTP thành một tiến trình vừa phục vụ HTTP vừa render video,
@@ -75,6 +94,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAdVideoEndpoints();
+app.MapAdminEndpoints();
 
 app.MapGet("/healthz", HealthAsync)
     .AllowAnonymous()
@@ -179,7 +199,7 @@ static async Task InitializeAsync(WebApplication app)
 
     IStorageService storage = sp.GetRequiredService<IStorageService>();
 
-    foreach (string bucket in new[] { Buckets.Uploads, Buckets.Work, Buckets.Final, Buckets.Voice })
+    foreach (string bucket in Buckets.All)
     {
         // Idempotent, và phải chạy ở cả hai host: worker ghi vào adv-work còn API đọc từ adv-final,
         // nên host nào khởi động trước cũng phải thấy đủ bucket.
