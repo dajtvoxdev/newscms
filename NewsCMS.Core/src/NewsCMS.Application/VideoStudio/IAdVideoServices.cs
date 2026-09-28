@@ -57,6 +57,16 @@ public interface IAdVideoAdminClient
     Task<Result<AdVideoLabelFontDto>> GetLabelFontAsync(CancellationToken ct = default);
     Task<Result<AdVideoLabelFontDto>> UploadLabelFontAsync(Stream content, string fileName, CancellationToken ct = default);
     Task<Result> ResetLabelFontAsync(CancellationToken ct = default);
+
+    Task<Result<IReadOnlyList<AdVideoVoicePresetDto>>> GetVoicePresetsAsync(CancellationToken ct = default);
+    Task<Result<AdVideoVoicePresetDto>> AddVoicePresetAsync(AdVideoVoicePresetInput input, CancellationToken ct = default);
+    Task<Result<AdVideoVoicePresetDto>> UpdateVoicePresetAsync(Guid id, AdVideoVoicePresetInput input, CancellationToken ct = default);
+    Task<Result> DeleteVoicePresetAsync(Guid id, CancellationToken ct = default);
+
+    /// <summary>Thư viện giọng của tài khoản engine (<paramref name="provider"/>, ví dụ <c>elevenlabs</c>) để nhập làm giọng có sẵn.</summary>
+    Task<Result<IReadOnlyList<AdVideoProviderVoiceDto>>> GetProviderVoiceLibraryAsync(string provider, CancellationToken ct = default);
+
+    Task<Result<IReadOnlyList<AdVideoClonedVoiceStatsDto>>> GetClonedVoiceStatsAsync(CancellationToken ct = default);
 }
 
 /// <summary>API video của AdVideo cho <b>site hiện tại</b>, gọi bằng tenant key của site đó.</summary>
@@ -67,4 +77,12 @@ public interface IAdVideoClient
     Task<Result<AdVideoJobPageDto>> ListJobsAsync(string? status, int page, int pageSize, CancellationToken ct = default);
     Task<Result<AdVideoJobDto>> GetJobAsync(Guid jobId, CancellationToken ct = default);
     Task<Result<AdVideoJobDto>> CancelJobAsync(Guid jobId, CancellationToken ct = default);
+
+    /// <summary>Giọng chọn được khi tạo video: giọng clone của site trước, rồi giọng có sẵn.</summary>
+    Task<Result<IReadOnlyList<AdVideoVoiceDto>>> ListVoicesAsync(CancellationToken ct = default);
+
+    Task<Result<AdVideoVoiceDto>> CloneVoiceAsync(CloneVoiceInput input, CancellationToken ct = default);
+
+    /// <summary>Xoá giọng clone của site (cả bên engine). Video đã làm không bị ảnh hưởng.</summary>
+    Task<Result> DeleteVoiceAsync(Guid voiceId, CancellationToken ct = default);
 }

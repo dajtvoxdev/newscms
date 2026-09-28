@@ -142,6 +142,7 @@ public sealed class VideoStudioService : IVideoStudioService
             input.Quality,
             input.HasPerson,
             input.KeepSoundEffects ? "sfx_only" : "off",
-            assetIds.Distinct().ToList()), ct);
+            assetIds.Distinct().ToList(),
+            input.VoiceId), ct);
     }
 }

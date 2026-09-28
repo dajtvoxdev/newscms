@@ -66,7 +66,7 @@ public sealed class AdVideoClient : IAdVideoClient
                 language = "vi",
             },
             assets = new { product_image_ids = input.ProductImageIds.Select(id => id.ToString()).ToArray() },
-            voice = new { script = input.Script.Trim() },
+            voice = new { voice_profile_id = input.VoiceId?.ToString(), script = input.Script.Trim() },
             audio = new { native_sound = input.NativeSound },
             options = new { quality = input.Quality, has_person = input.HasPerson },
         };
@@ -100,6 +100,80 @@ public sealed class AdVideoClient : IAdVideoClient
 
     public Task<Result<AdVideoJobDto>> CancelJobAsync(Guid jobId, CancellationToken ct = default) =>
         CallAsync<AdVideoJobDto>(HttpMethod.Post, $"v1/ad-videos/{jobId}/cancel", ct);
+
+    public Task<Result<IReadOnlyList<AdVideoVoiceDto>>> ListVoicesAsync(CancellationToken ct = default) =>
+        CallAsync<IReadOnlyList<AdVideoVoiceDto>>(HttpMethod.Get, "v1/voices", ct);
+
+    public async Task<Result<AdVideoVoiceDto>> CloneVoiceAsync(CloneVoiceInput input, CancellationToken ct = default)
+    {
+        if (input.Samples.Count == 0)
+        {
+            return Result<AdVideoVoiceDto>.Failure("Tải lên ít nhất một file ghi âm giọng mẫu.");
+        }
+
+        (HttpClient? client, string? error) = await ClientAsync(ct);
+
+        if (client is null)
+        {
+            return Result<AdVideoVoiceDto>.Failure(error!);
+        }
+
+        var opened = new List<Stream>();
+
+        try
+        {
+            var form = new MultipartFormDataContent
+            {
+                { new StringContent(input.Name.Trim()), "name" },
+                { new StringContent(input.ConsentStatement.Trim()), "consent_statement" },
+                { new StringContent(input.ConsentConfirmed ? "true" : "false"), "consent_confirmed" },
+                { new StringContent(input.ConsentedBy), "consented_by" },
+            };
+
+            if (!string.IsNullOrWhiteSpace(input.Description))
+            {
+                form.Add(new StringContent(input.Description.Trim()), "description");
+            }
+
+            foreach (AdVideoVoiceSample sample in input.Samples)
+            {
+                Stream stream = sample.Open();
+                opened.Add(stream);
+
+                // Như ảnh: AdVideo nhận dạng ghi âm bằng nội dung, không tin header.
+                var file = new StreamContent(stream);
+                file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+                form.Add(file, "files", Path.GetFileName(sample.FileName));
+            }
+
+            using (client)
+            {
+                return await AdVideoHttp.SendAsync<AdVideoVoiceDto>(client, HttpMethod.Post, "v1/voices", form, ct);
+            }
+        }
+        finally
+        {
+            foreach (Stream stream in opened)
+            {
+                await stream.DisposeAsync();
+            }
+        }
+    }
+
+    public async Task<Result> DeleteVoiceAsync(Guid voiceId, CancellationToken ct = default)
+    {
+        (HttpClient? client, string? error) = await ClientAsync(ct);
+
+        if (client is null)
+        {
+            return Result.Failure(error!);
+        }
+
+        using (client)
+        {
+            return await AdVideoHttp.SendAsync(client, HttpMethod.Delete, $"v1/voices/{voiceId}", null, ct);
+        }
+    }
 
     private async Task<Result<T>> CallAsync<T>(HttpMethod method, string path, CancellationToken ct)
     {

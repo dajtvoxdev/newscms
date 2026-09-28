@@ -176,6 +176,7 @@ public sealed class PipelineTestHost : IAsyncDisposable
 
             await sp.GetRequiredService<SystemSettingSeeder>().SeedAsync();
             await sp.GetRequiredService<PromptTemplateSeeder>().SeedAsync();
+            await sp.GetRequiredService<VoiceProfileSeeder>().SeedAsync();
         });
 
         return host;

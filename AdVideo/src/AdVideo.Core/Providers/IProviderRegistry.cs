@@ -18,6 +18,9 @@ public interface IProviderRegistry
 
     Task<ITtsProvider?> FindTtsProviderAsync(string providerName, CancellationToken cancellationToken = default);
 
+    /// <summary>Thư viện giọng + clone của một engine TTS. Null nếu engine đang tắt hoặc không có tính năng này.</summary>
+    Task<IProviderVoices?> FindVoicesAsync(string providerName, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Chọn provider theo YÊU CẦU NGHIỆP VỤ, không theo tên provider.
     /// </summary>

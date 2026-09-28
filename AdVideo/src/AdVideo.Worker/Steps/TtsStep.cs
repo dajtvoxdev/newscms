@@ -74,31 +74,21 @@ public sealed class TtsStep : IPipelineStep
             return StepResult.Fail($"Không tìm thấy job {context.JobId} trong DB.");
         }
 
-        ProviderSelectionResult selection = await _registry.SelectTtsProviderAsync(context.Tier, cancellationToken);
+        (ITtsProvider? provider, string? voiceId, StepResult? stop) = await ResolveVoiceAsync(job, context.Tier, cancellationToken);
 
-        if (!selection.IsSuccess)
+        if (stop is not null || provider is null || voiceId is null)
         {
-            return StepResult.Fail(string.Join(" ", selection.Reasons));
-        }
-
-        ITtsProvider? provider = await _registry.FindTtsProviderAsync(selection.ProviderName!, cancellationToken);
-
-        if (provider is null)
-        {
-            // Chọn được tên nhưng dựng không được: credential vừa bị tắt giữa hai lời gọi.
-            return StepResult.Retry($"Engine giọng đọc \"{selection.ProviderName}\" vừa ngừng phục vụ.");
+            return stop ?? StepResult.Fail("Không xác định được engine giọng đọc.");
         }
 
         JobBrief brief = context.Brief();
+        context.VoiceId = voiceId;
 
         var request = new TtsRequest
         {
             JobId = context.JobId,
             Text = context.NarrationText!,
-
-            // Chưa có hồ sơ giọng trong Sprint 1: adapter thật sẽ nhận voice id của nhà cung cấp,
-            // còn engine giả bỏ qua giá trị này.
-            VoiceId = context.VoiceId ?? "default",
+            VoiceId = voiceId,
             Speed = (decimal)brief.VoiceSpeed,
             WithTimestamps = true,
         };
@@ -183,6 +173,80 @@ public sealed class TtsStep : IPipelineStep
             result.WordTimings.Count);
 
         return StepResult.Ok();
+    }
+
+    /// <summary>
+    /// Engine đọc + voice id cho job.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Job có chọn giọng</b>: dùng engine của giọng đó, không dùng engine theo tier — voice id của
+    /// ElevenLabs gửi cho VieNeu là vô nghĩa. Giọng bị xoá / engine tắt sau khi job vào hàng đợi thì
+    /// dừng với lý do rõ, không lặng lẽ đọc bằng giọng khác (khách đã chọn giọng của chính họ).
+    /// </para>
+    /// <para>
+    /// <b>Không chọn giọng</b>: engine theo tier, giọng = giọng có sẵn đầu tiên (theo thứ tự) của
+    /// engine đó. Trước đây gửi chuỗi "default" — ElevenLabs thật trả 404 cho chuỗi này.
+    /// </para>
+    /// <para>
+    /// Đọc hồ sơ giọng với lọc tenant TƯỜNG MINH (giọng có sẵn hoặc giọng của đúng tenant của job):
+    /// brief trong DB là thứ worker chạy theo, và giọng clone của khách khác không bao giờ được đọc.
+    /// </para>
+    /// </remarks>
+    private async Task<(ITtsProvider? Provider, string? VoiceId, StepResult? Stop)> ResolveVoiceAsync(
+        AdVideoJob job, VideoTier tier, CancellationToken cancellationToken)
+    {
+        if (job.VoiceProfileId is { } profileId)
+        {
+            VoiceProfile? voice = await _db.VoiceProfiles
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    v => v.Id == profileId && !v.IsDeleted && (v.TenantId == null || v.TenantId == job.TenantId),
+                    cancellationToken);
+
+            if (voice is null || !voice.IsActive)
+            {
+                return (null, null, StepResult.Fail("Giọng đã chọn không còn (bị xoá hoặc bị tắt sau khi tạo video). Tạo lại video với giọng khác."));
+            }
+
+            ITtsProvider? owner = await _registry.FindTtsProviderAsync(voice.Provider, cancellationToken);
+
+            return owner is null
+                ? (null, null, StepResult.Retry($"Engine đọc của giọng \"{voice.Name}\" đang tắt."))
+                : (owner, voice.ProviderVoiceId, null);
+        }
+
+        ProviderSelectionResult selection = await _registry.SelectTtsProviderAsync(tier, cancellationToken);
+
+        if (!selection.IsSuccess)
+        {
+            return (null, null, StepResult.Fail(string.Join(" ", selection.Reasons)));
+        }
+
+        ITtsProvider? provider = await _registry.FindTtsProviderAsync(selection.ProviderName!, cancellationToken);
+
+        if (provider is null)
+        {
+            // Chọn được tên nhưng dựng không được: credential vừa bị tắt giữa hai lời gọi.
+            return (null, null, StepResult.Retry($"Engine giọng đọc \"{selection.ProviderName}\" vừa ngừng phục vụ."));
+        }
+
+        string? defaultVoice = await _db.VoiceProfiles
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(v => v.TenantId == null && !v.IsDeleted && v.IsActive && v.Provider == provider.Name)
+            .OrderBy(v => v.SortOrder)
+            .Select(v => v.ProviderVoiceId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (defaultVoice is null && provider.Name != ProviderNames.Fake)
+        {
+            return (null, null, StepResult.Fail(
+                $"Engine \"{provider.Name}\" chưa có giọng có sẵn nào để làm giọng mặc định. Thêm giọng ở Cấu hình AdVideo → Giọng đọc, hoặc chọn giọng khi tạo video."));
+        }
+
+        return (provider, defaultVoice ?? "default", null);
     }
 
     private static string ExtensionFor(string contentType) => contentType.ToLowerInvariant() switch

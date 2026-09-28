@@ -121,6 +121,72 @@ public record AdVideoLabelFontDto(
     string? Format,
     IReadOnlyList<string> MissingCharacters);
 
+// ---------------------------------------------------------------- giọng đọc (quản trị)
+
+/// <summary>Giọng có sẵn cho mọi site. Giọng đầu tiên (theo <see cref="SortOrder"/>) của một engine là giọng mặc định.</summary>
+public record AdVideoVoicePresetDto(
+    Guid Id,
+    string Name,
+    string? Description,
+    string Provider,
+    string ProviderVoiceId,
+    string? PreviewUrl,
+    bool IsActive,
+    int SortOrder,
+    DateTime CreatedAt);
+
+/// <summary>Thêm / sửa giọng có sẵn. Khi sửa, <see cref="Provider"/> và <see cref="ProviderVoiceId"/> bị bỏ qua.</summary>
+public record AdVideoVoicePresetInput(
+    string? Name,
+    string? Description,
+    string? Provider,
+    string? ProviderVoiceId,
+    string? PreviewUrl,
+    int? SortOrder,
+    bool? IsActive);
+
+/// <summary>Một giọng trong thư viện tài khoản engine (đã trừ giọng clone của khách).</summary>
+public record AdVideoProviderVoiceDto(
+    string VoiceId,
+    string Name,
+    string? Category,
+    string? Description,
+    string? PreviewUrl,
+    IReadOnlyDictionary<string, string>? Labels,
+    bool AlreadyAdded);
+
+public record AdVideoClonedVoiceStatsDto(Guid TenantId, string TenantName, int Count);
+
+// ---------------------------------------------------------------- giọng đọc (site)
+
+/// <param name="Kind"><c>preset</c> (có sẵn) hoặc <c>cloned</c> (của site này).</param>
+/// <param name="PreviewUrl">Link nghe thử — của engine, hoặc link ký sẵn tới mẫu ghi âm đã tải lên (hết hạn sau ít phút).</param>
+public record AdVideoVoiceDto(
+    Guid Id,
+    string Name,
+    string? Description,
+    string Kind,
+    string? PreviewUrl,
+    DateTime CreatedAt)
+{
+    public bool IsCloned => Kind == "cloned";
+}
+
+/// <summary>Một file ghi âm mẫu để clone giọng.</summary>
+public sealed record AdVideoVoiceSample(string FileName, Func<Stream> Open);
+
+/// <summary>
+/// Clone giọng. <see cref="ConsentStatement"/> lưu nguyên văn bên AdVideo cùng người xác nhận và thời điểm —
+/// là bằng chứng chủ giọng đã đồng ý.
+/// </summary>
+public record CloneVoiceInput(
+    string Name,
+    string? Description,
+    string ConsentStatement,
+    bool ConsentConfirmed,
+    string ConsentedBy,
+    IReadOnlyList<AdVideoVoiceSample> Samples);
+
 // ---------------------------------------------------------------- video của site
 
 public record AdVideoUploadDto(Guid AssetId, string ContentType, long SizeBytes, string Sha256, bool Reused);
@@ -153,6 +219,7 @@ public record AdVideoJobPageDto(IReadOnlyList<AdVideoJobDto> Items, int Page, in
 }
 
 /// <summary>Brief tạo video. <see cref="IdempotencyKey"/> sinh lúc mở form — bấm hai lần không thành hai job.</summary>
+/// <param name="VoiceId">Giọng đã chọn (id từ danh sách giọng); null = giọng mặc định.</param>
 public record CreateAdVideoInput(
     string IdempotencyKey,
     string? ProductName,
@@ -163,4 +230,5 @@ public record CreateAdVideoInput(
     string Quality,
     bool HasPerson,
     string NativeSound,
-    IReadOnlyList<Guid> ProductImageIds);
+    IReadOnlyList<Guid> ProductImageIds,
+    Guid? VoiceId = null);

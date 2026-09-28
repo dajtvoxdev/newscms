@@ -236,6 +236,23 @@ public sealed class SystemSettingSeeder
             SettingValueType.String,
             "Font vẽ nhãn AI trong bucket adv-system. Không sửa tay — tải font bằng POST /v1/admin/assets/label-font. Rỗng = dùng AdVideo:Ffmpeg:FontFile.",
             IsProvisional: false),
+
+        // Engine giả để dev clone được mà không tốn tiền; đổi sang elevenlabs khi đã nạp key.
+        new(
+            SettingKeys.VoiceCloneProvider,
+            ProviderNames.Fake,
+            SettingValueType.String,
+            "Engine dùng để clone giọng từ mẫu ghi âm của khách. Đổi sang elevenlabs khi đã nạp key ElevenLabs.",
+            IsProvisional: true),
+
+        new(
+            SettingKeys.MaxClonedVoicesPerTenant,
+            "5",
+            SettingValueType.Int,
+            "Số giọng clone tối đa mỗi tenant. Gói ElevenLabs giới hạn số giọng của CẢ tài khoản — chia cho số site.",
+            IsProvisional: true,
+            MinValue: "0",
+            MaxValue: "100"),
     ];
 
     /// <summary>Một dòng seed. Tách record để test đọc được danh sách mà không phải chạm DB.</summary>

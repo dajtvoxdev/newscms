@@ -20,7 +20,8 @@ public record VideoStudioCreateInput(
     bool HasPerson,
     bool KeepSoundEffects,
     IReadOnlyList<Guid> LibraryMediaIds,
-    IReadOnlyList<VideoStudioUpload> Uploads);
+    IReadOnlyList<VideoStudioUpload> Uploads,
+    Guid? VoiceId = null);
 
 /// <summary>
 /// Trang VideoStudio của một site: gom ảnh (thư viện + tải lên), đẩy sang AdVideo, tạo job.

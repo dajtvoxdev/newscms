@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Video quảng cáo AI";
     var canCreate = User.IsInRole("SuperAdmin") || User.HasClaim(Permissions.Prefix, Permissions.VideoStudio.Create);
+    var canManageVoices = User.IsInRole("SuperAdmin") || User.HasClaim(Permissions.Prefix, Permissions.VideoStudio.ManageVoices);
     var filters = new (string? Value, string Label)[] { (null, "Tất cả"), ("queued", "Đang chờ"), ("rendering_shots", "Đang dựng hình"), ("completed", "Đã xong"), ("failed", "Lỗi"), ("cancelled", "Đã huỷ") };
 }
 
@@ -11,10 +12,16 @@
         <p class="text-sm font-semibold text-indigo-600">Marketing</p>
         <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Video quảng cáo AI</h2>
     </div>
-    @if (Model.IsLinked && canCreate)
-    {
-        <a asp-area="Admin" asp-page="/VideoStudio/Create" class="admin-btn-primary">Tạo video</a>
-    }
+    <div class="flex gap-2">
+        @if (Model.IsLinked && canManageVoices)
+        {
+            <a asp-area="Admin" asp-page="/VideoStudio/Voices" class="admin-btn-secondary">Giọng đọc</a>
+        }
+        @if (Model.IsLinked && canCreate)
+        {
+            <a asp-area="Admin" asp-page="/VideoStudio/Create" class="admin-btn-primary">Tạo video</a>
+        }
+    </div>
 </div>
 
 @if (!Model.IsLinked)

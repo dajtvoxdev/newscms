@@ -41,6 +41,7 @@ public static class AdminEndpoints
         MapPrompts(admin.MapGroup("/prompts"));
         MapTenants(admin.MapGroup("/tenants"));
         admin.MapLabelFontEndpoints();
+        admin.MapAdminVoiceEndpoints();
 
         return app;
     }

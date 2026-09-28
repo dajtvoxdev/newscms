@@ -545,8 +545,9 @@ public static class AdminCommands
     {
         int settings = await sp.GetRequiredService<SystemSettingSeeder>().SeedAsync();
         int prompts = await sp.GetRequiredService<PromptTemplateSeeder>().SeedAsync();
+        int voices = await sp.GetRequiredService<VoiceProfileSeeder>().SeedAsync();
 
-        Console.WriteLine($"Đã nạp {settings} setting và {prompts} prompt còn thiếu.");
+        Console.WriteLine($"Đã nạp {settings} setting, {prompts} prompt và {voices} giọng mẫu còn thiếu.");
         Console.WriteLine("Seeder chỉ THÊM khoá thiếu, không ghi đè giá trị người vận hành đã sửa.");
 
         return 0;

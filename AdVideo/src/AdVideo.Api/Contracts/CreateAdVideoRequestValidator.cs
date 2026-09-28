@@ -19,7 +19,7 @@ public sealed record ValidatedRequest(
     string? ConsentRef,
     string? ForcedProvider,
     decimal? MaxCostUsd,
-    string? VoiceProfileId,
+    Guid? VoiceProfileId,
     double VoiceSpeed,
     string? CallbackUrl);
 
@@ -184,6 +184,23 @@ public static class CreateAdVideoRequestValidator
             AddError("voice.speed", "Phải trong khoảng 0.5–2.0.");
         }
 
+        // voice_profile_id là id giọng lấy từ GET /v1/voices — không còn là voice id thô của engine:
+        // chọn giọng là chọn luôn engine đọc, và chỉ hồ sơ giọng mới mang đủ hai thông tin đó.
+        Guid? voiceProfileId = null;
+        string? rawVoice = request.Voice?.VoiceProfileId?.Trim();
+
+        if (!string.IsNullOrEmpty(rawVoice))
+        {
+            if (Guid.TryParse(rawVoice, out Guid parsedVoice))
+            {
+                voiceProfileId = parsedVoice;
+            }
+            else
+            {
+                AddError("voice.voice_profile_id", $"\"{rawVoice}\" không phải id giọng. Lấy id từ GET /v1/voices.");
+            }
+        }
+
         // --- audio ---
         bool wantsSfx = false;
         string? nativeSound = request.Audio?.NativeSound?.Trim();
@@ -253,7 +270,7 @@ public static class CreateAdVideoRequestValidator
                 string.IsNullOrEmpty(consentRef) ? null : consentRef,
                 string.IsNullOrWhiteSpace(request.Options?.Provider) ? null : request.Options.Provider.Trim(),
                 maxCost,
-                string.IsNullOrWhiteSpace(request.Voice?.VoiceProfileId) ? null : request.Voice.VoiceProfileId.Trim(),
+                voiceProfileId,
                 speed,
                 string.IsNullOrEmpty(callbackUrl) ? null : callbackUrl),
             ToArrays(errors));

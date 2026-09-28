@@ -140,6 +140,36 @@ public sealed class AdVideoAdminClient : IAdVideoAdminClient
     public Task<Result> ResetLabelFontAsync(CancellationToken ct = default) =>
         SendNoContent(HttpMethod.Delete, "v1/admin/assets/label-font", null, ct);
 
+    public Task<Result<IReadOnlyList<AdVideoVoicePresetDto>>> GetVoicePresetsAsync(CancellationToken ct = default) =>
+        Get<IReadOnlyList<AdVideoVoicePresetDto>>("v1/admin/voices", ct);
+
+    public Task<Result<AdVideoVoicePresetDto>> AddVoicePresetAsync(AdVideoVoicePresetInput input, CancellationToken ct = default) =>
+        Send<AdVideoVoicePresetDto>(HttpMethod.Post, "v1/admin/voices", VoiceBody(input), ct);
+
+    public Task<Result<AdVideoVoicePresetDto>> UpdateVoicePresetAsync(Guid id, AdVideoVoicePresetInput input, CancellationToken ct = default) =>
+        Send<AdVideoVoicePresetDto>(HttpMethod.Put, $"v1/admin/voices/{id}", VoiceBody(input), ct);
+
+    public Task<Result> DeleteVoicePresetAsync(Guid id, CancellationToken ct = default) =>
+        SendNoContent(HttpMethod.Delete, $"v1/admin/voices/{id}", null, ct);
+
+    public Task<Result<IReadOnlyList<AdVideoProviderVoiceDto>>> GetProviderVoiceLibraryAsync(string provider, CancellationToken ct = default) =>
+        Get<IReadOnlyList<AdVideoProviderVoiceDto>>($"v1/admin/voices/library?provider={Uri.EscapeDataString(provider.Trim().ToLowerInvariant())}", ct);
+
+    public Task<Result<IReadOnlyList<AdVideoClonedVoiceStatsDto>>> GetClonedVoiceStatsAsync(CancellationToken ct = default) =>
+        Get<IReadOnlyList<AdVideoClonedVoiceStatsDto>>("v1/admin/voices/cloned-stats", ct);
+
+    // Mô tả / link nghe thử gửi chuỗi rỗng khi người dùng xoá trắng — AdVideo hiểu "" là xoá, null là giữ.
+    private static object VoiceBody(AdVideoVoicePresetInput input) => new
+    {
+        name = NullIfBlank(input.Name),
+        description = input.Description?.Trim(),
+        provider = NullIfBlank(input.Provider),
+        provider_voice_id = NullIfBlank(input.ProviderVoiceId),
+        preview_url = input.PreviewUrl?.Trim(),
+        sort_order = input.SortOrder,
+        is_active = input.IsActive,
+    };
+
     // ------------------------------------------------------------------
 
     private Task<Result<T>> Get<T>(string path, CancellationToken ct) => Send<T>(HttpMethod.Get, path, null, ct);

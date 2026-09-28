@@ -49,6 +49,7 @@ public class AdVideoDbContext : DbContext
     public DbSet<PromptTemplate> PromptTemplates => Set<PromptTemplate>();
     public DbSet<ProviderDescriptorRow> ProviderDescriptors => Set<ProviderDescriptorRow>();
     public DbSet<OperatorKey> OperatorKeys => Set<OperatorKey>();
+    public DbSet<VoiceProfile> VoiceProfiles => Set<VoiceProfile>();
 
     /// <summary>
     /// Khoá cache model: model gắn converter mã hoá giữ <see cref="IApiKeyProtector"/>, nên mỗi
@@ -121,6 +122,11 @@ public class AdVideoDbContext : DbContext
 
         // Shot: không soft-delete. Shot là bằng chứng của một lần render đã tiêu tiền; xoá nó là
         // làm mất khả năng đối soát chi phí. Muốn "xoá" thì đổi Status.
+
+        // VoiceProfile: giọng có sẵn (TenantId null) cho mọi tenant + giọng clone của đúng tenant.
+        // Quên set tenant thì chỉ thấy giọng có sẵn — không bao giờ thấy giọng clone của người khác.
+        modelBuilder.Entity<VoiceProfile>().HasQueryFilter(
+            e => _tenant.BypassFilters || (!e.IsDeleted && (e.TenantId == null || e.TenantId == _tenant.TenantId)));
 
         // OperatorKey: không filter. Key đã thu hồi vẫn phải tra được (IsActive = false) để handler
         // trả đúng lý do, và để lịch sử cấp quyền không biến mất khỏi mọi truy vấn.

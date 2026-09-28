@@ -139,4 +139,10 @@ public static class SettingKeys
     /// file có đúng là font không trước khi worker đem nó đi vẽ.
     /// </remarks>
     public const string AiLabelFontObjectKey = "AiLabelFontObjectKey";
+
+    /// <summary>Engine dùng để clone giọng từ mẫu ghi âm của khách, ví dụ <c>elevenlabs</c>.</summary>
+    public const string VoiceCloneProvider = "VoiceCloneProvider";
+
+    /// <summary>Số giọng clone tối đa mỗi tenant — gói ElevenLabs giới hạn số "slot" giọng của cả tài khoản.</summary>
+    public const string MaxClonedVoicesPerTenant = "MaxClonedVoicesPerTenant";
 }

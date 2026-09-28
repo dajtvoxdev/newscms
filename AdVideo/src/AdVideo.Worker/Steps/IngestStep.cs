@@ -82,7 +82,6 @@ public sealed class IngestStep : IPipelineStep
 
         context.SetBrief(brief);
         context.NarrationText = brief.Script;
-        context.VoiceId = brief.VoiceProfileId;
 
         // Ảnh đã tải lên trước (POST /v1/uploads): đã nằm trong adv-uploads nên dùng thẳng object
         // đó, không tải lại, không chép. Đi TRƯỚC ảnh URL để thứ tự ảnh ổn định giữa các lần chạy.

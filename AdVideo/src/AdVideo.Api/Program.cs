@@ -195,6 +195,7 @@ static async Task InitializeAsync(WebApplication app)
         await db.Database.MigrateAsync();
         await sp.GetRequiredService<SystemSettingSeeder>().SeedAsync();
         await sp.GetRequiredService<PromptTemplateSeeder>().SeedAsync();
+        await sp.GetRequiredService<VoiceProfileSeeder>().SeedAsync();
     }
 
     IStorageService storage = sp.GetRequiredService<IStorageService>();

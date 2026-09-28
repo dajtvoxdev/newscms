@@ -43,6 +43,7 @@ public sealed class ProviderRegistry : IProviderRegistry
     private readonly IMediaInspector _inspector;
     private readonly IEnumerable<IVideoProvider> _builtInVideoProviders;
     private readonly IEnumerable<ITtsProvider> _builtInTtsProviders;
+    private readonly IEnumerable<IProviderVoices> _builtInVoices;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ProviderRegistry> _logger;
 
@@ -54,6 +55,7 @@ public sealed class ProviderRegistry : IProviderRegistry
         IMediaInspector inspector,
         IEnumerable<IVideoProvider> builtInVideoProviders,
         IEnumerable<ITtsProvider> builtInTtsProviders,
+        IEnumerable<IProviderVoices> builtInVoices,
         ILoggerFactory loggerFactory,
         ILogger<ProviderRegistry> logger)
     {
@@ -64,6 +66,7 @@ public sealed class ProviderRegistry : IProviderRegistry
         _inspector = inspector;
         _builtInVideoProviders = builtInVideoProviders;
         _builtInTtsProviders = builtInTtsProviders;
+        _builtInVoices = builtInVoices;
         _loggerFactory = loggerFactory;
         _logger = logger;
     }
@@ -154,6 +157,37 @@ public sealed class ProviderRegistry : IProviderRegistry
         IReadOnlyList<ITtsProvider> providers = await GetTtsProvidersAsync(cancellationToken);
 
         return providers.FirstOrDefault(p => string.Equals(p.Name, providerName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public async Task<IProviderVoices?> FindVoicesAsync(string providerName, CancellationToken cancellationToken = default)
+    {
+        // Chỉ khi engine TTS cùng tên đang BẬT: clone một giọng cho engine đang tắt là tạo ra
+        // thứ khách thấy trong danh sách mà không đọc được.
+        if (await FindTtsProviderAsync(providerName, cancellationToken) is null)
+        {
+            return null;
+        }
+
+        if (_builtInVoices.FirstOrDefault(v => string.Equals(v.Name, providerName, StringComparison.OrdinalIgnoreCase)) is { } builtIn)
+        {
+            return builtIn;
+        }
+
+        ResolvedCredential? credential = await _credentials.GetAsync(providerName, ProviderCategory.TextToSpeech, cancellationToken: cancellationToken);
+
+        if (credential is null)
+        {
+            return null;
+        }
+
+        return credential.Provider switch
+        {
+            ProviderNames.ElevenLabs => new ElevenLabsVoices(
+                _httpClientFactory.CreateClient(HttpClientName), credential, _loggerFactory.CreateLogger<ElevenLabsVoices>()),
+
+            // VieNeu và engine khai báo bằng descriptor: chưa có thư viện giọng / clone qua API.
+            _ => null,
+        };
     }
 
     public async Task<ProviderSelectionResult> SelectVideoProviderAsync(

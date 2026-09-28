@@ -1,0 +1,189 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.AdVideo.VoicesModel
+@{
+    ViewData["Title"] = "AdVideo — Giọng đọc";
+    ViewData["AdVideoTab"] = "voices";
+    var byProvider = Model.Presets.GroupBy(p => p.Provider).ToList();
+}
+
+<partial name="_AdVideoNav" />
+
+@if (Model.LoadError is not null)
+{
+    <div class="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">@Model.LoadError</div>
+}
+
+<div class="mb-6 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+    Giọng có sẵn dùng chung cho mọi site. Giọng đầu tiên (thứ tự nhỏ nhất) của mỗi engine là <strong>giọng mặc định</strong> khi người tạo video không chọn giọng.
+    Engine dùng để clone giọng và số giọng clone tối đa mỗi site chỉnh ở
+    <a asp-page="/AdVideo/Settings" class="font-semibold text-indigo-600">Tham số vận hành</a> (<span class="font-mono text-xs">VoiceCloneProvider</span>, <span class="font-mono text-xs">MaxClonedVoicesPerTenant</span>).
+</div>
+
+<div class="space-y-6">
+    <div class="admin-card overflow-hidden">
+        <div class="px-6 py-4"><h3 class="font-bold text-slate-950">Giọng có sẵn</h3></div>
+        @if (Model.Presets.Count == 0)
+        {
+            <p class="px-6 pb-6 text-sm text-slate-500">Chưa có giọng nào. Thêm tay bên dưới hoặc nhập từ thư viện engine.</p>
+        }
+        else
+        {
+            <table class="w-full text-left text-sm" id="voice-presets">
+                <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <tr>
+                        <th class="px-6 py-3">Giọng</th>
+                        <th class="px-6 py-3">Engine / voice id</th>
+                        <th class="px-6 py-3 w-24">Thứ tự</th>
+                        <th class="px-6 py-3 w-20">Bật</th>
+                        <th class="px-6 py-3 w-40"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @foreach (var group in byProvider)
+                    {
+                        var first = group.Where(p => p.IsActive).OrderBy(p => p.SortOrder).FirstOrDefault();
+                        @foreach (var p in group)
+                        {
+                            var formId = $"voice-{p.Id:N}";
+                            <tr class="bg-white align-top">
+                                <td class="px-6 py-3">
+                                    <input form="@formId" name="name" value="@p.Name" class="admin-input text-sm" />
+                                    <input form="@formId" name="description" value="@p.Description" placeholder="Mô tả" class="admin-input mt-1 text-xs" />
+                                    <input form="@formId" name="previewUrl" value="@p.PreviewUrl" placeholder="Link nghe thử (tuỳ chọn)" class="admin-input mt-1 font-mono text-xs" />
+                                    @if (!string.IsNullOrWhiteSpace(p.PreviewUrl))
+                                    {
+                                        <audio controls preload="none" src="@p.PreviewUrl" class="mt-1 h-8"></audio>
+                                    }
+                                </td>
+                                <td class="px-6 py-3">
+                                    <div class="font-semibold text-slate-800">@p.Provider</div>
+                                    <div class="font-mono text-xs text-slate-500">@p.ProviderVoiceId</div>
+                                    @if (first?.Id == p.Id)
+                                    {
+                                        <span class="admin-badge mt-1 bg-indigo-100 text-indigo-700">Mặc định</span>
+                                    }
+                                </td>
+                                <td class="px-6 py-3"><input form="@formId" name="sortOrder" type="number" value="@p.SortOrder" class="admin-input text-sm" /></td>
+                                <td class="px-6 py-3"><input form="@formId" name="isActive" type="checkbox" value="true" class="h-4 w-4" @(p.IsActive ? "checked" : null) /></td>
+                                <td class="px-6 py-3">
+                                    <div class="flex gap-2">
+                                        <form id="@formId" method="post" asp-page-handler="Update" asp-route-id="@p.Id">
+                                            <button type="submit" class="admin-btn-secondary">Lưu</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="Delete" asp-route-id="@p.Id" onsubmit="return confirm('Gỡ giọng này khỏi danh sách chọn?');">
+                                            <button type="submit" class="admin-btn-secondary text-red-600">Gỡ</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <form method="post" asp-page-handler="Add" class="admin-card space-y-4 p-6" id="add-voice-form">
+            <h3 class="font-bold text-slate-950">Thêm giọng bằng voice id</h3>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                    <label class="admin-label" for="add-name">Tên hiển thị *</label>
+                    <input id="add-name" name="name" class="admin-input mt-1" placeholder="Nữ · miền Bắc · ấm" />
+                </div>
+                <div>
+                    <label class="admin-label" for="add-provider">Engine *</label>
+                    <input id="add-provider" name="provider" class="admin-input mt-1 font-mono" placeholder="elevenlabs" />
+                </div>
+                <div>
+                    <label class="admin-label" for="add-voice-id">Voice id *</label>
+                    <input id="add-voice-id" name="providerVoiceId" class="admin-input mt-1 font-mono" />
+                </div>
+                <div>
+                    <label class="admin-label" for="add-sort">Thứ tự</label>
+                    <input id="add-sort" name="sortOrder" type="number" class="admin-input mt-1" placeholder="tự động (cuối danh sách)" />
+                </div>
+            </div>
+            <div>
+                <label class="admin-label" for="add-description">Mô tả</label>
+                <input id="add-description" name="description" class="admin-input mt-1" />
+            </div>
+            <div>
+                <label class="admin-label" for="add-preview">Link nghe thử</label>
+                <input id="add-preview" name="previewUrl" class="admin-input mt-1 font-mono text-xs" />
+            </div>
+            <button type="submit" class="admin-btn-primary">Thêm giọng</button>
+        </form>
+
+        <div class="admin-card space-y-4 p-6">
+            <h3 class="font-bold text-slate-950">Nhập từ thư viện engine</h3>
+            <form method="get" class="flex gap-2">
+                <input name="provider" value="@Model.Provider" class="admin-input font-mono" placeholder="elevenlabs" />
+                <button type="submit" class="admin-btn-secondary">Xem thư viện</button>
+            </form>
+            <p class="text-xs text-slate-500">Đọc thư viện giọng của tài khoản engine bằng key đã nạp ở Provider &amp; key. Giọng clone của các site không hiện ở đây.</p>
+
+            @if (Model.LibraryError is not null)
+            {
+                <div class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">@Model.LibraryError</div>
+            }
+            @if (Model.Library is { } library)
+            {
+                @if (library.Count == 0)
+                {
+                    <p class="text-sm text-slate-500">Thư viện trống.</p>
+                }
+                <ul class="max-h-[32rem] divide-y divide-slate-100 overflow-y-auto" id="voice-library">
+                    @foreach (var v in library)
+                    {
+                        var labels = v.Labels is null ? "" : string.Join(" · ", v.Labels.Values);
+                        <li class="flex flex-wrap items-center gap-3 py-3">
+                            <div class="min-w-0 flex-1">
+                                <div class="font-semibold text-slate-900">@v.Name <span class="font-mono text-xs font-normal text-slate-400">@v.VoiceId</span></div>
+                                <div class="text-xs text-slate-500">@(v.Category)@(labels.Length > 0 ? " · " + labels : "")</div>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(v.PreviewUrl))
+                            {
+                                <audio controls preload="none" src="@v.PreviewUrl" class="h-8"></audio>
+                            }
+                            @if (v.AlreadyAdded)
+                            {
+                                <span class="admin-badge bg-slate-100 text-slate-500">Đã thêm</span>
+                            }
+                            else
+                            {
+                                <form method="post" asp-page-handler="Add">
+                                    <input type="hidden" name="name" value="@v.Name" />
+                                    <input type="hidden" name="description" value="@(labels.Length > 0 ? labels : v.Description)" />
+                                    <input type="hidden" name="provider" value="@Model.Provider" />
+                                    <input type="hidden" name="providerVoiceId" value="@v.VoiceId" />
+                                    <input type="hidden" name="previewUrl" value="@v.PreviewUrl" />
+                                    <input type="hidden" name="returnProvider" value="@Model.Provider" />
+                                    <button type="submit" class="admin-btn-secondary">Thêm</button>
+                                </form>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+
+    <div class="admin-card p-6">
+        <h3 class="font-bold text-slate-950">Giọng clone theo site</h3>
+        <p class="mt-1 text-xs text-slate-500">Mỗi giọng clone chiếm một slot giọng trong gói engine. Chỉ hiện số lượng — mẫu ghi âm và giọng thuộc về site đã tạo.</p>
+        @if (Model.ClonedStats.Count == 0)
+        {
+            <p class="mt-2 text-sm text-slate-500">Chưa site nào clone giọng.</p>
+        }
+        else
+        {
+            <ul class="mt-3 divide-y divide-slate-100 text-sm">
+                @foreach (var s in Model.ClonedStats.OrderByDescending(s => s.Count))
+                {
+                    <li class="flex justify-between py-2"><span>@s.TenantName</span><span class="font-semibold">@s.Count</span></li>
+                }
+            </ul>
+        }
+    </div>
+</div>

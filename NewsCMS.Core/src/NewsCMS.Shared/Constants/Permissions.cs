@@ -141,6 +141,9 @@ public static class Permissions
         public const string View = "VideoStudio.Video.View";
         public const string Create = "VideoStudio.Video.Create";
         public const string Cancel = "VideoStudio.Video.Cancel";
+
+        /// <summary>Clone giọng từ ghi âm mẫu và xoá giọng clone của site — tách riêng vì đụng tới giọng người thật.</summary>
+        public const string ManageVoices = "VideoStudio.Voice.Manage";
     }
 
     public static class KeoBia
@@ -219,6 +222,7 @@ public static class Permissions
         yield return (VideoStudio.View, "VideoStudio", "Xem video quảng cáo AI");
         yield return (VideoStudio.Create, "VideoStudio", "Tạo video quảng cáo AI (tốn chi phí)");
         yield return (VideoStudio.Cancel, "VideoStudio", "Huỷ video đang dựng");
+        yield return (VideoStudio.ManageVoices, "VideoStudio", "Clone và xoá giọng đọc của site (cần xác nhận của chủ giọng)");
 
         yield return (KeoBia.ViewPlayers, "KeoBia", "Xem tracking người chơi Kèo Bia");
         yield return (KeoBia.ManageMatches, "KeoBia", "Quản lý lịch và kết quả Kèo Bia");

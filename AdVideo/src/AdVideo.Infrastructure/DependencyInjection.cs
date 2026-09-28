@@ -116,6 +116,7 @@ public static class DependencyInjection
 
         services.AddScoped<SystemSettingSeeder>();
         services.AddScoped<PromptTemplateSeeder>();
+        services.AddScoped<VoiceProfileSeeder>();
     }
 
     private static void AddStores(IServiceCollection services)
@@ -213,6 +214,7 @@ public static class DependencyInjection
         {
             services.AddSingleton<IVideoProvider, FakeVideoProvider>();
             services.AddSingleton<ITtsProvider, FakeTtsProvider>();
+            services.AddSingleton<IProviderVoices, FakeProviderVoices>();
         }
 
         services.AddScoped<IProviderRegistry, ProviderRegistry>();

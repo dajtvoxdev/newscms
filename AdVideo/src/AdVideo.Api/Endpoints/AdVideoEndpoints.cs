@@ -64,6 +64,7 @@ public static class AdVideoEndpoints
             .WithSummary("Huỷ job chưa xong. Dừng ở ranh giới bước kế tiếp; tiền của bước đang chạy vẫn tính.");
 
         app.MapUploadEndpoints();
+        app.MapVoiceEndpoints();
 
         return app;
     }
@@ -254,18 +255,49 @@ public static class AdVideoEndpoints
             }
         }
 
-        ProviderSelectionResult ttsSelection = await registry.SelectTtsProviderAsync(request.Tier, cancellationToken);
+        ITtsProvider? ttsProvider;
 
-        if (!ttsSelection.IsSuccess)
+        if (request.VoiceProfileId is { } voiceId)
         {
-            return Problem(
-                http,
-                StatusCodes.Status422UnprocessableEntity,
-                "Không có engine giọng đọc nào đáp ứng được",
-                string.Join(" ", ttsSelection.Reasons));
-        }
+            // Chọn giọng = chọn engine đọc: voice id của một engine vô nghĩa với engine khác. Global
+            // filter chỉ để lộ giọng có sẵn + giọng clone của chính tenant này.
+            VoiceProfile? voice = await db.VoiceProfiles
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == voiceId && v.IsActive, cancellationToken);
 
-        ITtsProvider? ttsProvider = await registry.FindTtsProviderAsync(ttsSelection.ProviderName!, cancellationToken);
+            if (voice is null)
+            {
+                return Results.ValidationProblem(
+                    new Dictionary<string, string[]> { ["voice.voice_profile_id"] = ["Không có giọng này, hoặc giọng đã bị tắt. Lấy danh sách từ GET /v1/voices."] },
+                    title: "Request không hợp lệ");
+            }
+
+            ttsProvider = await registry.FindTtsProviderAsync(voice.Provider, cancellationToken);
+
+            if (ttsProvider is null)
+            {
+                return Problem(
+                    http,
+                    StatusCodes.Status422UnprocessableEntity,
+                    "Giọng này tạm không dùng được",
+                    $"Engine đọc của giọng \"{voice.Name}\" đang tắt. Chọn giọng khác hoặc bỏ trống để dùng giọng mặc định.");
+            }
+        }
+        else
+        {
+            ProviderSelectionResult ttsSelection = await registry.SelectTtsProviderAsync(request.Tier, cancellationToken);
+
+            if (!ttsSelection.IsSuccess)
+            {
+                return Problem(
+                    http,
+                    StatusCodes.Status422UnprocessableEntity,
+                    "Không có engine giọng đọc nào đáp ứng được",
+                    string.Join(" ", ttsSelection.Reasons));
+            }
+
+            ttsProvider = await registry.FindTtsProviderAsync(ttsSelection.ProviderName!, cancellationToken);
+        }
 
         // 4. Dự toán tiền, rồi mới tới hai cái trần.
         int maxRetries = await settings.GetIntAsync(SettingKeys.ShotMaxRetries, 2, cancellationToken);
@@ -335,6 +367,7 @@ public static class AdVideoEndpoints
             Provider = videoProvider.Name,
             ProviderModelId = videoProvider.Capability.ModelId,
             HasPerson = request.HasPerson,
+            VoiceProfileId = request.VoiceProfileId,
             EstimatedCostUsd = estimate.EstimatedCostUsd,
             MaxCostUsd = effectiveMax,
             RequiresApproval = false,
