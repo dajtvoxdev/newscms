@@ -43,6 +43,7 @@ public static class WorkerPipeline
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
         services.AddScoped<JobArtifacts>();
+        services.AddScoped<LabelFontResolver>();
 
         services.AddScoped<IPipelineStep, IngestStep>();
         services.AddScoped<IPipelineStep, TtsStep>();

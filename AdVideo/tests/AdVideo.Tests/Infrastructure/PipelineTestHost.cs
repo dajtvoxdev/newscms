@@ -85,8 +85,10 @@ public sealed class PipelineTestHost : IAsyncDisposable
     /// Chỉnh hành vi của provider giả: bắt shot nào fail, fail kiểu gì, TTS có trả mốc thời gian
     /// hay không.
     /// </param>
+    /// <param name="configurationOverrides">Ghi đè cấu hình máy, ví dụ để trống <c>AdVideo:Ffmpeg:FontFile</c>.</param>
     public static async Task<PipelineTestHost> StartAsync(
-        Action<FakeProviderOptions>? configureFakes = null)
+        Action<FakeProviderOptions>? configureFakes = null,
+        IDictionary<string, string?>? configurationOverrides = null)
     {
         string root = Path.Combine(
             Path.GetTempPath(), $"advideo-test-{Guid.NewGuid():N}");
@@ -120,6 +122,14 @@ public sealed class PipelineTestHost : IAsyncDisposable
             ["AdVideo:FakeProviders:VideoCostPerSecondUsd"] = VideoCostPerSecondUsd.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["AdVideo:FakeProviders:TtsCostPerCallUsd"] = TtsCostPerCallUsd.ToString(System.Globalization.CultureInfo.InvariantCulture),
         };
+
+        if (configurationOverrides is not null)
+        {
+            foreach (KeyValuePair<string, string?> pair in configurationOverrides)
+            {
+                settings[pair.Key] = pair.Value;
+            }
+        }
 
         IConfiguration configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(settings)

@@ -11,7 +11,6 @@ using AdVideo.Infrastructure.Media;
 using AdVideo.Infrastructure.Persistence;
 using AdVideo.Worker.Jobs;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace AdVideo.Worker.Steps;
 
@@ -41,7 +40,7 @@ public sealed class ComposeStep : IPipelineStep
     private readonly IVideoComposer _composer;
     private readonly IFfmpegRunner _ffmpeg;
     private readonly ISettingsStore _settings;
-    private readonly FfmpegOptions _options;
+    private readonly LabelFontResolver _fonts;
     private readonly JobArtifacts _artifacts;
     private readonly ILogger<ComposeStep> _logger;
 
@@ -50,17 +49,15 @@ public sealed class ComposeStep : IPipelineStep
         IVideoComposer composer,
         IFfmpegRunner ffmpeg,
         ISettingsStore settings,
-        IOptions<FfmpegOptions> options,
+        LabelFontResolver fonts,
         JobArtifacts artifacts,
         ILogger<ComposeStep> logger)
     {
-        ArgumentNullException.ThrowIfNull(options);
-
         _db = db;
         _composer = composer;
         _ffmpeg = ffmpeg;
         _settings = settings;
-        _options = options.Value;
+        _fonts = fonts;
         _artifacts = artifacts;
         _logger = logger;
     }
@@ -99,13 +96,14 @@ public sealed class ComposeStep : IPipelineStep
             return StepResult.Fail("Chưa có quyết định về tiếng gốc — bước 6 phải chạy trước bước ghép.");
         }
 
-        if (string.IsNullOrWhiteSpace(_options.FontFile))
+        // Tìm font TRƯỚC khi tải vài trăm MB clip về đĩa: thiếu font thì dừng ở đây, rẻ.
+        LabelFontResolution font = await _fonts.ResolveAsync(cancellationToken);
+
+        if (font.Path is null)
         {
-            // Chặn trước khi tải vài trăm MB về đĩa: thiếu font thì FFmpeg vẫn chạy, vẫn xuất ra
-            // video, chỉ là chữ tiếng Việt hiện thành ô vuông và không có dòng lỗi nào.
-            return StepResult.Fail(
-                $"Chưa cấu hình {FfmpegOptions.SectionName}:FontFile. Không có font có dấu thì nhãn AI " +
-                "hiện thành ô vuông, mà FFmpeg không báo lỗi gì cả.");
+            string reason = font.Problem ?? "Không có font vẽ nhãn AI.";
+
+            return font.IsRetryable ? StepResult.Retry(reason) : StepResult.Fail(reason);
         }
 
         string workDir = Path.Combine(Path.GetTempPath(), $"advideo-job-{context.JobId:N}");
@@ -144,7 +142,13 @@ public sealed class ComposeStep : IPipelineStep
                 shots.Add(new ComposeShot(plan, clipPath, nativeAudioPath));
             }
 
-            AiLabelSpec label = AiLabelStamper.Build(context.AspectRatio, timeline.TotalVideoSeconds);
+            // Chữ nhãn đọc từ DB (sửa được qua API quản trị); rỗng/thiếu thì Build dùng chữ mặc định —
+            // không có đường nào ra một video KHÔNG có nhãn.
+            string? overlayText = await _settings.GetStringAsync(SettingKeys.AiLabelOverlayText, cancellationToken);
+            AiLabelSpec label = AiLabelStamper.Build(context.AspectRatio, timeline.TotalVideoSeconds, overlayText);
+
+            _logger.LogInformation(
+                "job_id={JobId} nhãn AI \"{Text}\", font {FontSource}.", context.JobId, label.OverlayText, font.Source);
 
             string labelPath = Path.Combine(workDir, "label.txt");
 
@@ -165,7 +169,7 @@ public sealed class ComposeStep : IPipelineStep
                 AspectRatio = context.AspectRatio,
                 Label = label,
                 LabelTextFilePath = labelPath,
-                FontFile = _options.FontFile!,
+                FontFile = font.Path,
                 OutputPath = outputPath,
 
                 // Null nghĩa là bỏ hết track gốc. Lấy từ quyết định đã chốt ở bước 6 chứ không
