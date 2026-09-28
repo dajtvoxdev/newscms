@@ -111,28 +111,34 @@ public sealed class ApiKeyAuthHandler : AuthenticationHandler<AuthenticationSche
     protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
     {
         Response.StatusCode = StatusCodes.Status401Unauthorized;
-        Response.ContentType = "application/problem+json";
 
-        await Response.WriteAsJsonAsync(new
-        {
-            type = "https://advideo/errors/unauthorized",
-            title = "Thiếu hoặc sai API key",
-            status = StatusCodes.Status401Unauthorized,
-            detail = $"Gửi kèm header {HeaderName}. Key do bên vận hành cấp, mỗi tenant một key.",
-        });
+        // Truyền contentType vào WriteAsJsonAsync: đặt Response.ContentType trước rồi gọi bản không
+        // tham số thì nó ghi đè lại thành application/json.
+        await Response.WriteAsJsonAsync(
+            new
+            {
+                type = "https://advideo/errors/unauthorized",
+                title = "Thiếu hoặc sai API key",
+                status = StatusCodes.Status401Unauthorized,
+                detail = $"Gửi kèm header {HeaderName}. Key do bên vận hành cấp, mỗi tenant một key.",
+            },
+            options: (System.Text.Json.JsonSerializerOptions?)null,
+            contentType: "application/problem+json");
     }
 
     protected override async Task HandleForbiddenAsync(AuthenticationProperties properties)
     {
         Response.StatusCode = StatusCodes.Status403Forbidden;
-        Response.ContentType = "application/problem+json";
 
-        await Response.WriteAsJsonAsync(new
-        {
-            type = "https://advideo/errors/forbidden",
-            title = "Không có quyền",
-            status = StatusCodes.Status403Forbidden,
-        });
+        await Response.WriteAsJsonAsync(
+            new
+            {
+                type = "https://advideo/errors/forbidden",
+                title = "Không có quyền",
+                status = StatusCodes.Status403Forbidden,
+            },
+            options: (System.Text.Json.JsonSerializerOptions?)null,
+            contentType: "application/problem+json");
     }
 }
 

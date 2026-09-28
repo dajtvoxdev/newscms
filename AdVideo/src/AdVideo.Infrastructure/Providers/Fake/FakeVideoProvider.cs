@@ -165,7 +165,7 @@ public sealed class FakeVideoProvider : IVideoProvider
                 VideoBytes = bytes,
                 HasNativeAudio = withAudio,
                 MeasuredDurationSeconds = request.DurationSeconds,
-                ReportedCostUsd = 0m,
+                ReportedCostUsd = _options.VideoCostPerSecondUsd * request.DurationSeconds,
             };
         }
         finally

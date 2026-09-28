@@ -56,4 +56,17 @@ public sealed class FakeProviderOptions
 
     /// <summary>Ping luôn trả về giá trị này. Đặt false để kiểm tra nhánh provider chết.</summary>
     public bool PingSucceeds { get; set; } = true;
+
+    /// <summary>
+    /// Giá mỗi giây clip mà provider video giả "báo" về, USD.
+    /// </summary>
+    /// <remarks>
+    /// <b>Test phải đặt số khác 0.</b> Với giá 0, mọi phép kiểm tiền đều rỗng: xoá hẳn dòng cộng
+    /// dồn chi phí thì test vẫn xanh, và trần chi tiêu chưa bao giờ so với một con số thật. Mặc định
+    /// để 0 chỉ để môi trường dev không tự ăn vào trần chi tiêu ngày bằng tiền không có thật.
+    /// </remarks>
+    public decimal VideoCostPerSecondUsd { get; set; }
+
+    /// <summary>Giá mỗi lần gọi TTS giả, USD. Xem <see cref="VideoCostPerSecondUsd"/>.</summary>
+    public decimal TtsCostPerCallUsd { get; set; }
 }

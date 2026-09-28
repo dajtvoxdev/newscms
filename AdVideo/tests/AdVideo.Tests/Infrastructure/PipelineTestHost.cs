@@ -66,6 +66,12 @@ public sealed class PipelineTestHost : IAsyncDisposable
     /// <summary>Mọi dòng log từ worker, để test soi được những cảnh báo không làm job đỏ.</summary>
     public List<string> Log { get; }
 
+    /// <summary>Giá mỗi giây clip provider video giả báo về.</summary>
+    public const decimal VideoCostPerSecondUsd = 0.01m;
+
+    /// <summary>Giá mỗi lần gọi TTS giả.</summary>
+    public const decimal TtsCostPerCallUsd = 0.002m;
+
     /// <summary>Tenant của mọi job trong lần chạy này.</summary>
     public Guid TenantId { get; } = Guid.NewGuid();
 
@@ -108,6 +114,11 @@ public sealed class PipelineTestHost : IAsyncDisposable
 
             ["AdVideo:FakeProviders:Enabled"] = "true",
             ["AdVideo:FakeProviders:LatencyMs"] = "0",
+
+            // Giá khác 0 cho MỌI test: với giá 0, xoá dòng cộng dồn chi phí thì cả bộ test vẫn
+            // xanh (lỗ L3 trong file trạng thái 25/09).
+            ["AdVideo:FakeProviders:VideoCostPerSecondUsd"] = VideoCostPerSecondUsd.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["AdVideo:FakeProviders:TtsCostPerCallUsd"] = TtsCostPerCallUsd.ToString(System.Globalization.CultureInfo.InvariantCulture),
         };
 
         IConfiguration configuration = new ConfigurationBuilder()

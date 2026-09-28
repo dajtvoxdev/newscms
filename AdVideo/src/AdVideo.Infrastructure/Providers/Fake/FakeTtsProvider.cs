@@ -147,7 +147,7 @@ public sealed class FakeTtsProvider : ITtsProvider
                 AudioDurationSeconds = duration,
                 WordTimings = timings,
                 ProviderRequestId = $"fake-tts-{Guid.NewGuid():N}",
-                ReportedCostUsd = 0m,
+                ReportedCostUsd = _options.TtsCostPerCallUsd,
                 BilledCharacterCount = request.Text.Length,
             };
         }

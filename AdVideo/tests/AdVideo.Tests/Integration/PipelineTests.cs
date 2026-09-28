@@ -94,7 +94,44 @@ public class PipelineTests
             "test tự động không được gọi provider trả tiền");
         calls.Should().ContainSingle(c => c.Category == ProviderCategory.TextToSpeech);
 
-        job.ActualCostUsd.Should().Be(0m);
+        // Sổ cái và tổng trên job phải khớp từng xu. Giá giả khác 0 nên phép so này có nội dung:
+        // bỏ dòng cộng dồn trong JobArtifacts thì ActualCostUsd = 0 và test đỏ.
+        decimal expectedCost = PipelineTestHost.TtsCostPerCallUsd
+            + shots.Sum(s => PipelineTestHost.VideoCostPerSecondUsd * s.VideoDurationSeconds);
+
+        calls.Sum(c => c.CostUsd).Should().Be(expectedCost);
+        calls.Should().OnlyContain(c => c.CostIsReported, "provider giả báo giá, không phải hệ thống tự suy");
+        job.ActualCostUsd.Should().Be(expectedCost);
+        shots.Sum(s => s.CostUsd).Should().Be(expectedCost - PipelineTestHost.TtsCostPerCallUsd);
+    }
+
+    [Fact]
+    public async Task Tran_khac_0_bi_cham_giua_chung_thi_dung_o_shot_ke_tiep_va_so_cai_khop()
+    {
+        // Trần 0 (test bên dưới) nảy trước khi phát sinh đồng nào, nên phép so AccumulatedCostUsd
+        // với một trần thật chưa từng chạy. Trần này đủ cho TTS và shot đầu, không đủ cho shot hai.
+        await using PipelineTestHost host = await PipelineTestHost.StartAsync();
+
+        decimal ceiling = PipelineTestHost.TtsCostPerCallUsd + 0.001m;
+
+        Guid jobId = await host.CreateJobAsync(TestBriefs.Valid(), job => job.MaxCostUsd = ceiling);
+
+        await host.RunAsync(jobId);
+
+        AdVideoJob job = await host.ReadJobAsync(jobId);
+        List<Shot> shots = await host.ReadShotsAsync(jobId);
+        List<ProviderCall> calls = await host.ReadCallsAsync(jobId);
+
+        shots.Should().HaveCountGreaterThan(1, "cần ít nhất hai shot thì mới có 'shot kế tiếp' để chặn");
+
+        job.Status.Should().Be(JobStatus.Failed);
+        job.FailureReason.Should().Contain("chạm trần").And.Contain("shot 2/");
+
+        calls.Where(c => c.Category == ProviderCategory.Video).Should().ContainSingle(
+            "trần bị vượt sau shot đầu, nên shot hai phải bị chặn TRƯỚC lời gọi");
+
+        job.ActualCostUsd.Should().Be(calls.Sum(c => c.CostUsd));
+        job.ActualCostUsd.Should().BeGreaterThan(ceiling, "chỉ vượt được đúng một lời gọi — cái đã chạy trước khi biết giá");
     }
 
     [Fact]
