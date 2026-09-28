@@ -1,9 +1,12 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using AdVideo.Core.Configuration;
 using AdVideo.Core.Entities;
+using AdVideo.Core.Providers;
 using AdVideo.Core.Providers.Descriptors;
 using AdVideo.Infrastructure.Persistence.Caching;
+using AdVideo.Infrastructure.Providers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -213,21 +216,102 @@ public sealed class DbDescriptorStore : IDescriptorStore
         _credentialSignal.Reset();
     }
 
+    /// <remarks>
+    /// <b>Tắt descriptor là đường LÙI, nên nó phải trả credential về đúng trạng thái trước khi bật.</b>
+    /// Bật descriptor ghi capability của descriptor đè lên credential (descriptor là nguồn sự thật);
+    /// tắt mà không trả lại thì adapter viết tay quay về chạy với model id và đơn giá của descriptor
+    /// — ví dụ adapter fal chạy bằng model id của NOVA, sai cả đường dẫn lẫn giá, và sai im lặng.
+    /// </remarks>
     public async Task DeactivateAsync(string provider, CancellationToken cancellationToken = default)
     {
-        List<ProviderDescriptorRow> active = await _db.ProviderDescriptors
-            .Where(x => x.Code == provider && x.IsActive)
-            .ToListAsync(cancellationToken);
+        int credentialCountWithoutAdapter = 0;
 
-        foreach (ProviderDescriptorRow row in active)
+        // Cùng khuôn với ActivateVersionAsync: tắt descriptor và trả capability phải nằm trong một
+        // transaction, nếu không thì một lần tắt hỏng giữa chừng để lại credential mang capability
+        // của descriptor trong khi descriptor đã tắt.
+        await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            row.IsActive = false;
+            await using Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction =
+                _db.Database.IsRelational() ? await _db.Database.BeginTransactionAsync(cancellationToken) : null;
+
+            List<ProviderDescriptorRow> active = await _db.ProviderDescriptors
+                .Where(x => x.Code == provider && x.IsActive)
+                .ToListAsync(cancellationToken);
+
+            if (active.Count == 0)
+            {
+                // Không có descriptor nào đang bật thì capability của credential không phải do
+                // descriptor ghi — có thể là giá trị người vận hành tự đặt bằng set-credential. Để nguyên.
+                return;
+            }
+
+            foreach (ProviderDescriptorRow row in active)
+            {
+                row.IsActive = false;
+            }
+
+            await _db.SaveChangesAsync(cancellationToken);
+
+            List<ProviderCredential> credentials = await _db.ProviderCredentials
+                .Where(x => x.Provider == provider)
+                .ToListAsync(cancellationToken);
+
+            string? builtInCapabilityJson = BuiltInCapabilityJson(provider);
+
+            if (builtInCapabilityJson is null)
+            {
+                // Provider chỉ có descriptor, không có adapter viết tay: không có gì để quay về.
+                // Đoán một capability mặc định còn tệ hơn để nguyên — xem cảnh báo bên dưới.
+                credentialCountWithoutAdapter = credentials.Count;
+            }
+            else
+            {
+                foreach (ProviderCredential credential in credentials)
+                {
+                    credential.CapabilityJson = builtInCapabilityJson;
+                }
+
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+        });
+
+        if (credentialCountWithoutAdapter > 0)
+        {
+            _logger.LogWarning(
+                "Đã tắt descriptor {Provider} nhưng {Count} credential vẫn giữ capability của descriptor: "
+                + "provider này không có adapter viết tay nào để quay về. Sửa CapabilityJson bằng set-credential trước khi dùng lại.",
+                provider,
+                credentialCountWithoutAdapter);
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
-
         Invalidate();
+
+        // Credential vừa đổi nên phải bỏ cache của chúng, y như ActivateVersionAsync.
+        _credentialSignal.Reset();
     }
+
+    /// <summary>
+    /// Capability gốc của adapter viết tay, đúng dạng JSON mà <c>set-credential</c> ghi vào cột.
+    /// Null nghĩa là provider không có adapter nào để quay về.
+    /// </summary>
+    private static string? BuiltInCapabilityJson(string provider) =>
+        ProviderCapabilityCatalog.CategoryOf(provider) switch
+        {
+            ProviderCategory.Video => ProviderCapabilityCatalog.Video(provider) is { } video
+                ? JsonSerializer.Serialize(video, AdVideoJson.Indented)
+                : null,
+
+            ProviderCategory.TextToSpeech => ProviderCapabilityCatalog.Tts(provider) is { } tts
+                ? JsonSerializer.Serialize(tts, AdVideoJson.Indented)
+                : null,
+
+            _ => null,
+        };
 
     public void Invalidate() => _signal.Reset();
 }
