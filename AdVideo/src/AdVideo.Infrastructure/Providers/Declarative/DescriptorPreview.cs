@@ -68,8 +68,16 @@ public static class DescriptorPreview
 
         if (descriptor.Submit.Body is { Kind: DescriptorBodyKind.Json, Template: { } template2 })
         {
-            JsonTemplateRenderer.TryRender(template2, context, out JsonNode? rendered);
-            body = rendered?.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+            if (JsonTemplateRenderer.TryRender(template2, context, out JsonNode? rendered))
+            {
+                body = rendered?.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+            }
+            else
+            {
+                // Bản xem trước in ra body rỗng còn lúc gọi thật thì executor từ chối — nói trước,
+                // đừng để người vận hành tưởng descriptor đã ổn.
+                warnings.Add("submit.body không dựng được với dữ liệu mẫu — gọi thật sẽ bị từ chối.");
+            }
         }
 
         if ((descriptor.Poll?.Mode ?? DescriptorPollMode.None) != DescriptorPollMode.None && descriptor.Poll!.Mode != DescriptorPollMode.PathTemplate)

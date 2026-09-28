@@ -128,8 +128,14 @@ public sealed class DescriptorHttpExecutor
 
         if (submit.Body is { Kind: DescriptorBodyKind.Json, Template: { } template })
         {
-            JsonTemplateRenderer.TryRender(template, context, out JsonNode? body);
-            content = new StringContent(body?.ToJsonString() ?? "{}", Encoding.UTF8, "application/json");
+            if (!JsonTemplateRenderer.TryRender(template, context, out JsonNode? body))
+            {
+                // Thân request khuyết khoá là một request KHÁC với thứ descriptor mô tả: với prompt,
+                // đó là một lần render tính tiền cho nội dung ngẫu nhiên. Từ chối trước khi gọi.
+                return DescriptorExecution.Fail(VideoFailureKind.ProviderUnavailable, $"{_descriptor.Name}: thiếu biến để dựng submit.body.");
+            }
+
+            content = new StringContent(body!.ToJsonString(), Encoding.UTF8, "application/json");
         }
 
         using HttpResponseMessage submitResponse = await SendAsync(new HttpMethod(submit.Method), Resolve(path), context, content, cancellationToken);
@@ -271,7 +277,7 @@ public sealed class DescriptorHttpExecutor
                     return (null, null, url);
                 }
 
-                if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden or HttpStatusCode.Accepted)
+                if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden)
                 {
                     continue;
                 }
@@ -347,7 +353,10 @@ public sealed class DescriptorHttpExecutor
             url = builder.Uri;
         }
 
-        var request = new HttpRequestMessage(method, url) { Content = content };
+        // Request và thân request được giải phóng ở đây, SAU khi gửi xong: SendAsync đọc trọn phản hồi
+        // (HttpCompletionOption mặc định) nên không còn ai cần thân request nữa, và vòng theo
+        // chuyển hướng trong SsrfGuardingHandler cũng đã chạy xong trước khi hàm này trả về.
+        using var request = new HttpRequestMessage(method, url) { Content = content };
 
         if (sameOrigin)
         {
