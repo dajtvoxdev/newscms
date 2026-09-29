@@ -92,6 +92,20 @@ public sealed class ImageStudioTestHarness : IDisposable
         return new ImageModelService(db, Registry(), Credentials(db), Storage);
     }
 
+    public ImagePromptLibraryService Library(AppDbContext? db = null) => new(db ?? Db);
+
+    public ImagePromptDemoService Demos(AppDbContext? db = null)
+    {
+        db ??= Db;
+        return new ImagePromptDemoService(db, Credentials(db), Registry(), Storage, NullLogger<ImagePromptDemoService>.Instance);
+    }
+
+    public ImagePromptTrendService Trends(NewsCMS.Application.Ai.IAiCompletionService ai, AppDbContext? db = null)
+    {
+        db ??= Db;
+        return new ImagePromptTrendService(db, ai, Demos(db), NullLogger<ImagePromptTrendService>.Instance);
+    }
+
     /// <summary>Bật Xưởng ảnh cho site hiện tại.</summary>
     public async Task EnableSiteAsync(int monthly = 0, int daily = 0, string? brandStyle = null)
     {

@@ -24,12 +24,75 @@ namespace NewsCMS.Web.Areas.Admin.Pages.ImageStudio;
 public class ApiModel : PageModel
 {
     private readonly IImageStudioService _studio;
+    private readonly IImagePromptLibraryService _library;
+    private readonly IImagePromptAssistant _assistant;
     private readonly UserManager<AppUser> _users;
 
-    public ApiModel(IImageStudioService studio, UserManager<AppUser> users)
+    public ApiModel(IImageStudioService studio, IImagePromptLibraryService library, IImagePromptAssistant assistant, UserManager<AppUser> users)
     {
         _studio = studio;
+        _library = library;
+        _assistant = assistant;
         _users = users;
+    }
+
+    /// <summary><c>?handler=Templates&amp;purpose=post-cover</c> — mẫu cho modal, đúng mục đích trước.</summary>
+    public async Task<IActionResult> OnGetTemplatesAsync(string? purpose)
+    {
+        if (!CanCreate())
+        {
+            return Forbidden();
+        }
+
+        IReadOnlyList<ImagePromptTemplateDto> templates = await _library.GetPublishedAsync(ImagePurposes.Parse(purpose));
+
+        return new JsonResult(new
+        {
+            templates = templates.Select(t => new
+            {
+                id = t.Id,
+                title = t.Title,
+                category = t.Category,
+                purpose = t.PurposeKey,
+                description = t.Description,
+                prompt = t.Prompt,
+                aspectRatio = t.AspectRatio,
+                isTrend = t.IsTrend,
+                trendName = t.TrendName,
+                demoUrl = t.DemoImageUrl,
+                // {thuong_hieu} server tự điền bằng tên site — modal không hỏi.
+                placeholders = t.Placeholders
+                    .Where(p => p != ImagePromptTemplate.BrandPlaceholder)
+                    .Select(p => new { token = p, label = ImagePromptPlaceholders.Label(p) }),
+            }),
+        });
+    }
+
+    public async Task<IActionResult> OnPostEnhanceAsync([FromBody] EnhanceRequest request)
+    {
+        if (!CanCreate())
+        {
+            return Forbidden();
+        }
+
+        Result<string> result = await _assistant.EnhanceAsync(request.Prompt ?? string.Empty, ImagePurposes.Parse(request.Purpose) ?? ImagePurpose.Free);
+
+        return result.Succeeded ? new JsonResult(new { prompt = result.Value }) : Error(result.Error);
+    }
+
+    public async Task<IActionResult> OnPostSuggestAsync([FromBody] SuggestRequest request)
+    {
+        if (!CanCreate())
+        {
+            return Forbidden();
+        }
+
+        Result<ImagePromptSuggestionDto> result = await _assistant.SuggestAsync(new ImagePromptSuggestInput(
+            ImagePurposes.Parse(request.Purpose) ?? ImagePurpose.Free, request.Title, request.Excerpt));
+
+        return result.Succeeded
+            ? new JsonResult(new { prompt = result.Value!.Prompt, alt = result.Value.Alt, caption = result.Value.Caption })
+            : Error(result.Error);
     }
 
     public IActionResult OnGet() => NotFound();
@@ -72,7 +135,7 @@ public class ApiModel : PageModel
             return Forbidden();
         }
 
-        ImagePurpose purpose = Enum.TryParse(request.Purpose, ignoreCase: true, out ImagePurpose p) && Enum.IsDefined(p) ? p : ImagePurpose.Free;
+        ImagePurpose purpose = ImagePurposes.Parse(request.Purpose) ?? ImagePurpose.Free;
 
         Result<ImageJobDto> result = await _studio.CreateAsync(new ImageJobCreateInput(
             request.IdempotencyKey ?? string.Empty,
@@ -188,5 +251,18 @@ public class ApiModel : PageModel
     public sealed class CancelRequest
     {
         public Guid JobId { get; set; }
+    }
+
+    public sealed class EnhanceRequest
+    {
+        public string? Prompt { get; set; }
+        public string? Purpose { get; set; }
+    }
+
+    public sealed class SuggestRequest
+    {
+        public string? Purpose { get; set; }
+        public string? Title { get; set; }
+        public string? Excerpt { get; set; }
     }
 }

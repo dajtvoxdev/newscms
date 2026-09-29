@@ -7,6 +7,7 @@ using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.Metadata.Profiles.Xmp;
+using SixLabors.ImageSharp.Processing;
 
 namespace NewsCMS.Infrastructure.ImageStudio.Imaging;
 
@@ -38,26 +39,12 @@ public static class AiImageFinalizer
     private static readonly XNamespace Xmp = "http://ns.adobe.com/xap/1.0/";
     private static readonly XNamespace XmpMeta = "adobe:ns:meta/";
 
+    /// <param name="maxEdge">Có giá trị thì thu nhỏ để cạnh dài không vượt quá (ảnh demo, ảnh xem trước).</param>
     /// <exception cref="InvalidDataException">Không phải ảnh, hoặc quá lớn.</exception>
-    public static FinalizedImage Finalize(byte[] input, string? outputFormat, string digitalSourceType)
+    public static FinalizedImage Finalize(byte[] input, string? outputFormat, string digitalSourceType, int? maxEdge = null)
     {
-        ImageInfo info;
-
-        try
-        {
-            info = Image.Identify(input);
-        }
-        catch (Exception ex) when (ex is UnknownImageFormatException or InvalidImageContentException)
-        {
-            throw new InvalidDataException("Nhà cung cấp trả về dữ liệu không phải ảnh.", ex);
-        }
-
-        if ((long)info.Width * info.Height > MaxPixels)
-        {
-            throw new InvalidDataException("Ảnh kết quả quá lớn.");
-        }
-
-        using Image image = Image.Load(input);
+        using Image image = LoadChecked(input, "Nhà cung cấp trả về dữ liệu không phải ảnh.");
+        ShrinkTo(image, maxEdge);
 
         // Bỏ metadata provider gửi kèm (có thể chứa prompt nội bộ, id tài khoản…), chỉ giữ nhãn của ta.
         image.Metadata.ExifProfile = null;
@@ -75,6 +62,65 @@ public static class AiImageFinalizer
         image.Save(output, encoder);
 
         return new FinalizedImage(output.ToArray(), mime, extension, image.Width, image.Height);
+    }
+
+    /// <summary>
+    /// Ảnh người dùng/quản trị tải lên (không phải ảnh AI): giải mã lại để chắc là ảnh thật, xoay theo
+    /// EXIF, bỏ toàn bộ metadata (vị trí GPS, máy chụp…), thu nhỏ, mã hoá lại.
+    /// </summary>
+    /// <exception cref="InvalidDataException">Không phải ảnh, hoặc quá lớn.</exception>
+    public static FinalizedImage Normalize(byte[] input, string? outputFormat, int? maxEdge = null)
+    {
+        using Image image = LoadChecked(input, "File tải lên không phải ảnh.");
+        image.Mutate(x => x.AutoOrient());
+        ShrinkTo(image, maxEdge);
+
+        image.Metadata.ExifProfile = null;
+        image.Metadata.IptcProfile = null;
+        image.Metadata.XmpProfile = null;
+
+        (IImageEncoder encoder, string mime, string extension) = Encoder(outputFormat);
+
+        using var output = new MemoryStream();
+        image.Save(output, encoder);
+
+        return new FinalizedImage(output.ToArray(), mime, extension, image.Width, image.Height);
+    }
+
+    private static Image LoadChecked(byte[] input, string notImageMessage)
+    {
+        ImageInfo info;
+
+        try
+        {
+            info = Image.Identify(input);
+        }
+        catch (Exception ex) when (ex is UnknownImageFormatException or InvalidImageContentException)
+        {
+            throw new InvalidDataException(notImageMessage, ex);
+        }
+
+        if ((long)info.Width * info.Height > MaxPixels)
+        {
+            throw new InvalidDataException("Ảnh quá lớn (trên 40 megapixel).");
+        }
+
+        try
+        {
+            return Image.Load(input);
+        }
+        catch (Exception ex) when (ex is UnknownImageFormatException or InvalidImageContentException)
+        {
+            throw new InvalidDataException(notImageMessage, ex);
+        }
+    }
+
+    private static void ShrinkTo(Image image, int? maxEdge)
+    {
+        if (maxEdge is { } max && max > 0 && (image.Width > max || image.Height > max))
+        {
+            image.Mutate(x => x.Resize(new ResizeOptions { Mode = ResizeMode.Max, Size = new Size(max, max), Sampler = KnownResamplers.Lanczos3 }));
+        }
     }
 
     /// <summary>Đọc lại <c>DigitalSourceType</c> — để test và để trang chi tiết kiểm nhãn.</summary>

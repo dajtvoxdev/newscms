@@ -119,6 +119,25 @@ public sealed partial class ImageStudioService : IImageStudioService
             return Result<ImageJobDto>.Failure("Tỉ lệ khung không hợp lệ.");
         }
 
+        // Chỗ giữ của mẫu: {thuong_hieu} server tự điền bằng tên site; chỗ khác còn trống thì báo, không gửi
+        // nguyên chữ "{san_pham}" cho model vẽ.
+        if (prompt.Contains(ImagePromptTemplate.BrandPlaceholder, StringComparison.Ordinal))
+        {
+            string siteName = await _db.Sites.IgnoreQueryFilters().AsNoTracking()
+                .Where(s => s.Id == _db.CurrentSiteId)
+                .Select(s => s.Name)
+                .FirstOrDefaultAsync(ct) ?? string.Empty;
+            prompt = ImagePromptPlaceholders.Fill(prompt, new Dictionary<string, string?> { [ImagePromptTemplate.BrandPlaceholder] = siteName });
+        }
+
+        List<string> unfilled = ImagePromptPlaceholders.FindKnown(prompt);
+
+        if (unfilled.Count > 0)
+        {
+            return Result<ImageJobDto>.Failure(
+                $"Mô tả còn chỗ trống {string.Join(", ", unfilled.Select(t => $"{t} ({ImagePromptPlaceholders.Label(t)})"))} — điền vào ô tương ứng hoặc sửa mô tả.");
+        }
+
         ImageModel? model = await _db.ImageModels.AsNoTracking().FirstOrDefaultAsync(m => m.Id == input.ModelId && m.IsActive, ct);
 
         if (model is null || _registry.Get(model.Adapter) is null)
@@ -212,6 +231,11 @@ public sealed partial class ImageStudioService : IImageStudioService
         }
 
         _queue.Enqueue(job.Id);
+
+        if (job.TemplateId is { } templateId)
+        {
+            await ImagePromptLibraryService.RecordUsageAsync(_db, templateId, ct);
+        }
 
         return Result<ImageJobDto>.Success(ToDto(job));
     }

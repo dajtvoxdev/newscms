@@ -137,6 +137,9 @@ public class AppDbContext
     public DbSet<NewsCMS.Domain.Entities.ImageStudio.ImageJobOutput> ImageJobOutputs => Set<NewsCMS.Domain.Entities.ImageStudio.ImageJobOutput>();
     public DbSet<NewsCMS.Domain.Entities.ImageStudio.ImageProviderCall> ImageProviderCalls => Set<NewsCMS.Domain.Entities.ImageStudio.ImageProviderCall>();
     public DbSet<NewsCMS.Domain.Entities.ImageStudio.ImageStudioSiteSettings> ImageStudioSiteSettings => Set<NewsCMS.Domain.Entities.ImageStudio.ImageStudioSiteSettings>();
+    public DbSet<NewsCMS.Domain.Entities.ImageStudio.ImagePromptTemplate> ImagePromptTemplates => Set<NewsCMS.Domain.Entities.ImageStudio.ImagePromptTemplate>();
+    public DbSet<NewsCMS.Domain.Entities.ImageStudio.ImagePromptTrendRun> ImagePromptTrendRuns => Set<NewsCMS.Domain.Entities.ImageStudio.ImagePromptTrendRun>();
+    public DbSet<NewsCMS.Domain.Entities.ImageStudio.ImagePromptLibrarySettings> ImagePromptLibrarySettings => Set<NewsCMS.Domain.Entities.ImageStudio.ImagePromptLibrarySettings>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

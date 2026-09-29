@@ -1,0 +1,292 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.ImageStudio.Config.TemplatesModel
+@using NewsCMS.Application.ImageStudio
+@{
+    ViewData["Title"] = "Xưởng ảnh — Kho mẫu ảnh";
+    ViewData["ImageStudioTab"] = "templates";
+    var sources = new (string? Value, string Label)[] { (null, "Mọi nguồn"), ("default", "Mặc định"), ("manual", "Tự viết"), ("trend", "Theo trend") };
+    var statuses = new (string? Value, string Label)[] { (null, "Mọi trạng thái"), ("published", "Đang hiện"), ("pending_review", "Chờ duyệt"), ("hidden", "Đã ẩn") };
+    string SourceLabel(string s) => s switch { "default" => "Mặc định", "manual" => "Tự viết", _ => "Trend" };
+    var est = Model.DemoEstimate;
+}
+
+<partial name="_ImageStudioConfigNav" />
+
+<div class="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-5">
+    <form method="post" asp-page-handler="Settings" class="admin-card space-y-4 p-6 xl:col-span-3">
+        <div>
+            <h3 class="font-bold text-slate-950">Tự cập nhật theo xu hướng</h3>
+            <p class="mt-1 text-xs text-slate-500">
+                Dùng kết nối AI mặc định và skill <span class="font-mono">imagestudio_trend_templates</span> (sửa prompt ở trang Kỹ năng AI).
+                Bật một công cụ tìm web (9Router / Firecrawl) để AI tìm xu hướng thật. Mỗi lần chạy là một lần gọi model có tính phí.
+            </p>
+        </div>
+        <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input asp-for="Settings.TrendAutoUpdateEnabled" type="checkbox" class="h-4 w-4" /> Bật tự cập nhật theo lịch
+        </label>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <label class="block space-y-1">
+                <span class="admin-label">Chu kỳ (giờ)</span>
+                <input asp-for="Settings.TrendIntervalHours" type="number" min="6" max="720" class="admin-input" />
+            </label>
+            <label class="block space-y-1">
+                <span class="admin-label">Số mẫu mỗi lần</span>
+                <input asp-for="Settings.TemplatesPerRun" type="number" min="1" max="20" class="admin-input" />
+            </label>
+            <label class="block space-y-1">
+                <span class="admin-label">Mẫu trend sống (ngày)</span>
+                <input asp-for="Settings.TrendLifetimeDays" type="number" min="1" max="180" class="admin-input" />
+            </label>
+        </div>
+        <label class="block space-y-1">
+            <span class="admin-label">Trọng tâm</span>
+            <textarea asp-for="Settings.Focus" rows="2" class="admin-input" placeholder="Ảnh bài viết tin tức; ảnh sản phẩm mỹ phẩm và đồ ăn; mùa Tết"></textarea>
+        </label>
+        <label class="block space-y-1">
+            <span class="admin-label">Từ bị chặn trong mẫu (mỗi dòng một từ)</span>
+            <textarea asp-for="Settings.BlockedTerms" rows="3" class="admin-input font-mono text-xs"></textarea>
+            <span class="text-xs text-slate-500">Nhân vật có bản quyền, phong cách của hãng phim/nghệ sĩ, thương hiệu… Áp cho cả mẫu tự viết và mẫu trend.</span>
+        </label>
+        <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input asp-for="Settings.RequireReview" type="checkbox" class="h-4 w-4" /> Mẫu trend phải được duyệt ở đây trước khi hiện cho người dùng
+        </label>
+
+        <div class="rounded-xl border border-slate-200 p-4">
+            <h4 class="text-sm font-bold text-slate-900">Ảnh demo</h4>
+            <div class="mt-3 grid gap-4 md:grid-cols-2">
+                <label class="block space-y-1">
+                    <span class="admin-label">Model tạo ảnh demo</span>
+                    <select asp-for="Settings.DemoModelId" class="admin-select">
+                        <option value="">Model mặc định</option>
+                        @foreach (var m in Model.Models)
+                        {
+                            <option value="@m.Id">@m.Name (~$@m.PricePerImageUsd.ToString("0.###")/ảnh)</option>
+                        }
+                    </select>
+                </label>
+                <label class="block space-y-1">
+                    <span class="admin-label">Tối đa ảnh demo tự tạo mỗi lần chạy</span>
+                    <input asp-for="Settings.MaxAutoDemosPerRun" type="number" min="0" max="20" class="admin-input" />
+                </label>
+            </div>
+            <label class="mt-3 flex items-center gap-2 text-sm text-slate-700">
+                <input asp-for="Settings.AutoDemoForTrend" type="checkbox" class="h-4 w-4" /> Lần chạy theo lịch tự tạo ảnh demo cho mẫu trend mới
+            </label>
+        </div>
+        <button type="submit" class="admin-btn-primary">Lưu cấu hình</button>
+    </form>
+
+    <div class="space-y-6 xl:col-span-2">
+        <div class="admin-card space-y-3 p-6">
+            <h3 class="font-bold text-slate-950">Ảnh demo còn thiếu</h3>
+            @if (est.Count == 0)
+            {
+                <p class="text-sm text-emerald-700">Mọi mẫu đang hiện đều đã có ảnh demo.</p>
+            }
+            else if (est.Error is not null)
+            {
+                <p class="text-sm text-amber-700">@est.Count mẫu chưa có ảnh demo. @est.Error</p>
+            }
+            else
+            {
+                <p class="text-sm text-slate-600">
+                    <strong>@est.Count</strong> mẫu chưa có ảnh demo. Tạo bằng <strong>@est.ModelName</strong>, ước tính
+                    <span class="font-mono">$@est.EstimatedCostUsd.ToString("0.###")</span>@(est.Count > TemplatesModel.DemoBatchSize ? $" (mỗi lần bấm tạo tối đa {TemplatesModel.DemoBatchSize} ảnh)" : "").
+                </p>
+                <form method="post" asp-page-handler="DemoMissing" id="demo-missing-form"
+                      data-confirm="Tạo ảnh demo cho @Math.Min(est.Count, TemplatesModel.DemoBatchSize) mẫu? Mỗi ảnh tính phí như tạo ảnh thường.">
+                    <button type="submit" class="admin-btn-primary gap-2" id="demo-missing-button">@AdminIcon.Svg("sparkles") Tạo demo cho @Math.Min(est.Count, TemplatesModel.DemoBatchSize) mẫu</button>
+                </form>
+            }
+        </div>
+
+        <div class="admin-card space-y-4 p-6">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-950">Lần chạy gần đây</h3>
+                <form method="post" asp-page-handler="Refresh" id="refresh-form">
+                    <button type="submit" class="admin-btn-secondary" id="refresh-button">Cập nhật ngay</button>
+                </form>
+            </div>
+            @if (Model.Runs.Count == 0)
+            {
+                <p class="text-sm text-slate-500">Chưa chạy lần nào.</p>
+            }
+            else
+            {
+                <ul class="divide-y divide-slate-100 text-sm">
+                    @foreach (var r in Model.Runs)
+                    {
+                        <li class="py-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-slate-700">@r.StartedAt.ToLocalTime().ToString("dd/MM HH:mm") · @(r.Trigger == "schedule" ? "theo lịch" : r.Trigger)</span>
+                                @if (r.Status == "succeeded")
+                                {
+                                    <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">+@r.Added · loại @r.Rejected@(r.DemosCreated > 0 ? $" · {r.DemosCreated} demo" : "")</span>
+                                }
+                                else if (r.Status == "running")
+                                {
+                                    <span class="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">Đang chạy</span>
+                                }
+                                else
+                                {
+                                    <span class="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">Lỗi</span>
+                                }
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(r.Notes))
+                            {
+                                <details class="mt-1 text-xs text-slate-500">
+                                    <summary class="cursor-pointer">Chi tiết@(r.UsedWebSearch ? "" : " · không tìm web")</summary>
+                                    <pre class="mt-1 whitespace-pre-wrap font-sans">@r.Notes</pre>
+                                </details>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="admin-card overflow-hidden">
+    <div class="flex flex-col gap-3 px-6 py-4 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h3 class="font-bold text-slate-950">Mẫu trong kho (@Model.Templates.Count)</h3>
+            @if (Model.PendingCount > 0)
+            {
+                <a asp-page="/ImageStudio/Config/Templates" asp-route-status="pending_review" class="text-xs font-semibold text-amber-700">@Model.PendingCount mẫu chờ duyệt →</a>
+            }
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <form method="get" class="flex flex-wrap gap-2">
+                <select name="purpose" class="admin-select w-auto text-sm" onchange="this.form.submit()">
+                    <option value="">Mọi mục đích</option>
+                    @foreach (var p in ImagePurposes.List)
+                    {
+                        <option value="@p.Key" selected="@(p.Key == Model.Purpose)">@p.Label</option>
+                    }
+                </select>
+                <select name="source" class="admin-select w-auto text-sm" onchange="this.form.submit()">
+                    @foreach (var s in sources)
+                    {
+                        <option value="@s.Value" selected="@(s.Value == Model.Source)">@s.Label</option>
+                    }
+                </select>
+                <select name="status" class="admin-select w-auto text-sm" onchange="this.form.submit()">
+                    @foreach (var s in statuses)
+                    {
+                        <option value="@s.Value" selected="@(s.Value == Model.Status)">@s.Label</option>
+                    }
+                </select>
+            </form>
+            <a asp-page="/ImageStudio/Config/TemplateEdit" class="admin-btn-primary">Thêm mẫu</a>
+        </div>
+    </div>
+    <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="w-28 px-6 py-3">Ảnh demo</th>
+                <th class="px-6 py-3">Mẫu</th>
+                <th class="w-28 px-6 py-3">Nguồn</th>
+                <th class="w-28 px-6 py-3">Trạng thái</th>
+                <th class="w-20 px-6 py-3">Đã dùng</th>
+                <th class="w-72 px-6 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Templates.Count == 0)
+            {
+                <tr><td colspan="6" class="px-6 py-6 text-center text-slate-500">Không có mẫu nào.</td></tr>
+            }
+            @foreach (var t in Model.Templates)
+            {
+                <tr class="bg-white align-top">
+                    <td class="px-6 py-3">
+                        @if (t.DemoImageUrl is not null)
+                        {
+                            <a href="@t.DemoImageUrl" target="_blank" rel="noopener"><img src="@t.DemoImageUrl" alt="" loading="lazy" class="h-16 w-20 rounded-lg object-cover ring-1 ring-slate-200" /></a>
+                        }
+                        else
+                        {
+                            <span class="flex h-16 w-20 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-400">Chưa có</span>
+                        }
+                    </td>
+                    <td class="px-6 py-3">
+                        <div class="font-semibold text-slate-900">@t.Title</div>
+                        <div class="text-xs text-slate-500">@ImagePurposes.Label(t.Purpose) · @t.Category · @t.AspectRatio@(t.TrendName is null ? "" : " · " + t.TrendName)</div>
+                        <details class="mt-1 text-xs text-slate-600">
+                            <summary class="cursor-pointer text-slate-500">Xem prompt</summary>
+                            <p class="mt-1 whitespace-pre-line">@t.Prompt</p>
+                            @foreach (var url in t.SourceUrls)
+                            {
+                                <a href="@url" target="_blank" rel="noopener noreferrer" class="block truncate text-indigo-600">@url</a>
+                            }
+                        </details>
+                    </td>
+                    <td class="px-6 py-3">
+                        <span class="whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold @(t.IsTrend ? "bg-rose-50 text-rose-700" : "bg-slate-100 text-slate-600")">@SourceLabel(t.Source)</span>
+                        @if (t.ExpiresAt is { } exp)
+                        {
+                            <div class="mt-1 text-xs @(t.IsExpired ? "text-red-600" : "text-slate-400")">@(t.IsExpired ? "hết hạn" : "đến") @exp.ToLocalTime().ToString("dd/MM")</div>
+                        }
+                    </td>
+                    <td class="px-6 py-3">
+                        @switch (t.Status)
+                        {
+                            case "published": <span class="whitespace-nowrap rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Đang hiện</span> break;
+                            case "pending_review": <span class="whitespace-nowrap rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">Chờ duyệt</span> break;
+                            default: <span class="whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">Đã ẩn</span> break;
+                        }
+                    </td>
+                    <td class="px-6 py-3 text-slate-700">@t.UsageCount</td>
+                    <td class="px-6 py-3">
+                        <div class="flex flex-wrap justify-end gap-2 whitespace-nowrap">
+                            @if (t.Status != "published")
+                            {
+                                <form method="post" asp-page-handler="Status" asp-route-id="@t.Id" asp-route-newStatus="published" asp-route-source="@Model.Source" asp-route-status="@Model.Status" asp-route-purpose="@Model.Purpose">
+                                    <button type="submit" class="admin-btn-secondary text-emerald-700">@(t.Status == "pending_review" ? "Duyệt" : "Hiện")</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form method="post" asp-page-handler="Status" asp-route-id="@t.Id" asp-route-newStatus="hidden" asp-route-source="@Model.Source" asp-route-status="@Model.Status" asp-route-purpose="@Model.Purpose">
+                                    <button type="submit" class="admin-btn-secondary">Ẩn</button>
+                                </form>
+                            }
+                            @if (!t.RequiresSourceImage)
+                            {
+                                <form method="post" asp-page-handler="Demo" asp-route-id="@t.Id" asp-route-source="@Model.Source" asp-route-status="@Model.Status" asp-route-purpose="@Model.Purpose" data-demo-form>
+                                    <button type="submit" class="admin-btn-secondary" title="Tạo một ảnh demo (tính phí một ảnh)">@(t.DemoImageUrl is null ? "Tạo demo" : "Tạo lại demo")</button>
+                                </form>
+                            }
+                            <a asp-page="/ImageStudio/Config/TemplateEdit" asp-route-id="@t.Id" class="admin-btn-secondary">Sửa</a>
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@t.Id" asp-route-source="@Model.Source" asp-route-status="@Model.Status" asp-route-purpose="@Model.Purpose" data-confirm="Xoá mẫu &quot;@t.Title&quot; khỏi kho?">
+                                <button type="submit" class="admin-btn-secondary text-red-600">Xoá</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('refresh-form')?.addEventListener('submit', function () {
+            const b = document.getElementById('refresh-button');
+            b.disabled = true;
+            b.textContent = 'Đang hỏi AI… (tới 1–2 phút)';
+        });
+        document.querySelectorAll('[data-demo-form]').forEach(function (form) {
+            form.addEventListener('submit', function () {
+                const b = form.querySelector('button');
+                b.disabled = true;
+                b.textContent = 'Đang tạo ảnh…';
+            });
+        });
+        document.getElementById('demo-missing-form')?.addEventListener('submit', function () {
+            const b = document.getElementById('demo-missing-button');
+            setTimeout(function () { b.disabled = true; b.textContent = 'Đang tạo ảnh demo… (có thể vài phút)'; }, 0);
+        });
+    </script>
+}

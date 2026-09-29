@@ -98,6 +98,52 @@ public class ImageProviderCallConfiguration : IEntityTypeConfiguration<ImageProv
     }
 }
 
+public class ImagePromptTemplateConfiguration : IEntityTypeConfiguration<ImagePromptTemplate>
+{
+    public void Configure(EntityTypeBuilder<ImagePromptTemplate> builder)
+    {
+        builder.ToTable("ImagePromptTemplates");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Title).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.Category).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Description).HasMaxLength(500);
+        builder.Property(x => x.Prompt).HasMaxLength(2000).IsRequired();
+        builder.Property(x => x.AspectRatio).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.TrendName).HasMaxLength(200);
+        builder.Property(x => x.SourceUrls).HasMaxLength(4000);
+        builder.Property(x => x.DemoStorageKey).HasMaxLength(1024);
+        builder.Property(x => x.DemoImageUrl).HasMaxLength(1024);
+        builder.Property(x => x.DemoSource).HasMaxLength(200);
+
+        // Không site-scoped nên filter chung của AppDbContext không áp — tự lọc xoá mềm ở đây.
+        builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.HasIndex(x => new { x.Status, x.Purpose });
+    }
+}
+
+public class ImagePromptTrendRunConfiguration : IEntityTypeConfiguration<ImagePromptTrendRun>
+{
+    public void Configure(EntityTypeBuilder<ImagePromptTrendRun> builder)
+    {
+        builder.ToTable("ImagePromptTrendRuns");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Trigger).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.Notes).HasMaxLength(8000);
+        builder.HasIndex(x => x.StartedAt);
+    }
+}
+
+public class ImagePromptLibrarySettingsConfiguration : IEntityTypeConfiguration<ImagePromptLibrarySettings>
+{
+    public void Configure(EntityTypeBuilder<ImagePromptLibrarySettings> builder)
+    {
+        builder.ToTable("ImagePromptLibrarySettings");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Focus).HasMaxLength(1000);
+        builder.Property(x => x.BlockedTerms).HasMaxLength(4000);
+    }
+}
+
 public class ImageStudioSiteSettingsConfiguration : IEntityTypeConfiguration<ImageStudioSiteSettings>
 {
     public void Configure(EntityTypeBuilder<ImageStudioSiteSettings> builder)

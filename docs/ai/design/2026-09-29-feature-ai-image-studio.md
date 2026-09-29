@@ -228,8 +228,9 @@ public class ImagePromptTemplate : AuditableEntity, ISoftDelete
     public bool RequiresSourceImage { get; set; }    // mẫu "từ ảnh chụp thật", "đổi nền"
     public RegionHint RegionHint { get; set; }       // None | KeepSubject (bắt khoanh vùng Giữ nguyên) | EditRegions
     public string? Description { get; set; }
-    public Guid? DemoMediaId { get; set; }           // ảnh demo của mẫu (mục 7 — Ảnh demo)
-    public string? DemoImageUrl { get; set; }
+    public string? DemoStorageKey { get; set; }      // ảnh demo của mẫu: file ở storage ai-images/demos/ (không phải Media —
+    public string? DemoImageUrl { get; set; }        // mẫu dùng chung mọi site, thư viện media thì theo site). Mục 7 — Ảnh demo
+    public string? DemoSource { get; set; }          // "Tạo bằng <model>" hoặc "Tải lên"
     // Giống VideoPromptTemplate:
     public PromptTemplateSource Source { get; set; } // Default | Manual | Trend
     public PromptTemplateStatus Status { get; set; } // Published | PendingReview | Hidden

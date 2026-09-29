@@ -42,6 +42,9 @@ public static class DbSeeder
         // Kho prompt VideoStudio (dùng chung mọi site) — chỉ thêm, không ghi đè chỉnh sửa của quản trị.
         await VideoPromptLibrarySeeder.SeedAsync(db);
 
+        // Kho mẫu Xưởng ảnh (dùng chung mọi site) + skill AI của nó — cũng chỉ thêm, không ghi đè.
+        await ImagePromptLibrarySeeder.SeedAsync(db);
+
         await EnsureRole(roleManager, "SuperAdmin", "Toàn quyền hệ thống", isSystem: true);
         await EnsureRole(roleManager, "Admin", "Quản trị viên site");
         await EnsureRole(roleManager, "Editor", "Biên tập viên");

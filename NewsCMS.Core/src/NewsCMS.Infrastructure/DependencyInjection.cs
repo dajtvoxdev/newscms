@@ -264,6 +264,12 @@ public static class DependencyInjection
         services.AddScoped<NewsCMS.Application.ImageStudio.IImageModelService, NewsCMS.Infrastructure.ImageStudio.ImageModelService>();
         services.AddScoped<NewsCMS.Application.ImageStudio.IImageStudioSiteService, NewsCMS.Infrastructure.ImageStudio.ImageStudioSiteService>();
         services.AddScoped<NewsCMS.Application.ImageStudio.IImageStudioService, NewsCMS.Infrastructure.ImageStudio.ImageStudioService>();
+        services.AddScoped<NewsCMS.Application.ImageStudio.IImagePromptLibraryService, NewsCMS.Infrastructure.ImageStudio.ImagePromptLibraryService>();
+        services.AddScoped<NewsCMS.Infrastructure.ImageStudio.ImagePromptDemoService>();
+        services.AddScoped<NewsCMS.Application.ImageStudio.IImagePromptDemoService>(sp => sp.GetRequiredService<NewsCMS.Infrastructure.ImageStudio.ImagePromptDemoService>());
+        services.AddScoped<NewsCMS.Application.ImageStudio.IImagePromptTrendService, NewsCMS.Infrastructure.ImageStudio.ImagePromptTrendService>();
+        services.AddScoped<NewsCMS.Application.ImageStudio.IImagePromptAssistant, NewsCMS.Infrastructure.ImageStudio.ImagePromptAssistant>();
+        services.AddHostedService<NewsCMS.Infrastructure.ImageStudio.ImagePromptTrendWorker>();
 
         return services;
     }

@@ -1,0 +1,150 @@
+@page "{id:guid?}"
+@model NewsCMS.Web.Areas.Admin.Pages.ImageStudio.Config.TemplateEditModel
+@using NewsCMS.Application.ImageStudio
+@{
+    ViewData["Title"] = Model.IsNew ? "Thêm mẫu ảnh" : "Sửa mẫu ảnh";
+    ViewData["ImageStudioTab"] = "templates";
+    var t = Model.Template;
+}
+
+<partial name="_ImageStudioConfigNav" />
+
+<div class="grid gap-6 lg:grid-cols-[1fr_340px]">
+    <form method="post" asp-route-id="@t?.Id" class="admin-card space-y-5 p-6">
+        <div class="flex items-center justify-between">
+            <h3 class="font-bold text-slate-950">@(Model.IsNew ? "Mẫu mới" : t!.Title)</h3>
+            <a asp-page="/ImageStudio/Config/Templates" class="text-sm font-semibold text-slate-500 hover:text-slate-900">← Kho mẫu</a>
+        </div>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="All" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+        }
+
+        <label class="block space-y-2">
+            <span class="admin-label">Tiêu đề *</span>
+            <input asp-for="Input.Title" class="admin-input" placeholder="Studio nền trắng" required />
+        </label>
+
+        <div class="grid gap-4 md:grid-cols-3">
+            <label class="block space-y-2">
+                <span class="admin-label">Dùng cho</span>
+                <select asp-for="Input.Purpose" class="admin-select">
+                    @foreach (var p in ImagePurposes.List)
+                    {
+                        <option value="@p.Key">@p.Label</option>
+                    }
+                </select>
+            </label>
+            <label class="block space-y-2">
+                <span class="admin-label">Nhóm</span>
+                <select asp-for="Input.Category" class="admin-select">
+                    @foreach (var c in ImagePromptTemplateRules.Categories)
+                    {
+                        <option value="@c">@c</option>
+                    }
+                </select>
+            </label>
+            <label class="block space-y-2">
+                <span class="admin-label">Tỉ lệ khung</span>
+                <select asp-for="Input.AspectRatio" class="admin-select">
+                    @foreach (var a in ImageStudioRules.AspectRatios)
+                    {
+                        <option value="@a">@a</option>
+                    }
+                </select>
+            </label>
+        </div>
+
+        <label class="block space-y-2">
+            <span class="admin-label">Mô tả ngắn (người dùng thấy trên thẻ mẫu)</span>
+            <input asp-for="Input.Description" class="admin-input" placeholder="Ảnh sản phẩm chuẩn sàn thương mại điện tử." />
+        </label>
+
+        <label class="block space-y-2">
+            <span class="admin-label">Prompt *</span>
+            <textarea asp-for="Input.Prompt" rows="6" class="admin-input" required></textarea>
+            <span class="block text-xs text-slate-500">
+                Chỗ giữ: <code>{chu_de}</code> (chủ đề bài — bắt buộc cho ảnh bìa và ảnh trong bài),
+                <code>{san_pham}</code> (tên sản phẩm — bắt buộc cho ảnh sản phẩm), <code>{mo_ta}</code>, <code>{thuong_hieu}</code> (tên site, tự điền).
+                Tránh yêu cầu chữ trong ảnh — model vẽ sai chữ tiếng Việt.
+            </span>
+        </label>
+
+        <label class="block w-40 space-y-2">
+            <span class="admin-label">Thứ tự</span>
+            <input asp-for="Input.SortOrder" type="number" class="admin-input" />
+        </label>
+
+        <div class="flex gap-2">
+            <button type="submit" class="admin-btn-primary">@(Model.IsNew ? "Thêm mẫu" : "Lưu mẫu")</button>
+            <a asp-page="/ImageStudio/Config/Templates" class="admin-btn-secondary">Huỷ</a>
+        </div>
+    </form>
+
+    <aside class="space-y-4">
+        <section class="admin-card space-y-4 p-5">
+            <h3 class="font-bold text-slate-950">Ảnh demo</h3>
+            @if (t is null)
+            {
+                <p class="text-sm text-slate-500">Lưu mẫu trước, rồi tạo hoặc tải ảnh demo.</p>
+            }
+            else
+            {
+                @if (t.DemoImageUrl is not null)
+                {
+                    <img src="@t.DemoImageUrl" alt="Ảnh demo của mẫu" class="w-full rounded-xl border border-slate-200" />
+                    <p class="text-xs text-slate-500">@t.DemoSource · @t.DemoUpdatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
+                }
+                else
+                {
+                    <div class="flex aspect-[4/3] items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-400">Chưa có ảnh demo</div>
+                }
+
+                @if (!t.RequiresSourceImage)
+                {
+                    <form method="post" asp-page-handler="GenerateDemo" asp-route-id="@t.Id" id="generate-demo-form">
+                        <button type="submit" class="admin-btn-primary w-full gap-2" id="generate-demo-button">@AdminIcon.Svg("sparkles") @(t.DemoImageUrl is null ? "Tạo ảnh demo" : "Tạo lại ảnh demo")</button>
+                    </form>
+                    <p class="text-xs text-slate-500">Chạy mẫu với giá trị ví dụ theo nhóm (ví dụ "Hộp bánh pía" cho nhóm Ăn uống) bằng model demo. Tính phí một ảnh.</p>
+                }
+
+                <form method="post" asp-page-handler="UploadDemo" asp-route-id="@t.Id" enctype="multipart/form-data" class="space-y-2">
+                    <input type="file" name="demo" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-semibold" required />
+                    <button type="submit" class="admin-btn-secondary w-full">Tải ảnh demo lên</button>
+                </form>
+
+                @if (t.DemoImageUrl is not null)
+                {
+                    <form method="post" asp-page-handler="RemoveDemo" asp-route-id="@t.Id" data-confirm="Xoá ảnh demo của mẫu này?">
+                        <button type="submit" class="admin-btn-secondary w-full text-red-600">Xoá ảnh demo</button>
+                    </form>
+                }
+            }
+        </section>
+
+        @if (t is not null)
+        {
+            <section class="admin-card space-y-2 p-5 text-xs text-slate-500">
+                <p>Nguồn: <strong class="text-slate-700">@(t.Source switch { "default" => "Mặc định", "manual" => "Tự viết", _ => "Trend" })</strong> · đã dùng @t.UsageCount lần</p>
+                @if (t.TrendName is not null)
+                {
+                    <p>Xu hướng: @t.TrendName</p>
+                }
+                @foreach (var url in t.SourceUrls)
+                {
+                    <a href="@url" target="_blank" rel="noopener noreferrer" class="block truncate text-indigo-600">@url</a>
+                }
+            </section>
+        }
+    </aside>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('generate-demo-form')?.addEventListener('submit', function () {
+            const b = document.getElementById('generate-demo-button');
+            setTimeout(function () { b.disabled = true; b.textContent = 'Đang tạo ảnh…'; }, 0);
+        });
+    </script>
+}
