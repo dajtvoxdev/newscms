@@ -124,7 +124,7 @@ tải lên thư viện media. Muốn sửa một chi tiết nhỏ (đổi màu �
 
 | # | Câu hỏi | Ảnh hưởng |
 |---|---|---|
-| Q1 | Ngoài 9Router, có định mua key OpenAI, Gemini hoặc fal.ai không? *(29/09: không chặn — admin tự thêm model ở màn hình)* | Thứ tự viết adapter ở Đợt 3 |
+| Q1 | Ngoài 9Router, có định mua key OpenAI, Gemini hoặc fal.ai không? *(29/09: **dùng cổng vilao.ai** — chuẩn OpenAI `/v1/images/generations` + `/v1/images/edits` multipart, model ví dụ `xai/grok-imagine-image`, `size: auto`. Muốn tích hợp thêm Google Gemini và Stability — xem Q11)* | Thứ tự viết adapter ở Đợt 3 |
 | Q2 | Hạn mức mặc định cho mỗi site: bao nhiêu ảnh/tháng, bao nhiêu ảnh/người/ngày? *(29/09: **theo gói khách mua** — NewsCMS chưa có khái niệm gói; cần chốt Q10)* | Đợt 6 |
 | Q3 | Nhãn AI hiển thị: chú thích dưới ảnh trong bài là đủ, hay cần watermark trên ảnh? *(29/09: **chú thích là đủ**, không watermark; metadata AI trong file vẫn luôn ghi)* | Đợt 4, 6 |
 | Q4 | Kho mẫu: chỉ dùng chung toàn hệ thống, hay cho mỗi site có mẫu riêng? *(29/09: **dùng chung toàn hệ thống** — không làm mẫu riêng theo site)* | Đợt 2 |
@@ -134,3 +134,4 @@ tải lên thư viện media. Muốn sửa một chi tiết nhỏ (đổi màu �
 | Q8 | "Bài hoàn chỉnh có ảnh": mặc định bao nhiêu ảnh? *(29/09: **AI quyết theo nội dung bài, không đặt giới hạn cứng** — chỉ hạn mức của gói giới hạn; người dùng thấy chi phí và bỏ bớt ảnh đề xuất được trước khi tạo)* | Đợt 4 |
 | Q9 | Lỗi có sẵn ngoài Xưởng ảnh: `KeoBiaChangelogs` và cột `KeoBiaMatches.StarType` không có migration — DB mới dựng bị lỗi. Có muốn sửa (thêm migration) trong một việc riêng không? | Việc riêng |
 | Q10 | Gói dịch vụ (theo Q2): làm luôn trong NewsCMS một danh mục **gói** do SuperAdmin tạo (tên, số ảnh/tháng, ảnh/người/ngày, sau này thêm hạn mức video) và gán gói cho từng site — không tích hợp thanh toán — hay chờ hệ thống bán gói/thanh toán riêng? Hạn mức tính theo **site** (khách = site) hay theo **tài khoản**? | Đợt 6 (có thể kéo lên sớm) |
+| Q11 | Adapter **Stability AI** (gọi thẳng, REST v2beta: tạo ảnh, inpaint bằng mask, xoá vật thể, mở rộng khung, tách nền): làm ở Đợt 3 (+1 ngày, chỉ tạo + inpaint + xoá vật thể) hay Đợt 5 cùng tách nền/mở rộng khung cho ảnh sản phẩm (đề xuất)? | Đợt 3 hoặc 5 |

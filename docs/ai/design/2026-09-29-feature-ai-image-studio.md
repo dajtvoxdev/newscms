@@ -287,8 +287,13 @@ ImageSharp.
 |---|---|---|---|---|---|
 | `OpenAiImages` | `POST {base}/v1/images/generations` | `POST /v1/images/edits` (multipart `image[]`) | `/v1/images/edits` với `mask` (PNG, alpha = 0 là vùng sửa, cùng kích thước ảnh) | — | Dùng được cho OpenAI và **9Router** (đang chạy cho Telegram) cùng các gateway tương thích. Kích thước cố định, nên phải qua `SizeFitter` |
 | `Gemini` | `generateContent`, `responseModalities: ["IMAGE"]` | nhiều phần `inline_data` | — | ảnh gốc + ảnh đánh dấu + chỉ dẫn | Không có tham số mask, nên dùng chiến lược ảnh đánh dấu (D6) |
+| `Stability` *(đề xuất, Q11)* | `POST /v2beta/stable-image/generate/{ultra\|core\|sd3}` multipart, `aspect_ratio` thay cho size, trả thẳng bytes (`Accept: image/*`) | — | `/edit/inpaint` với `mask` (trắng là vùng sửa → `WhiteIsEdit`); `/edit/erase` (xoá vật thể theo mask) | `/edit/search-and-replace` | Ảnh sửa giữ kích thước ảnh vào nên không cần `SizeFitter`. Thêm `/edit/remove-background`, `/edit/outpaint` cho ảnh sản phẩm (Đợt 5) |
 | `FalQueue` | `queue.fal.run/{model}` → poll → `images[].url` | tuỳ model | model fill/inpaint nhận `mask_url` (trắng là vùng sửa) | model edit nhận `image_urls` | Gửi ảnh bằng data URI để không cần URL công khai (kiểm khi viết adapter ở Đợt 3). Tái dùng cách poll của `FalQueueVideoProvider` bên AdVideo |
 | `Fake` | vẽ gradient + hash prompt bằng ImageSharp | có | có (tô màu vùng mask) | có | **Chỉ bật ở Development** (bài học L5 của AdVideo: provider giả mặc định tắt). Dùng cho test và e2e |
+
+**Đã bị khai tử — không làm** (tra 29/09/2026): `/v1/images/variations` và DALL·E 2/3 (OpenAI tắt 12/05/2026); Imagen 4 `:predict` (Google tắt 17/08/2026, thay bằng Gemini 3.1 Flash Image); `gpt-image-1` sẽ tắt 23/10/2026 — model là dữ liệu nên chỉ đổi trên màn hình.
+
+**Cổng vilao.ai** (Q1) theo chuẩn OpenAI nên dùng adapter `OpenAiImages`. Grok Imagine theo tài liệu xAI sửa ảnh **bằng lời** (tối đa 5 ảnh), không nhắc tới mask → khai báo `InstructionEdit` + `ReferenceImages`, không khai `MaskEdit`, và kiểm bằng "Chạy thử sửa ảnh". Model nhận `size: auto` thì cần cách gửi khung khác (xem `SizeMode` ở kế hoạch Đợt 3).
 
 Model id cụ thể (ví dụ `gpt-image-1`, `cx/gpt-5.5-image`, `gemini-2.5-flash-image`, `fal-ai/flux-pro/v1/fill`)
 **chỉ là dữ liệu nhập ở màn hình**, không nằm trong code. Admin kiểm bằng nút "Chạy thử" (4.3).

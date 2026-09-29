@@ -45,7 +45,7 @@ Kịch bản chạy thật trên trình duyệt, không lỗi JavaScript:
 
 | Câu hỏi | Giả định | Nếu trả lời khác |
 |---|---|---|
-| **Q1** — có key provider nào ngoài 9Router? | Chỉ chắc có 9Router (chuẩn OpenAI). Adapter `OpenAiImages` làm được **cả hai đường**: `/images/edits` có `mask` và `/images/edits` nhiều ảnh không mask (ảnh gốc + ảnh đánh dấu). Viết thêm adapter **Gemini** (API `generateContent`), kiểm bằng server giả, chạy thật khi có key | Có key fal → thêm `FalImageProvider` (+0,5 ngày), tái dùng cách poll `status_url` của `FalQueueVideoProvider` bên AdVideo |
+| **Q1** — dùng provider nào? | **Đã trả lời 29/09: cổng vilao.ai**, chuẩn OpenAI (`/v1/images/generations` JSON, `/v1/images/edits` multipart `image` + `mask`), model ví dụ `xai/grok-imagine-image`, `size: auto`. Adapter `OpenAiImages` dùng được; thêm **`SizeMode`** (3C) cho model nhận `auto`. Grok sửa ảnh bằng lời → khai `InstructionEdit`. Adapter **Gemini** vẫn làm (người dùng muốn có Google) | Stability: chờ Q11 (Đợt 3 +1 ngày, hoặc Đợt 5) |
 | **Q5** — tick "Tôi có quyền sử dụng ảnh này"? | **Bắt buộc** khi đầu vào có ảnh *không do Xưởng ảnh tạo* (ảnh tải lên, `Media.Origin = upload`). Hệ thống không nhận ra được ảnh có người thật hay không nên không tách trường hợp. Lưu người tick, thời điểm, IP | Không bắt buộc → chỉ ẩn ô tick, cột vẫn ghi |
 | **Q9** — lỗi KeoBia có sẵn | Không sửa trong đợt này | — |
 | **Q10** — gói dịch vụ | Không đụng. Hạn mức đợt này chỉ đổi cách **đếm** (theo số lần gọi) | — |
@@ -175,6 +175,7 @@ gửi đi.
 | `ImageJob.QuotaUnits` (int) — migration gán `= VariantCount` cho dòng cũ | Hạn mức đếm theo **số lần gọi**: `biến thể × số bước`. Truy vấn hạn mức đổi từ `Sum(VariantCount)` sang `Sum(QuotaUnits)` |
 | `ImageJob.RightsConfirmedAt`, `RightsIp` (45) | Lưu vết tick quyền sử dụng (người tick = `CreatedBy`) |
 | `ImageModel.LastEditTestedAt`, `LastEditTestOk`, `LastEditTestError` | Kết quả "Chạy thử sửa ảnh", tách khỏi lần chạy thử tạo ảnh |
+| `ImageModel.SizeMode` (`Size` / `AspectRatio` / `Auto`) | Cách gửi khung hình cho model — xem 3C |
 
 `RegionsJson` lưu **bản đã kiểm và chuẩn hoá** (sắp theo `Index`, làm tròn 4 chữ số) — "Sửa tiếp" và
 "Tạo lại" đọc lại được nguyên vẹn.
@@ -209,6 +210,8 @@ SixLabors.Fonts và file phông trên máy chủ.
 | **`OpenAiImages.EditAsync`** | `POST {base}/images/edits`, `multipart/form-data`: `model`, `prompt`, `n=1`, `size`, `quality`, `output_format`; ảnh là `image` (một ảnh) hoặc `image[]` (nhiều ảnh: gốc → ảnh đánh dấu → tham chiếu); `mask` chỉ ở đường mask. `ExtraParamsJson` thêm thành trường form (bỏ trường `null` như bản tạo ảnh). Kết quả `b64_json` hoặc `url` qua `ImageDownloadGuard` | Dùng chung `MapError`/`FriendlyError`; 404/405 → `Unsupported` |
 | **`Gemini`** (mới) | `POST {base}/models/{model}:generateContent`, header `x-goog-api-key`; `contents[0].parts` = chữ + `inline_data` (ảnh gốc JPEG chất lượng 92 để nhẹ, ảnh đánh dấu PNG, tham chiếu); `generationConfig.responseModalities = ["IMAGE"]`, tạo ảnh từ chữ thêm `imageConfig.aspectRatio`. Đọc `candidates[].content.parts[].inlineData` | Không có mask → luôn đường ảnh đánh dấu. `promptFeedback.blockReason`, `finishReason` = `SAFETY`/`IMAGE_SAFETY`/`PROHIBITED_CONTENT` → `ContentPolicy`; không có phần ảnh → `InvalidResponse` kèm lời model (đã che). Base URL mẫu `https://generativelanguage.googleapis.com/v1beta`. Làm luôn `GenerateAsync` để model Gemini dùng được ở tab Tạo mới |
 | **`Fake.EditAsync`** | Vẽ lại **toàn bộ** ảnh (đảo màu + nhiễu nhẹ) và tô đậm vùng mask | Cố ý đổi cả phần ngoài vùng để test chứng minh bước ghép lại |
+
+**Cách gửi khung hình — `ImageModel.SizeMode`** (cột mới trong migration 3A): `Size` (như hiện nay: `WxH` gần nhất trong danh sách), `AspectRatio` (gửi `aspect_ratio: "16:9"`, kèm `size: auto`), `Auto` (gửi `size: auto`, rồi server **cắt giữa về đúng tỉ lệ** người dùng chọn nếu lệch > 2%). Cần cho vilao/Grok: `auto` để model tự chọn thì khung 16:9 của ảnh bìa không được bảo đảm. Test: mỗi chế độ gửi đúng trường; cắt giữa ra đúng tỉ lệ.
 
 **"Chạy thử sửa ảnh"** ở trang Model (chỉ hiện khi model khai báo `MaskEdit` hoặc `InstructionEdit`): tự
 sinh ảnh 512×512 (nền xám, hình vuông trắng giữa ảnh), mask/ảnh đánh dấu cho hình vuông, prompt "đổi hình
@@ -384,7 +387,8 @@ báo năng lực model, bấm "Chạy thử sửa ảnh", model gợi ý cho t�
 
 | Rủi ro | Giảm thiểu |
 |---|---|
-| **9Router không hỗ trợ `/images/edits` hoặc không nhận `mask`** | "Chạy thử sửa ảnh" phát hiện ngay ở trang Model; lỗi `Unsupported` nói rõ phải đổi gì. Đường ảnh đánh dấu (nhiều `image[]` không mask) hoặc Gemini thay thế |
+| **vilao/Grok chỉ nhận một `image`** (ví dụ cURL chỉ có một ảnh) — đường ảnh đánh dấu cần gửi hai ảnh | "Chạy thử sửa ảnh" kiểm cả hai ảnh. Chỉ nhận một ảnh → gửi **một ảnh gốc có viền mảnh đánh số, không tô màu**, dặn model xoá viền; bước ghép lại vẫn giữ nguyên phần ngoài vùng. Chất lượng trong vùng kém thì dùng Gemini cho sửa vùng |
+| **9Router/vilao không hỗ trợ `/images/edits` hoặc không nhận `mask`** | "Chạy thử sửa ảnh" phát hiện ngay ở trang Model; lỗi `Unsupported` nói rõ phải đổi gì. Đường ảnh đánh dấu (nhiều `image[]` không mask) hoặc Gemini thay thế |
 | **Model coi mask chỉ là gợi ý, vẽ lại cả ảnh** (gpt-image làm vậy) | Chính là lý do có `RegionCompositor`: phần ngoài vùng luôn là điểm ảnh gốc. Bên trong vùng lệch màu ở mép → chỉnh độ nới + làm mờ viền bằng ảnh thật ở 3G, **không kéo dài đợt để tinh chỉnh prompt** |
 | **Lệch 1 px giữa mask, ảnh gốc và kết quả** khi pad/cắt | `SizeFitter` viết test làm tròn trước (ngày đầu của 3B); mọi ảnh đi qua cùng một `FitPlan` |
 | **Request Gemini quá nặng** (base64 ba ảnh 2048 px) | Ảnh gốc gửi JPEG 92; tham chiếu ≤ 1536 cạnh dài; ảnh đánh dấu cùng cỡ ảnh gốc |
