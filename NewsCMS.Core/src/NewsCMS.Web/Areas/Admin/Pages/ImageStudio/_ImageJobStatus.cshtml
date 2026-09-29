@@ -1,0 +1,13 @@
+@model NewsCMS.Domain.Entities.ImageStudio.ImageJobStatus
+@using NewsCMS.Domain.Entities.ImageStudio
+@{
+    var (label, css) = Model switch
+    {
+        ImageJobStatus.Queued => ("Đang chờ", "bg-slate-100 text-slate-600"),
+        ImageJobStatus.Running => ("Đang tạo", "bg-indigo-50 text-indigo-700"),
+        ImageJobStatus.Succeeded => ("Đã xong", "bg-emerald-50 text-emerald-700"),
+        ImageJobStatus.Failed => ("Lỗi", "bg-red-50 text-red-700"),
+        _ => ("Đã huỷ", "bg-slate-100 text-slate-500"),
+    };
+}
+<span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold @css">@label</span>

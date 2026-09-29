@@ -248,6 +248,23 @@ public static class DependencyInjection
         services.AddScoped<NewsCMS.Application.VideoStudio.IVideoPromptTrendService, NewsCMS.Infrastructure.VideoStudio.VideoPromptTrendService>();
         services.AddHostedService<NewsCMS.Infrastructure.VideoStudio.VideoPromptTrendWorker>();
 
+        // Xưởng ảnh AI — model do SuperAdmin cấu hình, job lưu DB + hàng đợi trong tiến trình.
+        services.Configure<NewsCMS.Infrastructure.ImageStudio.ImageStudioOptions>(cfg.GetSection(NewsCMS.Infrastructure.ImageStudio.ImageStudioOptions.SectionName));
+        services.AddHttpClient(NewsCMS.Infrastructure.ImageStudio.Providers.OpenAiImageProvider.HttpClientName);
+        services.AddHttpClient(NewsCMS.Infrastructure.ImageStudio.Imaging.ImageDownloadGuard.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(NewsCMS.Infrastructure.ImageStudio.Imaging.ImageDownloadGuard.CreateHandler);
+        services.AddScoped<NewsCMS.Infrastructure.ImageStudio.Imaging.IImageDownloader, NewsCMS.Infrastructure.ImageStudio.Imaging.ImageDownloadGuard>();
+        services.AddScoped<NewsCMS.Application.ImageStudio.Providers.IImageProvider, NewsCMS.Infrastructure.ImageStudio.Providers.OpenAiImageProvider>();
+        services.AddScoped<NewsCMS.Application.ImageStudio.Providers.IImageProvider, NewsCMS.Infrastructure.ImageStudio.Providers.FakeImageProvider>();
+        services.AddScoped<NewsCMS.Application.ImageStudio.Providers.IImageProviderRegistry, NewsCMS.Infrastructure.ImageStudio.Providers.ImageProviderRegistry>();
+        services.AddScoped<NewsCMS.Infrastructure.ImageStudio.ImageModelCredentials>();
+        services.AddSingleton<NewsCMS.Infrastructure.ImageStudio.Jobs.IImageJobQueue, NewsCMS.Infrastructure.ImageStudio.Jobs.ImageJobQueue>();
+        services.AddScoped<NewsCMS.Infrastructure.ImageStudio.Jobs.IImageJobRunner, NewsCMS.Infrastructure.ImageStudio.Jobs.ImageJobRunner>();
+        services.AddHostedService<NewsCMS.Infrastructure.ImageStudio.Jobs.ImageJobWorker>();
+        services.AddScoped<NewsCMS.Application.ImageStudio.IImageModelService, NewsCMS.Infrastructure.ImageStudio.ImageModelService>();
+        services.AddScoped<NewsCMS.Application.ImageStudio.IImageStudioSiteService, NewsCMS.Infrastructure.ImageStudio.ImageStudioSiteService>();
+        services.AddScoped<NewsCMS.Application.ImageStudio.IImageStudioService, NewsCMS.Infrastructure.ImageStudio.ImageStudioService>();
+
         return services;
     }
 

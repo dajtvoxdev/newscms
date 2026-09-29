@@ -68,5 +68,9 @@
     </script>
     @await Html.PartialAsync("~/Areas/Admin/Shared/_UploadTracker.cshtml")
     @await Html.PartialAsync("~/Areas/Admin/Shared/_MediaLibraryModal.cshtml")
+    @if (User.IsInRole("SuperAdmin") || User.HasClaim(NewsCMS.Shared.Constants.Permissions.Prefix, NewsCMS.Shared.Constants.Permissions.ImageStudio.Create))
+    {
+        @await Html.PartialAsync("~/Areas/Admin/Shared/_ImageStudioModal.cshtml")
+    }
 </body>
 </html>

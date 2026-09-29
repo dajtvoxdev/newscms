@@ -46,6 +46,10 @@
     <Compile Include="Ai\*.cs" />
     <Compile Include="Ai\Tools\*.cs" />
     <Compile Include="VideoStudio\*.cs" />
+    <Compile Include="ImageStudio\*.cs" />
+    <Compile Include="ImageStudio\Imaging\*.cs" />
+    <Compile Include="ImageStudio\Jobs\*.cs" />
+    <Compile Include="ImageStudio\Providers\*.cs" />
   </ItemGroup>
 
 </Project>

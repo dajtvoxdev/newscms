@@ -1,0 +1,126 @@
+@page "{id:guid}"
+@model NewsCMS.Web.Areas.Admin.Pages.ImageStudio.DetailModel
+@{
+    ViewData["Title"] = "Chi tiết ảnh AI";
+    var job = Model.Job;
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Xưởng ảnh AI</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Chi tiết yêu cầu tạo ảnh</h2>
+    </div>
+    <a asp-page="/ImageStudio/Index" class="admin-btn-secondary">Quay lại</a>
+</div>
+
+@* Token cho nút "Lưu vào thư viện" — gọi /Admin/ImageStudio/Api bằng fetch *@
+@Html.AntiForgeryToken()
+
+<div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <section class="admin-card p-6" id="job-detail" data-job-id="@job.Id" data-finished="@(job.IsFinished ? "true" : "false")">
+        @if (job.Error is not null)
+        {
+            <div class="mb-4 rounded-xl px-4 py-3 text-sm @(job.Status == NewsCMS.Domain.Entities.ImageStudio.ImageJobStatus.Failed ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-800")">@job.Error</div>
+        }
+
+        @if (!job.IsFinished)
+        {
+            <p class="rounded-xl bg-indigo-50 px-4 py-3 text-sm text-indigo-700">Ảnh đang được tạo. Trang tự cập nhật khi xong.</p>
+        }
+        else if (job.Outputs.Count == 0)
+        {
+            <p class="text-sm text-slate-500">Không có ảnh nào được tạo.</p>
+        }
+        else
+        {
+            <div class="grid gap-4 sm:grid-cols-2">
+                @foreach (var o in job.Outputs)
+                {
+                    <figure class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                        @if (o.Url is not null)
+                        {
+                            <a href="@o.Url" target="_blank" rel="noopener"><img src="@o.Url" alt="" width="@o.Width" height="@o.Height" class="block h-auto w-full" loading="lazy" /></a>
+                        }
+                        else
+                        {
+                            <div class="flex aspect-square items-center justify-center text-sm text-slate-400">Ảnh đã được dọn (quá hạn giữ)</div>
+                        }
+                        <figcaption class="flex items-center justify-between gap-2 border-t border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
+                            <span>@o.Width × @o.Height · @((o.Bytes / 1024.0).ToString("0")) KB</span>
+                            @if (o.PromotedMediaId is not null)
+                            {
+                                <span class="rounded-lg bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">Đã trong thư viện</span>
+                            }
+                            else if (Model.CanCreate && o.Url is not null)
+                            {
+                                <button type="button" class="rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white hover:bg-indigo-700" data-promote="@o.Id">Lưu vào thư viện</button>
+                            }
+                        </figcaption>
+                    </figure>
+                }
+            </div>
+        }
+    </section>
+
+    <aside class="space-y-4">
+        <section class="admin-card space-y-3 p-5 text-sm">
+            <div class="flex items-center justify-between"><span class="text-slate-500">Trạng thái</span><partial name="_ImageJobStatus" model="job.Status" /></div>
+            <div class="flex items-center justify-between"><span class="text-slate-500">Model</span><span class="font-semibold text-slate-900">@job.ModelName</span></div>
+            <div class="flex items-center justify-between"><span class="text-slate-500">Khung</span><span>@job.AspectRatio (@job.Size)</span></div>
+            <div class="flex items-center justify-between"><span class="text-slate-500">Số ảnh</span><span>@job.Outputs.Count/@job.VariantCount</span></div>
+            <div class="flex items-center justify-between"><span class="text-slate-500">Chi phí</span><span class="font-mono">$@job.CostUsd.ToString("0.####") <span class="text-slate-400">(ước tính $@job.EstimatedCostUsd.ToString("0.####"))</span></span></div>
+            <div class="flex items-center justify-between"><span class="text-slate-500">Tạo lúc</span><span>@job.QueuedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</span></div>
+            @if (job.FinishedAt is { } finished && job.StartedAt is { } started)
+            {
+                <div class="flex items-center justify-between"><span class="text-slate-500">Thời gian tạo</span><span>@((finished - started).TotalSeconds.ToString("0")) giây</span></div>
+            }
+        </section>
+
+        <section class="admin-card space-y-2 p-5 text-sm">
+            <h3 class="font-bold text-slate-950">Mô tả của người dùng</h3>
+            <p class="whitespace-pre-line text-slate-700">@job.UserPrompt</p>
+            <details class="pt-2">
+                <summary class="cursor-pointer text-xs font-semibold text-slate-500">Prompt thật đã gửi cho model</summary>
+                <p class="mt-2 whitespace-pre-line rounded-xl bg-slate-50 p-3 text-xs text-slate-600">@job.FinalPrompt</p>
+            </details>
+        </section>
+    </aside>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const detail = document.getElementById('job-detail');
+            if (detail.dataset.finished !== 'true') {
+                setTimeout(() => window.location.reload(), 3000);
+            }
+
+            const token = () => document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            document.querySelectorAll('[data-promote]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    btn.disabled = true;
+                    btn.textContent = 'Đang lưu…';
+                    try {
+                        const resp = await fetch('/Admin/ImageStudio/Api?handler=Promote', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token() },
+                            body: JSON.stringify({ outputId: btn.dataset.promote }),
+                        });
+                        const data = await resp.json().catch(() => null);
+                        if (!resp.ok) throw new Error(data?.error || 'Không lưu được ảnh.');
+                        btn.replaceWith(Object.assign(document.createElement('span'), {
+                            className: 'rounded-lg bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700',
+                            textContent: 'Đã trong thư viện',
+                        }));
+                        window.toast?.success('Đã lưu ảnh vào thư viện media (thư mục "Ảnh AI").');
+                    } catch (err) {
+                        window.toast?.error(err.message);
+                        btn.disabled = false;
+                        btn.textContent = 'Lưu vào thư viện';
+                    }
+                });
+            });
+        })();
+    </script>
+}

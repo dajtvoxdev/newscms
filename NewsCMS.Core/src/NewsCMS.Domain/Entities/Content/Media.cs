@@ -26,6 +26,14 @@ public class Media : BaseEntity, ISoftDelete, ISiteScoped
     public MediaFolder? Folder { get; set; }
     public Guid UploadedById { get; set; }
 
+    /// <summary>Nguồn gốc file — xem <see cref="MediaOrigins"/>. Ảnh AI phải truy ngược được (nghĩa vụ gắn nhãn AI).</summary>
+    public string Origin { get; set; } = MediaOrigins.Upload;
+
+    /// <summary>Job của Xưởng ảnh AI đã sinh ra ảnh này (khi <see cref="Origin"/> là ảnh AI).</summary>
+    public Guid? AiJobId { get; set; }
+
+    public bool IsAiGenerated => Origin is MediaOrigins.AiGenerated or MediaOrigins.AiEdited;
+
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
 }
@@ -39,4 +47,15 @@ public class MediaFolder : BaseEntity, ISiteScoped
     public MediaFolder? Parent { get; set; }
     public ICollection<MediaFolder> Children { get; set; } = new List<MediaFolder>();
     public ICollection<Media> Items { get; set; } = new List<Media>();
+}
+
+public static class MediaOrigins
+{
+    public const string Upload = "upload";
+
+    /// <summary>Ảnh tạo mới bằng AI.</summary>
+    public const string AiGenerated = "ai-generated";
+
+    /// <summary>Ảnh có sẵn được sửa bằng AI.</summary>
+    public const string AiEdited = "ai-edited";
 }

@@ -1,0 +1,125 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.ImageStudio.IndexModel
+@using NewsCMS.Domain.Entities.ImageStudio
+@{
+    ViewData["Title"] = "Xưởng ảnh AI";
+    var filters = new (ImageJobStatus? Value, string Label)[]
+    {
+        (null, "Tất cả"), (ImageJobStatus.Queued, "Đang chờ"), (ImageJobStatus.Running, "Đang tạo"),
+        (ImageJobStatus.Succeeded, "Đã xong"), (ImageJobStatus.Failed, "Lỗi"), (ImageJobStatus.Canceled, "Đã huỷ"),
+    };
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <p class="text-sm font-semibold text-indigo-600">Marketing</p>
+        <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Xưởng ảnh AI</h2>
+        <p class="mt-1 text-sm text-slate-500">Tạo ảnh minh hoạ, ảnh bìa, ảnh sản phẩm bằng AI. Ảnh chọn "Lưu vào thư viện" sẽ nằm trong thư mục <strong>Ảnh AI</strong> của thư viện media.</p>
+    </div>
+    @if (Model.CanCreate)
+    {
+        <button type="button" class="admin-btn-primary gap-2" data-image-studio-open data-purpose="free" data-reload-on-close
+                disabled="@(Model.Form is { Enabled: false } ? "disabled" : null)">
+            @AdminIcon.Svg("sparkles") Tạo ảnh
+        </button>
+    }
+</div>
+
+@if (Model.Form is { Enabled: false } form)
+{
+    <div class="admin-card mb-6 p-6 text-sm text-amber-800">@form.DisabledReason</div>
+}
+else if (Model.Form is { } active && (active.MonthlyRemaining is not null || active.DailyRemaining is not null))
+{
+    <div class="mb-6 flex flex-wrap gap-3 text-sm">
+        @if (active.MonthlyRemaining is { } monthly)
+        {
+            <span class="rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200">Site còn <strong>@monthly</strong> lượt tháng này</span>
+        }
+        @if (active.DailyRemaining is { } daily)
+        {
+            <span class="rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200">Bạn còn <strong>@daily</strong> lượt hôm nay</span>
+        }
+    </div>
+}
+
+<form method="get" class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <nav class="flex flex-wrap gap-2">
+        @foreach (var f in filters)
+        {
+            <a asp-page="/ImageStudio/Index" asp-route-status="@f.Value" asp-route-q="@Model.Keyword"
+               class="rounded-xl px-3 py-1.5 text-xs font-semibold @(f.Value == Model.Status ? "bg-indigo-600 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200")">@f.Label</a>
+        }
+    </nav>
+    <div class="flex gap-2">
+        @if (Model.Status is not null)
+        {
+            <input type="hidden" name="status" value="@Model.Status" />
+        }
+        <input type="search" name="q" value="@Model.Keyword" placeholder="Tìm theo mô tả hoặc model…" class="admin-input sm:w-72" />
+        <button type="submit" class="admin-btn-secondary">@AdminIcon.Svg("search")</button>
+    </div>
+</form>
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-3">Ảnh</th>
+                <th class="px-5 py-3">Mô tả</th>
+                <th class="hidden px-5 py-3 md:table-cell">Model</th>
+                <th class="px-5 py-3">Trạng thái</th>
+                <th class="hidden px-5 py-3 sm:table-cell">Chi phí</th>
+                <th class="px-5 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Jobs.Items.Count == 0)
+            {
+                <tr><td colspan="6" class="px-5 py-10 text-center text-slate-500">Chưa có ảnh nào. @(Model.CanCreate ? "Bấm \"Tạo ảnh\" để bắt đầu." : "")</td></tr>
+            }
+            @foreach (var job in Model.Jobs.Items)
+            {
+                <tr class="bg-white">
+                    <td class="px-5 py-3">
+                        @if (job.ThumbnailUrl is not null)
+                        {
+                            <img src="@job.ThumbnailUrl" alt="" loading="lazy" class="h-14 w-14 rounded-lg object-cover ring-1 ring-slate-200" />
+                        }
+                        else
+                        {
+                            <span class="flex h-14 w-14 items-center justify-center rounded-lg bg-slate-100 text-slate-400">@AdminIcon.Svg("image")</span>
+                        }
+                    </td>
+                    <td class="max-w-md px-5 py-3">
+                        <p class="line-clamp-2 font-medium text-slate-900">@job.UserPrompt</p>
+                        <p class="mt-0.5 text-xs text-slate-500">@job.QueuedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm") · @job.OutputCount/@job.VariantCount ảnh</p>
+                    </td>
+                    <td class="hidden px-5 py-3 text-slate-600 md:table-cell">@job.ModelName</td>
+                    <td class="px-5 py-3"><partial name="_ImageJobStatus" model="job.Status" /></td>
+                    <td class="hidden px-5 py-3 font-mono text-xs text-slate-600 sm:table-cell">$@job.CostUsd.ToString("0.###")</td>
+                    <td class="px-5 py-3 text-right">
+                        <a asp-page="/ImageStudio/Detail" asp-route-id="@job.Id" class="admin-btn-secondary">Xem</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Jobs.TotalPages > 1)
+{
+    <div class="mt-4 flex items-center justify-between text-sm text-slate-600">
+        <span>Trang @Model.Jobs.Page / @Model.Jobs.TotalPages · @Model.Jobs.TotalItems yêu cầu</span>
+        <div class="flex gap-2">
+            @if (Model.Jobs.HasPrev)
+            {
+                <a asp-page="/ImageStudio/Index" asp-route-status="@Model.Status" asp-route-q="@Model.Keyword" asp-route-page="@(Model.Jobs.Page - 1)" class="admin-btn-secondary">Trước</a>
+            }
+            @if (Model.Jobs.HasNext)
+            {
+                <a asp-page="/ImageStudio/Index" asp-route-status="@Model.Status" asp-route-q="@Model.Keyword" asp-route-page="@(Model.Jobs.Page + 1)" class="admin-btn-secondary">Sau</a>
+            }
+        </div>
+    </div>
+}

@@ -1,0 +1,66 @@
+@* Modal tạo ảnh AI dùng chung — mở bằng window.imageStudio.open({...}) (wwwroot/js/admin/image-studio.js).
+   Nạp một lần trong _AdminLayout khi người dùng có quyền ImageStudio.Image.Create. *@
+<dialog id="image-studio-modal"
+        class="w-full max-w-6xl rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-black/50"
+        aria-labelledby="isd-title">
+    @Html.AntiForgeryToken()
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <div>
+            <h2 class="text-lg font-bold text-slate-950" id="isd-title">Tạo ảnh bằng AI</h2>
+            <p class="text-xs text-slate-500" id="isd-subtitle">Mô tả ảnh cần tạo, chọn model rồi bấm Tạo ảnh. Ảnh sinh ở nền — có thể tạo tiếp trong lúc chờ.</p>
+        </div>
+        <button type="button" id="isd-close" class="inline-flex rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Đóng">@AdminIcon.Svg("x")</button>
+    </div>
+
+    <div class="grid max-h-[78vh] gap-0 overflow-y-auto lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+        <form id="isd-form" class="space-y-5 border-b border-slate-200 p-6 lg:border-b-0 lg:border-r" novalidate>
+            <div id="isd-disabled" class="hidden rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800"></div>
+
+            <label class="block space-y-2">
+                <span class="admin-label">Mô tả ảnh</span>
+                <textarea id="isd-prompt" class="admin-input" rows="5" maxlength="4000"
+                          placeholder="Ví dụ: Một ly cà phê muối đặt trên bàn gỗ bên cửa sổ phố cổ Huế, ánh nắng sớm, phong cách ảnh chụp tạp chí."></textarea>
+                <span class="flex justify-between text-xs text-slate-500">
+                    <span>Viết tiếng Việt được. Càng cụ thể về bối cảnh, ánh sáng, góc chụp thì ảnh càng sát ý.</span>
+                    <span id="isd-prompt-count">0/4000</span>
+                </span>
+            </label>
+
+            <fieldset class="space-y-2">
+                <legend class="admin-label">Model</legend>
+                <div id="isd-models" class="grid gap-2 sm:grid-cols-2"></div>
+            </fieldset>
+
+            <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
+                <fieldset class="space-y-2">
+                    <legend class="admin-label">Tỉ lệ khung</legend>
+                    <div id="isd-aspects" class="flex flex-wrap gap-2"></div>
+                </fieldset>
+                <label class="block space-y-2">
+                    <span class="admin-label">Số ảnh</span>
+                    <select id="isd-count" class="admin-select"></select>
+                </label>
+            </div>
+
+            <div class="flex flex-col gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                <div class="space-y-0.5">
+                    <div id="isd-estimate">Chi phí ước tính: —</div>
+                    <div id="isd-quota" class="text-xs text-slate-500"></div>
+                </div>
+                <button type="submit" id="isd-submit" class="admin-btn-primary gap-2">@AdminIcon.Svg("sparkles") <span>Tạo ảnh</span></button>
+            </div>
+        </form>
+
+        <section class="bg-slate-50/60 p-6" aria-live="polite">
+            <div class="mb-3 flex items-center justify-between">
+                <h3 class="font-bold text-slate-950">Kết quả</h3>
+                <span class="text-xs text-slate-500" id="isd-results-hint">Ảnh chưa chọn sẽ tự dọn sau 14 ngày.</span>
+            </div>
+            <div id="isd-empty" class="rounded-2xl border border-dashed border-slate-300 px-6 py-16 text-center text-sm text-slate-500">
+                Ảnh sẽ hiện ở đây ngay khi tạo xong.
+            </div>
+            <div id="isd-results" class="space-y-4"></div>
+        </section>
+    </div>
+</dialog>
+<script src="~/js/admin/image-studio.js" asp-append-version="true"></script>

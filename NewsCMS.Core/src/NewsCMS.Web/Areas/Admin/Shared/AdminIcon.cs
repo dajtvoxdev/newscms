@@ -45,6 +45,8 @@ public static class AdminIcon
         ["arrow-right"] = @"<path d=""M5 12h14""/><path d=""m12 5 7 7-7 7""/>",
         ["corner-down-right"] = @"<polyline points=""15 10 20 15 15 20""/><path d=""M4 4v7a4 4 0 0 0 4 4h12""/>",
         ["rotate-cw"] = @"<path d=""M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8""/><path d=""M21 3v5h-5""/>",
+        ["sparkles"] = @"<path d=""m12 3-1.9 5.8L4.3 10.7l5.8 1.9L12 18.4l1.9-5.8 5.8-1.9-5.8-1.9Z""/><path d=""M5 3v3""/><path d=""M3.5 4.5h3""/><path d=""M18 16v3""/><path d=""M16.5 17.5h3""/>",
+        ["image"] = @"<rect width=""18"" height=""18"" x=""3"" y=""3"" rx=""2"" ry=""2""/><circle cx=""9"" cy=""9"" r=""2""/><path d=""m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21""/>",
     };
 
     /// <summary>Chuỗi &lt;svg&gt; hoàn chỉnh — dùng cho Html.Raw, JS template, TinyMCE addIcon.</summary>

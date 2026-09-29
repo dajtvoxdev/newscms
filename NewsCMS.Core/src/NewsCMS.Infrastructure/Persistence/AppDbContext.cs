@@ -131,6 +131,13 @@ public class AppDbContext
     public DbSet<NewsCMS.Domain.Entities.VideoStudio.VideoPromptTrendRun> VideoPromptTrendRuns => Set<NewsCMS.Domain.Entities.VideoStudio.VideoPromptTrendRun>();
     public DbSet<NewsCMS.Domain.Entities.VideoStudio.VideoPromptLibrarySettings> VideoPromptLibrarySettings => Set<NewsCMS.Domain.Entities.VideoStudio.VideoPromptLibrarySettings>();
 
+    // Xưởng ảnh AI
+    public DbSet<NewsCMS.Domain.Entities.ImageStudio.ImageModel> ImageModels => Set<NewsCMS.Domain.Entities.ImageStudio.ImageModel>();
+    public DbSet<NewsCMS.Domain.Entities.ImageStudio.ImageJob> ImageJobs => Set<NewsCMS.Domain.Entities.ImageStudio.ImageJob>();
+    public DbSet<NewsCMS.Domain.Entities.ImageStudio.ImageJobOutput> ImageJobOutputs => Set<NewsCMS.Domain.Entities.ImageStudio.ImageJobOutput>();
+    public DbSet<NewsCMS.Domain.Entities.ImageStudio.ImageProviderCall> ImageProviderCalls => Set<NewsCMS.Domain.Entities.ImageStudio.ImageProviderCall>();
+    public DbSet<NewsCMS.Domain.Entities.ImageStudio.ImageStudioSiteSettings> ImageStudioSiteSettings => Set<NewsCMS.Domain.Entities.ImageStudio.ImageStudioSiteSettings>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

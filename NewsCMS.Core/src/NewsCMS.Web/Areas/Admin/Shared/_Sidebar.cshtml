@@ -34,6 +34,8 @@
     var showInterface = canMenus || canBanners || canBuilder;
 
     var canVideoStudio = Can(Permissions.VideoStudio.View);
+    var canImageStudio = Can(Permissions.ImageStudio.View);
+    var showMarketing = canVideoStudio || canImageStudio;
 
     var canAiConnection = Can(Permissions.Ai.ManageConnection);
     var canAiSkill = Can(Permissions.Ai.ManageSkill);
@@ -68,19 +70,33 @@
                     <span class="h-2 w-2 rounded-full bg-slate-500"></span>
                     Cấu hình AdVideo
                 </a>
+                <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/ImageStudio/Config")" href="/Admin/ImageStudio/Config/Models">
+                    <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+                    Cấu hình Xưởng ảnh
+                </a>
             </div>
         </div>
     }
 
-    @if (canVideoStudio)
+    @if (showMarketing)
     {
         <div>
             <div class="px-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Marketing</div>
             <div class="mt-2 space-y-1">
-                <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/VideoStudio")" href="/Admin/VideoStudio">
-                    <span class="h-2 w-2 rounded-full bg-slate-500"></span>
-                    Video quảng cáo AI
-                </a>
+                @if (canVideoStudio)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @Active("/admin/VideoStudio")" href="/Admin/VideoStudio">
+                        <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+                        Video quảng cáo AI
+                    </a>
+                }
+                @if (canImageStudio)
+                {
+                    <a class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold @(Context.Request.Path.StartsWithSegments("/Admin/ImageStudio/Config", StringComparison.OrdinalIgnoreCase) ? "text-slate-300 hover:bg-white/5 hover:text-white" : Active("/admin/ImageStudio"))" href="/Admin/ImageStudio">
+                        <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+                        Xưởng ảnh AI
+                    </a>
+                }
             </div>
         </div>
     }

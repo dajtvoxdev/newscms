@@ -146,6 +146,17 @@ public static class Permissions
         public const string ManageVoices = "VideoStudio.Voice.Manage";
     }
 
+    /// <summary>
+    /// Xưởng ảnh AI theo site. Cấu hình model và hạn mức là việc của nền tảng — trang đó dùng
+    /// <c>Roles = "SuperAdmin"</c> như Cấu hình AdVideo.
+    /// </summary>
+    /// <remarks>Tách <see cref="Create"/> khỏi <see cref="View"/>: tạo ảnh là lúc tiền bắt đầu tiêu.</remarks>
+    public static class ImageStudio
+    {
+        public const string View = "ImageStudio.Image.View";
+        public const string Create = "ImageStudio.Image.Create";
+    }
+
     public static class KeoBia
     {
         public const string ViewPlayers = "KeoBia.Player.View";
@@ -223,6 +234,9 @@ public static class Permissions
         yield return (VideoStudio.Create, "VideoStudio", "Tạo video quảng cáo AI (tốn chi phí)");
         yield return (VideoStudio.Cancel, "VideoStudio", "Huỷ video đang dựng");
         yield return (VideoStudio.ManageVoices, "VideoStudio", "Clone và xoá giọng đọc của site (cần xác nhận của chủ giọng)");
+
+        yield return (ImageStudio.View, "ImageStudio", "Xem ảnh AI đã tạo");
+        yield return (ImageStudio.Create, "ImageStudio", "Tạo ảnh bằng AI (tốn chi phí)");
 
         yield return (KeoBia.ViewPlayers, "KeoBia", "Xem tracking người chơi Kèo Bia");
         yield return (KeoBia.ManageMatches, "KeoBia", "Quản lý lịch và kết quả Kèo Bia");

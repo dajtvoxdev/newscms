@@ -20,6 +20,11 @@ public class MediaConfiguration : IEntityTypeConfiguration<Media>
         builder.Property(m => m.PosterUrl).HasMaxLength(1024);
         builder.Property(m => m.PosterStorageKey).HasMaxLength(1024);
 
+        // Dòng cũ nhận "upload" qua default của cột, không cần script cập nhật dữ liệu.
+        builder.Property(m => m.Origin).HasMaxLength(20).IsRequired().HasDefaultValue(MediaOrigins.Upload);
+        builder.Ignore(m => m.IsAiGenerated);
+        builder.HasIndex(m => m.Origin);
+
         builder.HasIndex(m => m.FileName);
         builder.HasIndex(m => m.Kind);
         builder.HasIndex(m => m.FolderId);

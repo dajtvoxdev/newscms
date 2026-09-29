@@ -20,7 +20,7 @@ hình**, không phải một thứ "gần xong". Đợt nào bắt đầu thì v
 
 ## Milestones
 
-- [ ] **M1 — Tạo được ảnh từ chữ** (Đợt 1) · `/Admin/ImageStudio` → 2 biến thể → "Dùng ảnh này" → ảnh nằm trong thư viện media, có metadata AI
+- [x] **M1 — Tạo được ảnh từ chữ** (Đợt 1, xong 29/09 — [dot-1-nen-mong-2026-09-29.md](./image-studio/dot-1-nen-mong-2026-09-29.md)) · `/Admin/ImageStudio` → 2 biến thể → "Dùng ảnh này" → ảnh nằm trong thư viện media, có metadata AI
 - [ ] **M2 — Có kho prompt** (Đợt 2) · mẫu có ảnh demo, chọn mẫu "Đang trend", "Cải thiện prompt", trend tự cập nhật
 - [ ] **M3 — Sửa được ảnh theo vùng đánh số** (Đợt 3) · khoanh #1 #2, chỉ dẫn từng vùng, phần ngoài vùng giữ nguyên từng điểm ảnh
 - [ ] **M4 — Bài viết hoàn chỉnh có ảnh** (Đợt 4) · khung chat trả bài + ảnh bìa + ảnh trong bài, lưu nháp
@@ -30,6 +30,8 @@ hình**, không phải một thứ "gần xong". Đợt nào bắt đầu thì v
 ## Task Breakdown
 
 ### Đợt 1 — Nền móng: tạo ảnh từ chữ, hàng đợi, promote (5 ngày)
+
+> **Xong 29/09.** Kết quả, khác biệt so với thiết kế và cách chạy với nhà cung cấp thật: [image-studio/dot-1-nen-mong-2026-09-29.md](./image-studio/dot-1-nen-mong-2026-09-29.md).
 
 | # | Việc | File |
 |---|---|---|

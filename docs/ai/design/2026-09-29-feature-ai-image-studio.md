@@ -261,10 +261,9 @@ public interface IImageProvider
 
 public sealed record ImageProviderContext(string BaseUrl, string ApiKey, ImageModelDto Model);
 
-public sealed record ImageProviderRequest(
-    ImageProviderContext Ctx, string Prompt, string? NegativePrompt,
-    string Size, string? Quality, int Count,
-    IReadOnlyList<ImageInput> References);               // bytes + mime, đã chuẩn hoá
+// Đợt 1: mỗi lần gọi sinh ĐÚNG MỘT ảnh — nhiều biến thể thì runner gọi song song (không phải gateway
+// nào cũng nhận n > 1; mỗi lần gọi một dòng sổ chi phí; một biến thể lỗi không làm mất biến thể khác).
+public sealed record ImageGenerateRequest(ImageProviderContext Context, string Prompt, string Size);
 
 public sealed record ImageEditProviderRequest(
     ImageProviderContext Ctx, string Prompt, int Count,

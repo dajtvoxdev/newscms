@@ -1,0 +1,52 @@
+@page
+@model NewsCMS.Web.Areas.Admin.Pages.ImageStudio.Config.SitesModel
+@{
+    ViewData["Title"] = "Xưởng ảnh — site & hạn mức";
+    ViewData["ImageStudioTab"] = "sites";
+}
+
+<partial name="_ImageStudioConfigNav" />
+
+<p class="mb-4 text-sm text-slate-500">Site chưa bật thì mọi nút "Tạo ảnh" của site đó bị ẩn. Hạn mức <strong>0 = không giới hạn</strong>. Lượt dùng tính theo số ảnh (mỗi biến thể là một ảnh), tháng tính theo giờ UTC.</p>
+
+<div class="admin-card overflow-hidden">
+    <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-5 py-3">Site</th>
+                <th class="px-5 py-3">Bật</th>
+                <th class="px-5 py-3">Ảnh / tháng</th>
+                <th class="px-5 py-3">Ảnh / người / ngày</th>
+                <th class="hidden px-5 py-3 md:table-cell">Tháng này</th>
+                <th class="px-5 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            @if (Model.Sites.Count == 0)
+            {
+                <tr><td colspan="6" class="px-5 py-10 text-center text-slate-500">Chưa có site nào.</td></tr>
+            }
+            @foreach (var s in Model.Sites)
+            {
+                var formId = "site-" + s.SiteId.ToString("N");
+                <tr class="bg-white">
+                    <td class="px-5 py-4">
+                        <div class="font-semibold text-slate-900">@s.SiteName</div>
+                        <div class="text-xs text-slate-500">@s.SiteSlug</div>
+                    </td>
+                    <td class="px-5 py-4">
+                        <input type="checkbox" name="enabled" value="true" form="@formId" class="h-5 w-5" checked="@s.Enabled" aria-label="Bật cho @s.SiteName" />
+                    </td>
+                    <td class="px-5 py-4"><input type="number" name="monthlyImageQuota" min="0" value="@s.MonthlyImageQuota" form="@formId" class="admin-input w-28" /></td>
+                    <td class="px-5 py-4"><input type="number" name="perUserDailyQuota" min="0" value="@s.PerUserDailyQuota" form="@formId" class="admin-input w-28" /></td>
+                    <td class="hidden px-5 py-4 text-xs text-slate-600 md:table-cell">@s.ImagesThisMonth ảnh · <span class="font-mono">$@s.CostThisMonthUsd.ToString("0.##")</span></td>
+                    <td class="px-5 py-4 text-right">
+                        <form method="post" asp-page-handler="Save" asp-route-siteId="@s.SiteId" id="@formId">
+                            <button type="submit" class="admin-btn-secondary">Lưu</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

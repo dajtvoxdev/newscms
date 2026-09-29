@@ -1,0 +1,171 @@
+@page "{id:guid?}"
+@model NewsCMS.Web.Areas.Admin.Pages.ImageStudio.Config.ModelEditModel
+@using NewsCMS.Domain.Entities.ImageStudio
+@{
+    ViewData["Title"] = Model.IsNew ? "Thêm model tạo ảnh" : "Sửa model tạo ảnh";
+    ViewData["ImageStudioTab"] = "models";
+}
+
+<partial name="_ImageStudioConfigNav" />
+
+<form method="post" class="grid gap-6 lg:grid-cols-[1fr_340px]">
+    <input type="hidden" asp-for="Input.Id" />
+
+    <div class="space-y-6">
+        <section class="admin-card space-y-5 p-6">
+            <h3 class="font-bold text-slate-950">@(Model.IsNew ? "Model mới" : Model.Input.Name)</h3>
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="All" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+            }
+
+            <div class="grid gap-4 md:grid-cols-2">
+                <label class="block space-y-2">
+                    <span class="admin-label">Tên hiển thị cho người dùng *</span>
+                    <input asp-for="Input.Name" class="admin-input" placeholder="GPT Image — chất lượng cao" required />
+                </label>
+                <label class="block space-y-2">
+                    <span class="admin-label">Thứ tự</span>
+                    <input asp-for="Input.SortOrder" type="number" class="admin-input" />
+                </label>
+            </div>
+            <label class="block space-y-2">
+                <span class="admin-label">Mô tả ngắn (người dùng thấy khi chọn model)</span>
+                <input asp-for="Input.Description" class="admin-input" placeholder="Ảnh đẹp, bám mô tả tốt; chậm hơn một chút." />
+            </label>
+
+            <label class="block space-y-2">
+                <span class="admin-label">Loại kết nối *</span>
+                <select asp-for="Input.Adapter" class="admin-select" id="model-adapter">
+                    @foreach (var a in Model.Adapters)
+                    {
+                        <option value="@a">@NewsCMS.Web.Areas.Admin.Pages.ImageStudio.Config.ModelEditModel.AdapterLabel(a)</option>
+                    }
+                </select>
+                <span class="text-xs text-slate-500">Gemini và fal.ai sẽ có ở đợt sau (sửa ảnh theo vùng).</span>
+            </label>
+
+            <div class="grid gap-4 md:grid-cols-2" id="model-connection-row">
+                <label class="block space-y-2">
+                    <span class="admin-label">Kết nối AI (chứa API key) *</span>
+                    <select asp-for="Input.ConnectionId" class="admin-select">
+                        <option value="@Guid.Empty">— chọn kết nối —</option>
+                        @foreach (var c in Model.Connections)
+                        {
+                            <option value="@c.Id">@c.Name · @c.BaseUrl@(c.HasApiKey ? "" : " (chưa có key)")</option>
+                        }
+                    </select>
+                    <span class="text-xs text-slate-500">Base URL của kết nối gồm cả <code>/v1</code>, ví dụ <code>https://api.openai.com/v1</code> hoặc <code>http://localhost:20128/v1</code> (9Router). <a asp-page="/AiConnections/Create" class="font-semibold text-indigo-600 hover:underline">Thêm kết nối</a></span>
+                </label>
+                <label class="block space-y-2">
+                    <span class="admin-label">Model id *</span>
+                    <input asp-for="Input.ModelId" class="admin-input font-mono" placeholder="gpt-image-1" required />
+                    <span class="text-xs text-slate-500">Đúng tên model phía nhà cung cấp, ví dụ <code>gpt-image-1</code>, <code>cx/gpt-5.5-image</code>.</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="admin-card space-y-5 p-6">
+            <h3 class="font-bold text-slate-950">Năng lực và tham số</h3>
+            <fieldset class="space-y-2">
+                <legend class="admin-label">Model làm được</legend>
+                <div class="grid gap-2 sm:grid-cols-2">
+                    <label class="flex items-center gap-2 text-sm"><input asp-for="Input.CapTextToImage" class="h-4 w-4" /> Tạo ảnh từ mô tả</label>
+                    <label class="flex items-center gap-2 text-sm"><input asp-for="Input.CapReferenceImages" class="h-4 w-4" /> Nhận ảnh tham chiếu</label>
+                    <label class="flex items-center gap-2 text-sm"><input asp-for="Input.CapMaskEdit" class="h-4 w-4" /> Sửa theo mask (vùng)</label>
+                    <label class="flex items-center gap-2 text-sm"><input asp-for="Input.CapInstructionEdit" class="h-4 w-4" /> Sửa ảnh bằng lời</label>
+                </div>
+                <span class="text-xs text-slate-500">Đợt này người dùng mới dùng "Tạo ảnh từ mô tả". Các năng lực còn lại dùng cho sửa ảnh ở đợt sau.</span>
+            </fieldset>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                <label class="block space-y-2">
+                    <span class="admin-label">Kích thước model nhận (mỗi dòng một giá trị) *</span>
+                    <textarea asp-for="Input.SupportedSizes" rows="4" class="admin-input font-mono"></textarea>
+                    <span class="text-xs text-slate-500">Dạng <code>1024x1024</code>, <code>16:9</code> hoặc <code>auto</code>. Người dùng chọn tỉ lệ khung; hệ thống gửi giá trị gần nhất trong danh sách này.</span>
+                </label>
+                <div class="space-y-4">
+                    <label class="block space-y-2">
+                        <span class="admin-label">Chất lượng gửi đi</span>
+                        <input asp-for="Input.Quality" class="admin-input" placeholder="để trống = không gửi · low / medium / high / auto" />
+                    </label>
+                    <label class="block space-y-2">
+                        <span class="admin-label">Định dạng ảnh</span>
+                        <select asp-for="Input.OutputFormat" class="admin-select">
+                            <option value="png">PNG</option>
+                            <option value="jpeg">JPEG</option>
+                            <option value="webp">WebP</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-3">
+                <label class="block space-y-2">
+                    <span class="admin-label">Giá ước tính mỗi ảnh (USD)</span>
+                    <input asp-for="Input.PricePerImageUsd" type="number" step="0.0001" min="0" class="admin-input" />
+                </label>
+                <label class="block space-y-2">
+                    <span class="admin-label">Số ảnh tối đa mỗi lần</span>
+                    <input asp-for="Input.MaxVariants" type="number" min="1" max="4" class="admin-input" />
+                </label>
+                <label class="block space-y-2">
+                    <span class="admin-label">Thời gian chờ (giây)</span>
+                    <input asp-for="Input.TimeoutSeconds" type="number" min="30" max="900" class="admin-input" />
+                </label>
+            </div>
+
+            <details class="rounded-xl border border-slate-200 px-4 py-3">
+                <summary class="cursor-pointer text-sm font-semibold text-slate-700">Nâng cao</summary>
+                <div class="mt-4 grid gap-4 md:grid-cols-2">
+                    <label class="block space-y-2">
+                        <span class="admin-label">Quy ước mask</span>
+                        <select asp-for="Input.MaskConvention" class="admin-select">
+                            <option value="@MaskConvention.None">Không dùng mask</option>
+                            <option value="@MaskConvention.AlphaZeroIsEdit">Trong suốt = vùng sửa (OpenAI)</option>
+                            <option value="@MaskConvention.WhiteIsEdit">Trắng = vùng sửa (fal)</option>
+                        </select>
+                    </label>
+                    <label class="block space-y-2">
+                        <span class="admin-label">Số ảnh tham chiếu tối đa</span>
+                        <input asp-for="Input.MaxReferenceImages" type="number" min="0" max="16" class="admin-input" />
+                    </label>
+                </div>
+                <label class="mt-4 block space-y-2">
+                    <span class="admin-label">Tham số bổ sung (JSON)</span>
+                    <textarea asp-for="Input.ExtraParamsJson" rows="3" class="admin-input font-mono" placeholder='{"background": "auto", "moderation": "low"}'></textarea>
+                    <span class="text-xs text-slate-500">Trộn vào body request. Giá trị <code>null</code> để bỏ một tham số mặc định (ví dụ <code>{"output_format": null}</code> cho gateway không nhận). Không ghi đè được <code>model</code>, <code>prompt</code>, <code>n</code>.</span>
+                </label>
+            </details>
+        </section>
+    </div>
+
+    <aside class="space-y-4">
+        <section class="admin-card space-y-4 p-5">
+            <label class="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                <input asp-for="Input.IsActive" class="h-5 w-5" /> Bật — người dùng chọn được
+            </label>
+            <label class="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                <input asp-for="Input.IsDefault" class="h-5 w-5" /> Model mặc định (chọn sẵn)
+            </label>
+            <button type="submit" class="admin-btn-primary w-full">@(Model.IsNew ? "Thêm model" : "Lưu model")</button>
+            <a asp-page="/ImageStudio/Config/Models" class="admin-btn-secondary w-full">Huỷ</a>
+        </section>
+        <section class="admin-card space-y-2 p-5 text-xs text-slate-500">
+            <p><strong class="text-slate-700">Sau khi lưu</strong>, bấm "Chạy thử" ở danh sách để kiểm key và model id (tạo một ảnh, tốn phí một ảnh).</p>
+            <p>Giá ở đây chỉ để hiện ước tính cho người dùng. Chi phí thật được ghi theo từng lần gọi.</p>
+        </section>
+    </aside>
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            const adapter = document.getElementById('model-adapter');
+            const connectionRow = document.getElementById('model-connection-row');
+            const sync = () => connectionRow.querySelector('select').disabled = adapter.value === 'Fake';
+            adapter.addEventListener('change', sync);
+            sync();
+        })();
+    </script>
+}
