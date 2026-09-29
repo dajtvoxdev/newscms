@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NewsCMS.Application.Ai;
@@ -8,6 +7,7 @@ using NewsCMS.Application.Common;
 using NewsCMS.Application.VideoStudio;
 using NewsCMS.Domain.Entities.Ai;
 using NewsCMS.Domain.Entities.VideoStudio;
+using NewsCMS.Infrastructure.Ai.PromptLibrary;
 using NewsCMS.Infrastructure.Persistence;
 
 namespace NewsCMS.Infrastructure.VideoStudio;
@@ -53,13 +53,12 @@ public sealed class VideoPromptTrendService : IVideoPromptTrendService
             return false;
         }
 
-        // Tính từ lần chạy gần nhất kể cả lần lỗi: AI hỏng thì không gọi lại mỗi 15 phút rồi tốn tiền.
         DateTime? last = await _db.VideoPromptTrendRuns.AsNoTracking()
             .OrderByDescending(x => x.StartedAt)
             .Select(x => (DateTime?)x.StartedAt)
             .FirstOrDefaultAsync(ct);
 
-        return last is null || DateTime.UtcNow - last.Value >= TimeSpan.FromHours(Math.Max(settings.TrendIntervalHours, 1));
+        return TrendRunSupport.IsDue(true, settings.TrendIntervalHours, last, DateTime.UtcNow);
     }
 
     public async Task<Result<VideoPromptTrendRunDto>> RefreshAsync(string trigger, CancellationToken ct = default)
@@ -86,7 +85,7 @@ public sealed class VideoPromptTrendService : IVideoPromptTrendService
                 Trigger = trigger.Length > 200 ? trigger[..200] : trigger,
                 Status = VideoPromptTrendRunStatus.Running,
                 StartedAt = now,
-                UsedWebSearch = await HasWebSearchAsync(ct),
+                UsedWebSearch = await TrendRunSupport.HasWebSearchAsync(_db, AiTaskKeys.VideoStudioTrendTemplates, ct),
             };
             _db.VideoPromptTrendRuns.Add(run);
             await _db.SaveChangesAsync(ct);
@@ -99,7 +98,7 @@ public sealed class VideoPromptTrendService : IVideoPromptTrendService
             {
                 _logger.LogError(ex, "Cập nhật kho prompt theo trend lỗi (run {RunId}).", run.Id);
                 run.Status = VideoPromptTrendRunStatus.Failed;
-                run.Notes = Append(run.Notes, $"Lỗi: {ex.Message}");
+                run.Notes = TrendRunSupport.Append(run.Notes, $"Lỗi: {ex.Message}");
             }
 
             run.FinishedAt = DateTime.UtcNow;
@@ -154,17 +153,17 @@ public sealed class VideoPromptTrendService : IVideoPromptTrendService
         if (!generated.Succeeded)
         {
             run.Status = VideoPromptTrendRunStatus.Failed;
-            run.Notes = Append(run.Notes,
+            run.Notes = TrendRunSupport.Append(run.Notes,
                 $"AI không trả lời: {generated.Error} Kiểm tra kết nối AI mặc định và skill \"{AiTaskKeys.VideoStudioTrendTemplates}\" ở trang AI.");
             return;
         }
 
-        List<TrendItem>? items = ParseItems(generated.Value!.Content, out string? parseError);
+        List<TrendItem>? items = TrendRunSupport.ParseArray<TrendItem>(generated.Value!.Content, out string? parseError);
 
         if (items is null)
         {
             run.Status = VideoPromptTrendRunStatus.Failed;
-            run.Notes = Append(run.Notes, $"Không đọc được kết quả của AI: {parseError}");
+            run.Notes = TrendRunSupport.Append(run.Notes, $"Không đọc được kết quả của AI: {parseError}");
             return;
         }
 
@@ -206,7 +205,7 @@ public sealed class VideoPromptTrendService : IVideoPromptTrendService
             if (errors.Count > 0)
             {
                 run.Rejected++;
-                run.Notes = Append(run.Notes, $"Loại \"{Truncate(title, 80)}\": {string.Join(" ", errors)}");
+                run.Notes = TrendRunSupport.Append(run.Notes, $"Loại \"{TrendRunSupport.Truncate(title, 80)}\": {string.Join(" ", errors)}");
                 continue;
             }
 
@@ -214,7 +213,7 @@ public sealed class VideoPromptTrendService : IVideoPromptTrendService
             {
                 Title = title,
                 Category = input.Category!,
-                Description = string.IsNullOrWhiteSpace(input.Description) ? null : Truncate(input.Description.Trim(), 500),
+                Description = string.IsNullOrWhiteSpace(input.Description) ? null : TrendRunSupport.Truncate(input.Description.Trim(), 500),
                 ScenePrompt = input.ScenePrompt!.Trim(),
                 ScriptTemplate = input.ScriptTemplate!.Trim(),
                 AspectRatio = input.AspectRatio!,
@@ -222,8 +221,8 @@ public sealed class VideoPromptTrendService : IVideoPromptTrendService
                 HasPerson = input.HasPerson,
                 Source = VideoPromptTemplateSource.Trend,
                 Status = settings.RequireReview ? VideoPromptTemplateStatus.PendingReview : VideoPromptTemplateStatus.Published,
-                TrendName = string.IsNullOrWhiteSpace(item.TrendName) ? null : Truncate(item.TrendName.Trim(), 200),
-                SourceUrls = CleanUrls(item.SourceUrls),
+                TrendName = string.IsNullOrWhiteSpace(item.TrendName) ? null : TrendRunSupport.Truncate(item.TrendName.Trim(), 200),
+                SourceUrls = TrendRunSupport.CleanUrls(item.SourceUrls),
                 ExpiresAt = now.AddDays(Math.Clamp(settings.TrendLifetimeDays, 1, 180)),
                 TrendRunId = run.Id,
             });
@@ -232,7 +231,7 @@ public sealed class VideoPromptTrendService : IVideoPromptTrendService
 
         if (!run.UsedWebSearch)
         {
-            run.Notes = Append(run.Notes, "Chưa bật công cụ tìm web — xu hướng chỉ dựa trên hiểu biết của model, có thể không mới.");
+            run.Notes = TrendRunSupport.Append(run.Notes, "Chưa bật công cụ tìm web — xu hướng chỉ dựa trên hiểu biết của model, có thể không mới.");
         }
 
         run.Status = VideoPromptTrendRunStatus.Succeeded;
@@ -265,84 +264,7 @@ public sealed class VideoPromptTrendService : IVideoPromptTrendService
         return sb.ToString();
     }
 
-    /// <summary>Đọc mảng mẫu từ câu trả lời của AI — chịu được khối ```json, chữ thừa hai đầu, hoặc object bọc mảng.</summary>
-    internal static List<TrendItem>? ParseItems(string content, out string? error)
-    {
-        error = null;
-        string text = content.Trim();
-        int start = text.IndexOf('[');
-        int end = text.LastIndexOf(']');
-
-        if (start < 0 || end <= start)
-        {
-            error = "không thấy mảng JSON trong câu trả lời.";
-            return null;
-        }
-
-        try
-        {
-            List<TrendItem>? items = JsonSerializer.Deserialize<List<TrendItem>>(text[start..(end + 1)], Json);
-
-            if (items is null || items.Count == 0)
-            {
-                error = "mảng rỗng.";
-                return null;
-            }
-
-            return items;
-        }
-        catch (JsonException ex)
-        {
-            error = ex.Message;
-            return null;
-        }
-    }
-
-    private async Task<bool> HasWebSearchAsync(CancellationToken ct)
-    {
-        bool skillUsesTools = await _db.AiSkills.AnyAsync(
-            x => x.Key == AiTaskKeys.VideoStudioTrendTemplates && x.IsActive && !x.IsDeleted && x.UseTools, ct);
-
-        return skillUsesTools && await _db.AiSkills.AnyAsync(
-            x => x.Kind == AiSkillKind.Tool && x.IsActive && !x.IsDeleted && x.ToolType != null && x.ToolType.EndsWith("_search"), ct);
-    }
-
-    private static string? CleanUrls(IReadOnlyList<string>? urls)
-    {
-        if (urls is null)
-        {
-            return null;
-        }
-
-        List<string> clean = urls
-            .Where(u => Uri.TryCreate(u?.Trim(), UriKind.Absolute, out Uri? uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp))
-            .Select(u => u.Trim())
-            .Where(u => u.Length <= 500)
-            .Distinct()
-            .Take(5)
-            .ToList();
-
-        return clean.Count == 0 ? null : string.Join('\n', clean);
-    }
-
-    private static string Append(string? notes, string line)
-    {
-        string result = string.IsNullOrEmpty(notes) ? line : notes + "\n" + line;
-
-        return result.Length > 8000 ? result[..8000] : result;
-    }
-
-    private static string Truncate(string value, int max) => value.Length <= max ? value : value[..max];
-
-    private static readonly JsonSerializerOptions Json = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        PropertyNameCaseInsensitive = true,
-        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true,
-    };
-
+    /// <summary>Một mẫu AI trả về — tên trường snake_case theo hợp đồng trong prompt hệ thống của skill.</summary>
     internal sealed record TrendItem(
         string? Title,
         string? Category,

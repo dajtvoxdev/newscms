@@ -45,6 +45,7 @@
     <Compile Include="KeoBia\*.cs" />
     <Compile Include="Ai\*.cs" />
     <Compile Include="Ai\Tools\*.cs" />
+    <Compile Include="Ai\PromptLibrary\*.cs" />
     <Compile Include="VideoStudio\*.cs" />
     <Compile Include="ImageStudio\*.cs" />
     <Compile Include="ImageStudio\Imaging\*.cs" />
