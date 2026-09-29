@@ -127,5 +127,9 @@ tải lên thư viện media. Muốn sửa một chi tiết nhỏ (đổi màu �
 | Q1 | Ngoài 9Router, có định mua key OpenAI, Gemini hoặc fal.ai không? *(29/09: không chặn — admin tự thêm model ở màn hình)* | Thứ tự viết adapter ở Đợt 3 |
 | Q2 | Hạn mức mặc định cho mỗi site: bao nhiêu ảnh/tháng, bao nhiêu ảnh/người/ngày? | Đợt 6 |
 | Q3 | Nhãn AI hiển thị: chú thích dưới ảnh trong bài là đủ, hay cần watermark trên ảnh? Chờ pháp chế như R4 AdVideo | Đợt 6 |
-| Q4 | Kho mẫu: chỉ dùng chung toàn hệ thống, hay cho mỗi site có mẫu riêng? | Đợt 2 (đề xuất: có, mức ưu tiên P2) |
+| Q4 | Kho mẫu: chỉ dùng chung toàn hệ thống, hay cho mỗi site có mẫu riêng? *(29/09: **dùng chung toàn hệ thống** — không làm mẫu riêng theo site)* | Đợt 2 |
 | Q5 | Ảnh có người thật do khách tải lên để sửa: bắt buộc tick xác nhận quyền sử dụng? (đề xuất: có) | Đợt 3 |
+| Q6 | Vai trò nào được dùng Xưởng ảnh mặc định? Hiện chỉ SuperAdmin có quyền `ImageStudio.Image.View/Create`; vai trò khác phải cấp tay ở trang Vai trò. Có cấp sẵn cho Admin / Editor khi seed không? | Triển khai |
+| Q7 | Ảnh tạo ra mà không chọn đưa vào thư viện: tự dọn sau 14 ngày — giữ con số này? | Đợt 6 |
+| Q8 | "Bài hoàn chỉnh có ảnh": mặc định bao nhiêu ảnh (đề xuất: 1 ảnh bìa + 2 ảnh trong bài, người dùng đổi được 0–3)? | Đợt 4 |
+| Q9 | Lỗi có sẵn ngoài Xưởng ảnh: `KeoBiaChangelogs` và cột `KeoBiaMatches.StarType` không có migration — DB mới dựng bị lỗi. Có muốn sửa (thêm migration) trong một việc riêng không? | Việc riêng |

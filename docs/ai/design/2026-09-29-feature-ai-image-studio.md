@@ -218,7 +218,6 @@ Model **không** chia theo site: mọi site thấy cùng danh sách model đang 
 ```csharp
 public class ImagePromptTemplate : AuditableEntity, ISoftDelete
 {
-    public Guid? SiteId { get; set; }                // null = dùng chung; có giá trị = mẫu riêng của site (P2, Q4)
     public string Title { get; set; }
     public string Category { get; set; }             // ngành: "Ăn uống", "Mỹ phẩm", "Tin tức"…
     public ImagePurpose Purpose { get; set; }        // lọc theo chỗ mở modal
@@ -492,7 +491,7 @@ chồng. **Phần lập lịch, khoá và đọc JSON được tách thành help
 **Prompt tự viết** luôn dùng được. Nút **"Cải thiện prompt"** gọi skill `imagestudio_prompt_enhance`
 (prompt skill, quản trị sửa ở trang Kỹ năng AI): viết lại chi tiết hơn (bố cục, ánh sáng, ống kính,
 chất liệu) và giữ nguyên ý người dùng. Người dùng thấy bản trước và sau, rồi chọn bản muốn dùng.
-**"Lưu thành mẫu của site"** (P2, Q4) lưu với `SiteId` của site, nguồn `Manual`.
+Kho mẫu **dùng chung toàn hệ thống** (chốt Q4, 29/09): không có mẫu riêng theo site; mẫu chỉ SuperAdmin thêm/sửa.
 
 ## 8. Giao diện
 
@@ -596,7 +595,6 @@ skill `tool_image_generate`**, để bot KeoBia không gãy khi deploy.
 | `ImageStudio.Image.View` | ImageStudio | Xem lịch sử ảnh AI của site |
 | `ImageStudio.Image.Create` | ImageStudio | Tạo và sửa ảnh AI (**tốn chi phí**) |
 | `ImageStudio.Settings.Manage` | ImageStudio | Sửa phong cách thương hiệu, chú thích AI của site |
-| `ImageStudio.Template.Manage` | ImageStudio | Quản lý mẫu riêng của site (P2) |
 
 Thêm vào `Permissions.cs` và `Permissions.All()` để được seed. Các nút "Tạo bằng AI" trong bài viết và sản
 phẩm cần **cả** quyền sửa bài/sản phẩm **và** `ImageStudio.Image.Create`. Mọi handler kiểm lại quyền ở

@@ -55,7 +55,7 @@ provider.
 
 ### Đợt 2 — Kho prompt mẫu, trend, prompt tự viết (3 ngày)
 
-> **Xong 29/09** (trừ 2.10 mẫu riêng của site — chờ Q4). Kết quả và kiểm chứng: [image-studio/dot-2-kho-mau-2026-09-29.md](./image-studio/dot-2-kho-mau-2026-09-29.md).
+> **Xong 29/09.** 2.10 (mẫu riêng của site) bỏ — chốt Q4: kho mẫu dùng chung toàn hệ thống. Kết quả và kiểm chứng: [image-studio/dot-2-kho-mau-2026-09-29.md](./image-studio/dot-2-kho-mau-2026-09-29.md).
 
 | # | Việc | File |
 |---|---|---|
@@ -68,7 +68,7 @@ provider.
 | 2.7 | Trang **Config/Templates**, **TemplateEdit**, **Trend** (bật tự cập nhật, "Cập nhật ngay", lịch sử chạy, duyệt/ẩn) | `Areas/Admin/Pages/ImageStudio/Config/*` |
 | 2.8 | Modal: khối kho mẫu (tìm, lọc "Đang trend"/ngành/mục đích), "Dùng mẫu này" (điền chỗ giữ từ ngữ cảnh), "Cải thiện prompt" (xem trước/sau), cộng `UsageCount` khi job thành công | `image-studio.js`, handler trong `ImageStudio/Index.cshtml.cs` |
 | 2.9 | **Ảnh demo cho mẫu:** cột `DemoMediaId`/`DemoImageUrl`. Trang Templates có nút "Tạo ảnh demo" (chạy mẫu với chủ đề/sản phẩm ví dụ bằng model mặc định, lưu vào thư mục hệ thống) hoặc "Tải ảnh demo lên"; nút "Tạo demo cho mọi mẫu chưa có" (hiện tổng chi phí trước khi chạy). Mẫu trend: tuỳ chọn "Tự tạo ảnh demo cho mẫu trend mới" trong cài đặt kho, có trần số ảnh mỗi lần chạy. Modal hiện ảnh demo dạng lưới thẻ | `ImagePromptTemplate.cs`, `ImagePromptLibraryService`, `Config/Templates*`, `image-studio.js` |
-| 2.10 | *(P2, chờ Q4)* Mẫu riêng của site (`SiteId`), quyền `ImageStudio.Template.Manage`, "Lưu thành mẫu của site" | |
+| 2.10 | ~~Mẫu riêng của site~~ — **không làm** (chốt Q4 ngày 29/09: kho mẫu dùng chung toàn hệ thống) | |
 
 **Ra khỏi đợt:** modal hiện mẫu theo mục đích, dạng thẻ có ảnh demo. "Dùng mẫu này" điền đúng tên chủ đề hoặc sản phẩm; còn chỗ
 giữ chưa điền thì bị chặn kèm lời nhắc. "Cải thiện prompt" chạy được. "Cập nhật ngay" thêm mẫu đạt và
