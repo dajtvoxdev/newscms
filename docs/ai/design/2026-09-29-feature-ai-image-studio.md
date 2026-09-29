@@ -70,7 +70,7 @@ NewsCMS.Web/Areas/Admin/Pages/ImageStudio/  (+ Config/)
 | # | Quyết định | Vì sao |
 |---|---|---|
 | **D1** | **Làm trong NewsCMS, không đưa sang AdVideo.** | Ảnh là việc ngắn (5–120 giây), kết quả phải vào `Medias` theo site. Kết nối AI, skill, tool tìm web, kho prompt, `IFileStorage` và `ImageSharp` đều đã có ở NewsCMS. AdVideo sinh ra cho pipeline video nặng (Hangfire, FFmpeg, MinIO, vòng đời `adv-work`). Đưa ảnh sang đó là thêm một chặng mạng, thêm một bộ key tenant, trong khi chẳng dùng tới thứ nào trong số đó. Chỉ **mượn ý tưởng** từ AdVideo: allowlist host (SSRF), sổ `ProviderCall`, D10 "con số chưa kiểm chứng nằm trong DB". |
-| **D2** | **Model tạo ảnh là dữ liệu** (bảng `ImageModels`). Key dùng lại `AiConnection`, thêm cờ phạm vi `Chat`/`Image`. | Đổi provider không cần deploy (theo D10 của AdVideo). Key đã được mã hoá bằng DataProtection trong `AiConnection`, không cần kho key thứ hai. Cờ phạm vi để một key fal.ai không lọt vào danh sách chọn kết nối chat. |
+| **D2** | **Model tạo ảnh là dữ liệu** (bảng `ImageModels`), SuperAdmin cấu hình sẵn; **người dùng chọn một trong các model đó** như chọn giọng đọc ở VideoStudio. Key dùng lại `AiConnection`. | Đổi provider không cần deploy (theo D10 của AdVideo). Key đã được mã hoá bằng DataProtection trong `AiConnection`, không cần kho key thứ hai; 9Router dùng một key cho cả chat lẫn ảnh. Không cần thêm cờ phạm vi: mọi chỗ chat đều chỉ dùng kết nối **mặc định**, nên kết nối chỉ dành cho ảnh (fal, Gemini) không ảnh hưởng chat, miễn là không đặt nó làm mặc định. |
 | **D3** | **Kết quả chưa vào thư viện media.** Ảnh sinh ra nằm ở `ImageJobOutputs` (storage `ai-images/outputs/…`). Chỉ khi người dùng bấm **"Dùng ảnh này"** mới *promote* thành `Media`. Output không được chọn sẽ bị dọn sau N ngày. | Mỗi lần tạo ra 2–4 biến thể; đưa hết vào thư viện thì thư viện ngập rác. Cách này còn gỡ luôn vấn đề site-scope: promote chạy trong HTTP request nên có `CurrentSiteId`, còn worker chỉ ghi file, không tạo `Media`. |
 | **D4** | **Job lưu bền trong DB và xếp hàng bằng `Channel`**, không dùng Hangfire. | NewsCMS không có Hangfire. `VideoCompressionQueue` cố ý không lưu bền vì mất job chỉ làm video to hơn. Ảnh AI thì khác: mất job là mất tiền đã trả. Nên job nằm trong DB; khi khởi động, worker quét lại job `Queued` và đánh lỗi job `Running` đã quá hạn. |
 | **D5** | **Sửa theo vùng = mask + chỉ dẫn đánh số + ghép lại điểm ảnh gốc.** | Model (nhất là loại sửa bằng lời) hay vẽ lại cả ảnh, làm lệch mặt người, chữ và màu ở chỗ không được bảo sửa. **Không tin model giữ nguyên phần ngoài vùng.** Sau khi nhận kết quả, server ghép lại: `out = gốc·(1−m) + mới·m` với `m` là mask có viền mềm. Nhờ vậy tiêu chí "100% điểm ảnh ngoài vùng giữ nguyên" kiểm được bằng test. |
@@ -90,9 +90,10 @@ NewsCMS.Web/Areas/Admin/Pages/ImageStudio/  (+ Config/)
 public class ImageModel : AuditableEntity, ISoftDelete
 {
     public string Name { get; set; }                 // "GPT Image (9Router)", "Nano Banana", "FLUX Fill"
+    public string? Description { get; set; }         // hiện cho người dùng khi chọn model
     public Guid ConnectionId { get; set; }           // → AiConnection (BaseUrl + key mã hoá)
     public ImageProviderAdapter Adapter { get; set; }// OpenAiImages | Gemini | FalQueue | Fake
-    public string ModelId { get; set; }              // "gpt-image-1", "cx/gpt-5.5-image", "fal-ai/flux-pro/v1/fill"… (kiểm ở Đợt 0)
+    public string ModelId { get; set; }              // "gpt-image-1", "cx/gpt-5.5-image", "fal-ai/flux-pro/v1/fill"… (admin nhập)
     public ImageCapabilities Capabilities { get; set; } // [Flags] TextToImage | ReferenceImages | MaskEdit | InstructionEdit
     public int MaxReferenceImages { get; set; }      // 0 = không nhận ảnh tham chiếu
     public MaskConvention MaskConvention { get; set; } // AlphaZeroIsEdit (OpenAI) | WhiteIsEdit (fal) | None
@@ -114,9 +115,8 @@ public class ImageModel : AuditableEntity, ISoftDelete
 }
 ```
 
-`AiConnection` thêm cột `Scopes` kiểu `[Flags] Chat = 1, Image = 2`, dữ liệu cũ mặc định `Chat`. Khi
-`AiCompletionService.ResolveConnectionAsync` chọn kết nối mặc định cho chat thì lọc theo `Chat`. Dropdown
-kết nối trên trang Model ảnh thì lọc theo `Image`.
+`ImageModel` còn có `Description` (một câu cho người dùng: "Nhanh, rẻ — hợp ảnh minh hoạ"). Form tạo ảnh
+hiện danh sách model đang bật dạng thẻ chọn một (tên, mô tả, giá ước tính mỗi ảnh), model mặc định chọn sẵn.
 
 ### 3.2 Job, output, sổ gọi provider (theo site)
 
@@ -205,7 +205,9 @@ Bảng `ImageStudioSiteSettings` (mỗi site một dòng):
 | Trường | Ai sửa | Ghi chú |
 |---|---|---|
 | `Enabled` | SuperAdmin | Tắt thì mọi nút "Tạo bằng AI" của site đều ẩn |
-| `AllowedModelIdsJson`, `DefaultModelId` | SuperAdmin | Site chỉ thấy các model được phép |
+
+Model **không** chia theo site: mọi site thấy cùng danh sách model đang bật (chốt 29/09). Nếu sau này cần giới hạn theo site thì thêm cột danh sách model được phép vào bảng này.
+
 | `MonthlyImageQuota`, `PerUserDailyQuota` | SuperAdmin | 0 = không giới hạn |
 | `BrandStyle` | Quản trị site | Ví dụ "tông xanh lá, ánh sáng tự nhiên, tối giản". Được nối vào mọi prompt |
 | `CoverAspect`, `ProductAspect` | Quản trị site | Mặc định `16:9`, `1:1` |
@@ -226,7 +228,8 @@ public class ImagePromptTemplate : AuditableEntity, ISoftDelete
     public bool RequiresSourceImage { get; set; }    // mẫu "từ ảnh chụp thật", "đổi nền"
     public RegionHint RegionHint { get; set; }       // None | KeepSubject (bắt khoanh vùng Giữ nguyên) | EditRegions
     public string? Description { get; set; }
-    public string? PreviewUrl { get; set; }          // ảnh ví dụ (tuỳ chọn, quản trị tự tạo)
+    public Guid? DemoMediaId { get; set; }           // ảnh demo của mẫu (mục 7 — Ảnh demo)
+    public string? DemoImageUrl { get; set; }
     // Giống VideoPromptTemplate:
     public PromptTemplateSource Source { get; set; } // Default | Manual | Trend
     public PromptTemplateStatus Status { get; set; } // Published | PendingReview | Hidden
@@ -285,12 +288,11 @@ ImageSharp.
 |---|---|---|---|---|---|
 | `OpenAiImages` | `POST {base}/v1/images/generations` | `POST /v1/images/edits` (multipart `image[]`) | `/v1/images/edits` với `mask` (PNG, alpha = 0 là vùng sửa, cùng kích thước ảnh) | — | Dùng được cho OpenAI và **9Router** (đang chạy cho Telegram) cùng các gateway tương thích. Kích thước cố định, nên phải qua `SizeFitter` |
 | `Gemini` | `generateContent`, `responseModalities: ["IMAGE"]` | nhiều phần `inline_data` | — | ảnh gốc + ảnh đánh dấu + chỉ dẫn | Không có tham số mask, nên dùng chiến lược ảnh đánh dấu (D6) |
-| `FalQueue` | `queue.fal.run/{model}` → poll → `images[].url` | tuỳ model | model fill/inpaint nhận `mask_url` (trắng là vùng sửa) | model edit nhận `image_urls` | Gửi ảnh bằng data URI để không cần URL công khai (kiểm ở Đợt 0). Tái dùng cách poll của `FalQueueVideoProvider` bên AdVideo |
+| `FalQueue` | `queue.fal.run/{model}` → poll → `images[].url` | tuỳ model | model fill/inpaint nhận `mask_url` (trắng là vùng sửa) | model edit nhận `image_urls` | Gửi ảnh bằng data URI để không cần URL công khai (kiểm khi viết adapter ở Đợt 3). Tái dùng cách poll của `FalQueueVideoProvider` bên AdVideo |
 | `Fake` | vẽ gradient + hash prompt bằng ImageSharp | có | có (tô màu vùng mask) | có | **Chỉ bật ở Development** (bài học L5 của AdVideo: provider giả mặc định tắt). Dùng cho test và e2e |
 
 Model id cụ thể (ví dụ `gpt-image-1`, `cx/gpt-5.5-image`, `gemini-2.5-flash-image`, `fal-ai/flux-pro/v1/fill`)
-**chỉ là dữ liệu nhập ở màn hình**, không nằm trong code. Đợt 0 kiểm lại model nào còn sống, giá bao
-nhiêu và giới hạn kích thước ra sao.
+**chỉ là dữ liệu nhập ở màn hình**, không nằm trong code. Admin kiểm bằng nút "Chạy thử" (4.3).
 
 ### 4.3 Nút "Chạy thử" model
 
@@ -480,6 +482,13 @@ chồng. **Phần lập lịch, khoá và đọc JSON được tách thành help
 | Sản phẩm (từ ảnh thật, `KeepSubject`) | Đổi sang nền trắng TMĐT · Đặt vào bối cảnh lifestyle · Thêm bóng đổ và phản chiếu |
 | Sửa ảnh | Xoá vật thể · Đổi màu · Thay trời/nền · Làm sạch ảnh chụp điện thoại |
 
+**Ảnh demo cho mẫu.** Mỗi mẫu có một ảnh minh hoạ để người dùng thấy trước kết quả, hiện dạng lưới thẻ trong modal:
+- SuperAdmin bấm **"Tạo ảnh demo"** trên một mẫu: chạy mẫu với giá trị ví dụ cho chỗ giữ (`{chu_de}` = "Cà phê sáng ở Hà Nội", `{san_pham}` = "Hũ mật ong rừng"…) bằng model mặc định, 1 ảnh, chất lượng thấp nhất. Ảnh lưu vào storage `ai-images/demos/` (không thuộc site nào), chi phí ghi `ImageProviderCall` với `SiteId` của site đang chọn.
+- Hoặc **"Tải ảnh demo lên"** (ảnh tự chọn).
+- **"Tạo demo cho mọi mẫu chưa có"**: hiện tổng chi phí ước tính và xin xác nhận trước khi chạy.
+- Mẫu trend: tuỳ chọn "Tự tạo ảnh demo cho mẫu trend mới" trong `ImagePromptLibrarySettings`, có trần số ảnh mỗi lần chạy. Mẫu chờ duyệt có demo giúp quản trị duyệt nhanh hơn.
+- Mẫu mặc định seed **không kèm ảnh** trong repo (tránh commit ảnh nặng và ảnh chưa rõ bản quyền). Sau khi deploy, quản trị bấm "Tạo demo cho mọi mẫu chưa có" một lần.
+
 **Prompt tự viết** luôn dùng được. Nút **"Cải thiện prompt"** gọi skill `imagestudio_prompt_enhance`
 (prompt skill, quản trị sửa ở trang Kỹ năng AI): viết lại chi tiết hơn (bố cục, ánh sáng, ống kính,
 chất liệu) và giữ nguyên ý người dùng. Người dùng thấy bản trước và sau, rồi chọn bản muốn dùng.
@@ -610,8 +619,8 @@ server, không chỉ dựa vào việc ẩn nút.
 
 - **Metadata** (`AiMetadataWriter`, ImageSharp): ghi XMP `Iptc4xmpExt:DigitalSourceType` =
   `trainedAlgorithmicMedia` (ảnh tạo mới) hoặc `compositeWithTrainedAlgorithmicMedia` (ảnh sửa), kèm EXIF
-  `Software = "NewsCMS ImageStudio"`. **Đợt 0 kiểm ImageSharp 3.1 ghi được XMP cho PNG, JPEG và WebP.**
-  Nếu định dạng nào không ghi được thì output đổi sang định dạng ghi được.
+  `Software = "NewsCMS ImageStudio"`. Có test tự động kiểm ImageSharp 3.1 ghi và đọc lại được XMP cho
+  PNG, JPEG và WebP. Nếu định dạng nào không ghi được thì output đổi sang định dạng ghi được.
 - **Hiển thị**: chú thích trong bài theo `ShowAiCaption`. Helper `Media.IsAiGenerated` cho theme hiện
   huy hiệu ở ảnh đại diện (theme tự quyết cách hiện).
 - **Watermark trên ảnh**: chưa làm. Chờ Q3 hoặc pháp chế.

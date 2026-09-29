@@ -1,7 +1,7 @@
 ---
 phase: planning
 title: Project Planning & Task Breakdown
-description: Lộ trình ImageStudio — 7 đợt, ~26 người-ngày; mỗi đợt kết thúc bằng một thứ chạy được
+description: Lộ trình ImageStudio — 6 đợt, ~25 người-ngày; mỗi đợt kết thúc bằng một thứ chạy được
 ---
 
 # Xưởng ảnh AI (ImageStudio) — Kế hoạch triển khai
@@ -9,15 +9,19 @@ description: Lộ trình ImageStudio — 7 đợt, ~26 người-ngày; mỗi đ�
 > Yêu cầu: [../requirements/2026-09-29-feature-ai-image-studio.md](../requirements/2026-09-29-feature-ai-image-studio.md)
 > Thiết kế: [../design/2026-09-29-feature-ai-image-studio.md](../design/2026-09-29-feature-ai-image-studio.md)
 
-Khoảng **26 người-ngày, tức 5–6 tuần cho 1 dev**. Mỗi đợt kết thúc bằng **một thứ bấm được trên màn
+Khoảng **25 người-ngày, tức ~5 tuần cho 1 dev**. Mỗi đợt kết thúc bằng **một thứ bấm được trên màn
 hình**, không phải một thứ "gần xong". Đợt nào bắt đầu thì viết plan chi tiết riêng vào
 `docs/ai/planning/image-studio/dot-N-….md`, theo cách AdVideo đã làm với các đợt F–I.
 
+> **29/09 — chốt với chủ sản phẩm:**
+> - **Bỏ Đợt 0 (spike).** Vào thẳng Đợt 1. Model id, giá, kích thước là dữ liệu admin nhập ở màn hình (D2), nên chọn sai model chỉ là sửa một dòng, không phải sửa code. Những việc spike định kiểm (XMP của ImageSharp, quy ước mask) chuyển thành test tự động trong đợt tương ứng.
+> - **Chọn model giống chọn giọng đọc của VideoStudio:** SuperAdmin cấu hình sẵn vài model (tên, mô tả, giá ước tính); người dùng chọn một trong các model đó ở form tạo ảnh.
+> - **Mẫu prompt có ảnh demo** (Đợt 2): mỗi mẫu có ảnh minh hoạ để người dùng thấy trước kết quả.
+
 ## Milestones
 
-- [ ] **M0 — Biết model nào dùng được** (Đợt 0) · bảng chấm 5 tình huống × các provider có key, chọn model mặc định
 - [ ] **M1 — Tạo được ảnh từ chữ** (Đợt 1) · `/Admin/ImageStudio` → 2 biến thể → "Dùng ảnh này" → ảnh nằm trong thư viện media, có metadata AI
-- [ ] **M2 — Có kho prompt** (Đợt 2) · chọn mẫu "Đang trend", "Cải thiện prompt", trend tự cập nhật
+- [ ] **M2 — Có kho prompt** (Đợt 2) · mẫu có ảnh demo, chọn mẫu "Đang trend", "Cải thiện prompt", trend tự cập nhật
 - [ ] **M3 — Sửa được ảnh theo vùng đánh số** (Đợt 3) · khoanh #1 #2, chỉ dẫn từng vùng, phần ngoài vùng giữ nguyên từng điểm ảnh
 - [ ] **M4 — Bài viết hoàn chỉnh có ảnh** (Đợt 4) · khung chat trả bài + ảnh bìa + ảnh trong bài, lưu nháp
 - [ ] **M5 — Ảnh sản phẩm** (Đợt 5) · ảnh đại diện, gallery, "từ ảnh chụp thật, giữ nguyên sản phẩm"
@@ -25,28 +29,12 @@ hình**, không phải một thứ "gần xong". Đợt nào bắt đầu thì v
 
 ## Task Breakdown
 
-### Đợt 0 — Spike chọn model (2 ngày)
-
-Không viết code sản phẩm. Mục đích là trả lời "model nào làm được việc gì" **trước khi** chọn chiến lược
-sửa vùng cho từng adapter.
-
-| # | Việc | Ra |
-|---|---|---|
-| 0.1 | Gom bộ ảnh thử: 3 ảnh sản phẩm chụp thật bằng điện thoại (của một khách thật), 2 ảnh có người, 2 ảnh có logo hoặc chữ | `docs/ai/planning/image-studio/spike/inputs/` (không commit ảnh của khách lên repo công khai) |
-| 0.2 | Chạy 5 tình huống trên mọi provider có key (9Router đã có; OpenAI, Gemini, fal nếu có): **(a)** ảnh bìa bài báo từ prompt tiếng Việt; **(b)** ảnh sản phẩm từ chữ; **(c)** đổi nền, giữ sản phẩm (có mask); **(d)** sửa 2 vùng đánh số: bằng mask và bằng ảnh đánh dấu; **(e)** prompt tiếng Việt so với tiếng Anh | file `.http` hoặc script `curl` trong `spike/` |
-| 0.3 | Đo: thời gian, chi phí thật, kích thước nhận/trả, quy ước mask, fal có nhận data URI không, **mức lệch điểm ảnh ngoài vùng khi chưa ghép lại** | `spike/ket-qua.md` |
-| 0.4 | Kiểm ImageSharp 3.1.5 ghi XMP `DigitalSourceType` cho PNG, JPEG, WebP, đọc lại được bằng `exiftool` | ghi chú trong `spike/ket-qua.md` |
-| 0.5 | 2–3 biên tập viên chấm mù (1–5) phần (a), (b), (c) | bảng chấm + **chọn model mặc định**, điền giá trị seed cho `ImageModels` |
-
-**Cổng:** adapter chạy thật ở Đợt 3 chỉ viết sau khi có 0.3. Đợt 1 không phải chờ, vì làm được với Fake
-và 9Router.
-
 ### Đợt 1 — Nền móng: tạo ảnh từ chữ, hàng đợi, promote (5 ngày)
 
 | # | Việc | File |
 |---|---|---|
 | 1.1 | Entity + enum: `ImageModel`, `ImageJob`, `ImageJobOutput`, `ImageProviderCall`, `ImageStudioSiteSettings` | `NewsCMS.Domain/Entities/ImageStudio/*.cs` |
-| 1.2 | Thêm `AiConnection.Scopes` (Chat/Image, dữ liệu cũ = Chat), `Media.Origin`, `Media.AiJobId`. `ResolveConnectionAsync` lọc theo `Chat` | `AiConnection.cs`, `Media.cs`, `AiCompletionService.cs`, trang `AiConnections/*` (ô chọn phạm vi) |
+| 1.2 | Thêm `Media.Origin`, `Media.AiJobId` | `Media.cs`, `MediaConfiguration.cs` |
 | 1.3 | Cấu hình EF, `DbSet`, migration `AddImageStudio` (có index như thiết kế mục 3.2) | `Persistence/Configurations/ImageStudioConfiguration.cs`, `AppDbContext.cs`, `Persistence/Migrations/` |
 | 1.4 | Hợp đồng Application: DTO, `IImageStudioService`, `IImageModelService`, `IImageProvider` + request/result | `NewsCMS.Application/ImageStudio/**` |
 | 1.5 | `OpenAiImageProvider.GenerateAsync` (dùng được cho 9Router và OpenAI), `FakeImageProvider` (chỉ bật ở Development), `ImageProviderRegistry` | `Infrastructure/ImageStudio/Providers/*.cs` |
@@ -54,7 +42,7 @@ và 9Router.
 | 1.7 | `ImageJobQueue` + `ImageJobWorker` (`MaxConcurrency`, nhận job bằng update có điều kiện, quét lại lúc khởi động) + `ImageJobRunner` (chế độ Generate) | `Infrastructure/ImageStudio/Jobs/*.cs`, `DependencyInjection.cs` |
 | 1.8 | `ImageStudioService`: Create (quyền, model được phép, **hạn mức**, idempotency, chi phí ước tính), Status, Promote (vào thư mục "Ảnh AI"), Cancel | `Infrastructure/ImageStudio/ImageStudioService.cs` |
 | 1.9 | Permission `ImageStudio.Image.View/Create`, `ImageStudio.Settings.Manage`; seed qua `Permissions.All()` | `Permissions.cs` |
-| 1.10 | Trang **Config/Models** (danh sách, thêm/sửa, "Chạy thử") và **Config/Sites** (bật/tắt, model được phép, hạn mức) cho SuperAdmin; `_ImageStudioConfigNav` | `Areas/Admin/Pages/ImageStudio/Config/*` |
+| 1.10 | Trang **Config/Models** (danh sách, thêm/sửa: tên hiển thị, mô tả cho người dùng, kết nối, model id, giá, "Chạy thử") và **Config/Sites** (bật/tắt, hạn mức) cho SuperAdmin; `_ImageStudioConfigNav` | `Areas/Admin/Pages/ImageStudio/Config/*` |
 | 1.11 | Trang `/Admin/ImageStudio` (lịch sử job, tìm/lọc/phân trang) và `Detail`. `_ImageStudioModal` bản đầu: tab "Tạo mới" với prompt tự viết, chọn model, khung, số biến thể, chi phí ước tính, poll trạng thái, "Dùng ảnh này". Mục sidebar | `Areas/Admin/Pages/ImageStudio/*`, `Shared/_ImageStudioModal.cshtml`, `wwwroot/js/admin/image-studio.js`, `_Sidebar.cshtml`, `_AdminLayout.cshtml` |
 | 1.12 | Test (mục Kiểm thử) + build lại `admin.css` (`npm run css:admin`) | `tests/NewsCMS.Tests/ImageStudio/*` |
 
@@ -75,9 +63,10 @@ provider.
 | 2.6 | `ImagePromptTrendService` + `ImagePromptTrendWorker`. Seed skill `imagestudio_trend_templates` (UseTools), `imagestudio_prompt_enhance`, `imagestudio_suggest_prompt`; thêm hằng vào `AiTaskKeys` | `Infrastructure/ImageStudio/*`, `AiEnums.cs`, `DbSeeder.cs` |
 | 2.7 | Trang **Config/Templates**, **TemplateEdit**, **Trend** (bật tự cập nhật, "Cập nhật ngay", lịch sử chạy, duyệt/ẩn) | `Areas/Admin/Pages/ImageStudio/Config/*` |
 | 2.8 | Modal: khối kho mẫu (tìm, lọc "Đang trend"/ngành/mục đích), "Dùng mẫu này" (điền chỗ giữ từ ngữ cảnh), "Cải thiện prompt" (xem trước/sau), cộng `UsageCount` khi job thành công | `image-studio.js`, handler trong `ImageStudio/Index.cshtml.cs` |
-| 2.9 | *(P2, chờ Q4)* Mẫu riêng của site (`SiteId`), quyền `ImageStudio.Template.Manage`, "Lưu thành mẫu của site" | |
+| 2.9 | **Ảnh demo cho mẫu:** cột `DemoMediaId`/`DemoImageUrl`. Trang Templates có nút "Tạo ảnh demo" (chạy mẫu với chủ đề/sản phẩm ví dụ bằng model mặc định, lưu vào thư mục hệ thống) hoặc "Tải ảnh demo lên"; nút "Tạo demo cho mọi mẫu chưa có" (hiện tổng chi phí trước khi chạy). Mẫu trend: tuỳ chọn "Tự tạo ảnh demo cho mẫu trend mới" trong cài đặt kho, có trần số ảnh mỗi lần chạy. Modal hiện ảnh demo dạng lưới thẻ | `ImagePromptTemplate.cs`, `ImagePromptLibraryService`, `Config/Templates*`, `image-studio.js` |
+| 2.10 | *(P2, chờ Q4)* Mẫu riêng của site (`SiteId`), quyền `ImageStudio.Template.Manage`, "Lưu thành mẫu của site" | |
 
-**Ra khỏi đợt:** modal hiện mẫu theo mục đích. "Dùng mẫu này" điền đúng tên chủ đề hoặc sản phẩm; còn chỗ
+**Ra khỏi đợt:** modal hiện mẫu theo mục đích, dạng thẻ có ảnh demo. "Dùng mẫu này" điền đúng tên chủ đề hoặc sản phẩm; còn chỗ
 giữ chưa điền thì bị chặn kèm lời nhắc. "Cải thiện prompt" chạy được. "Cập nhật ngay" thêm mẫu đạt và
 loại mẫu vi phạm, có ghi lý do. Test kho video vẫn xanh.
 
@@ -91,7 +80,7 @@ loại mẫu vi phạm, có ghi lý do. Test kho video vẫn xanh.
 | 3.4 | `RegionPromptComposer` (vị trí bằng lời + phần trăm, vùng giữ, chỉ dẫn chung, dòng "không vẽ dấu đánh dấu") | `Application/ImageStudio/RegionPromptComposer.cs` |
 | 3.5 | `RegionCompositor` (ghép lại điểm ảnh gốc ngoài vùng) | `Imaging/RegionCompositor.cs` |
 | 3.6 | Runner chế độ `RegionEdit`: tự chọn mask hay ảnh đánh dấu theo năng lực model; chiến lược `Single`/`Sequential`; chi phí ước tính × số lần gọi | `ImageJobRunner.cs` |
-| 3.7 | Adapter: `OpenAiImageProvider.EditAsync` (multipart `image[]` + `mask`); `GeminiImageProvider` và `FalImageProvider` **theo kết luận Đợt 0** (tối thiểu một cái) | `Providers/*.cs` |
+| 3.7 | Adapter: `OpenAiImageProvider.EditAsync` (multipart `image[]` + `mask`); `GeminiImageProvider` và `FalImageProvider` (tối thiểu một cái, tuỳ key đang có — Q1) | `Providers/*.cs` |
 | 3.8 | `image-region-editor.js`: chữ nhật, cọ, tẩy, chọn/di chuyển, hoàn tác, phóng to, cảm ứng; bảng vùng (#N, Sửa/Giữ nguyên, chỉ dẫn), dồn số khi xoá, rê chuột sáng hai chiều, xem trước bản đánh dấu | `wwwroot/js/admin/image-region-editor.js`, `Styles/admin.css` |
 | 3.9 | Chuỗi phiên bản ("Sửa tiếp", `ParentJobId`/`SourceOutputId`), thanh trượt so sánh trước/sau | modal, `Detail.cshtml` |
 | 3.10 | Trang trình sửa toàn trang `/Admin/ImageStudio/Edit?mediaId=`; nút "Sửa bằng AI" ở `Media/Edit`; lọc "Ảnh AI" ở `Media/Index`; kết quả là `Media` mới cùng thư mục (không ghi đè) | `ImageStudio/Edit.cshtml*`, `Media/Edit.cshtml`, `Media/Index.cshtml*`, `MediaService.SearchAsync` |
@@ -167,7 +156,6 @@ quả ghi vào file plan của đợt.
 
 ```mermaid
 graph LR
-  D0["Đợt 0<br/>Spike"] -.->|chọn adapter| D3
   D1["Đợt 1<br/>Nền móng"] --> D2["Đợt 2<br/>Kho prompt"]
   D1 --> D3["Đợt 3<br/>Sửa theo vùng"]
   D2 --> D4["Đợt 4<br/>Bài viết"]
@@ -178,7 +166,7 @@ graph LR
   D5 --> D6
 ```
 
-- **Đợt 0 chạy song song với Đợt 1.** Đợt 1 chỉ cần 9Router (đã có) hoặc Fake.
+- **Đợt 1 chạy được ngay** với 9Router (đã có) hoặc Fake provider.
 - **Đợt 2 và Đợt 3 làm song song được** nếu có 2 dev: một người lo kho mẫu, một người lo xử lý ảnh.
 - **Đợt 4 cần Đợt 3** cho tính năng "Sửa ảnh trong bài". Phần ảnh đại diện và chèn ảnh (4.1–4.3 trừ phần
   sửa) làm được ngay sau Đợt 2.
@@ -190,24 +178,23 @@ graph LR
 | Phụ thuộc | Cần khi | Nếu chậm |
 |---|---|---|
 | Key 9Router (đã có, đang dùng cho Telegram) | Đợt 1 | Dùng Fake; chưa có "chạy thật" |
-| Key thêm một provider có năng lực khác (Gemini hoặc fal) | Đợt 0, Đợt 3 | Chỉ có một adapter chạy thật; chưa đạt tiêu chí "không phụ thuộc một provider" |
-| Ảnh sản phẩm thật của một khách | Đợt 0, Đợt 5 | Spike bằng ảnh stock thì mất ý nghĩa phần giữ nguyên sản phẩm |
-| 2–3 biên tập viên chấm | Đợt 0, cuối Đợt 3 | Chọn model theo cảm tính |
+| Key thêm một provider có năng lực khác (Gemini hoặc fal) | Đợt 3 | Chỉ có một adapter chạy thật; chưa đạt tiêu chí "không phụ thuộc một provider" |
+| Ảnh sản phẩm thật của một khách | Đợt 5 | Thử bằng ảnh stock thì mất ý nghĩa phần giữ nguyên sản phẩm |
+| 2–3 biên tập viên dùng thử | cuối Đợt 3 | Chọn model mặc định theo cảm tính (đổi được trên màn hình) |
 | Pháp chế chốt nhãn AI hiển thị (Q3) | Trước khi mở cho khách ngoài | Metadata vẫn ghi; chú thích mặc định bật |
 
 ## Timeline & Estimates
 
 | Đợt | Người-ngày | Buffer | Ghi chú |
 |---|---|---|---|
-| 0 — Spike | 2 | Thấp | Chủ yếu chờ model trả ảnh và chờ người chấm |
 | 1 — Nền móng | 5 | Trung bình | Nhiều file nhưng theo khuôn đã có (VideoStudio, AiConnection) |
-| 2 — Kho prompt | 3 | Thấp | Bản video đã chạy; rủi ro chỉ ở phần tách code dùng chung |
+| 2 — Kho prompt + ảnh demo | 4 | Thấp | Bản video đã chạy; rủi ro chỉ ở phần tách code dùng chung |
 | 3 — Sửa theo vùng | 6 | **Cao** | Trình vẽ canvas, `SizeFitter`/ghép lại, và chất lượng bên trong vùng phụ thuộc model |
 | 4 — Bài viết | 4 | Trung bình | Đụng `ai-assist.js` (501 dòng) và hợp đồng chat đang chạy |
 | 5 — Sản phẩm | 3 | Trung bình | Chỉnh viền mềm quanh sản phẩm tốn thời gian thử |
 | 6 — Vận hành | 3 | Thấp | |
 
-**Tổng: ~26 người-ngày.** 1 dev làm liên tục thì mất 5–6 tuần; 2 dev thì khoảng 4 tuần, vì Đợt 2 và Đợt 3
+**Tổng: ~25 người-ngày.** 1 dev làm liên tục thì mất ~5 tuần; 2 dev thì khoảng 4 tuần, vì Đợt 2 và Đợt 3
 chạy song song.
 
 ### Ba chỗ dễ trượt nhất
@@ -245,7 +232,7 @@ chạy song song.
 | Vai | Ai | Khi nào |
 |---|---|---|
 | Dev .NET + JS | 1–2 người | Toàn bộ |
-| Người chấm output | 2–3 biên tập viên / người bán hàng | Đợt 0 (nửa ngày), cuối Đợt 3 |
+| Người dùng thử | 2–3 biên tập viên / người bán hàng | cuối Đợt 3 |
 | Chủ sản phẩm | Người quyết Q1–Q5 | Trước Đợt 1 (Q1), trước Đợt 2 (Q4), trước Đợt 6 (Q2, Q3) |
 | Pháp chế | 1 người | Trước khi mở cho khách ngoài |
 

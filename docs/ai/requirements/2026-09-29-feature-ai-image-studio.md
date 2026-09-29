@@ -35,12 +35,14 @@ tải lên thư viện media. Muốn sửa một chi tiết nhỏ (đổi màu �
 
 1. **G1. Tạo ảnh từ mô tả.** Người dùng nhập mô tả tự do (tiếng Việt) hoặc chọn mẫu, chọn model, tỉ lệ
    khung và số biến thể, rồi nhận ảnh trong thư viện media.
-2. **G2. Cấu hình model là dữ liệu.** SuperAdmin thêm, bật hoặc tắt model tạo ảnh (OpenAI-compatible,
-   Gemini, fal.ai…) trên màn hình, không cần deploy. Mỗi model khai báo năng lực (tạo từ chữ, dùng ảnh tham
+2. **G2. Admin cấu hình sẵn model, người dùng chọn.** Giống cách chọn giọng đọc ở VideoStudio:
+   SuperAdmin thêm, bật hoặc tắt vài model tạo ảnh (OpenAI-compatible, Gemini, fal.ai…) trên màn hình,
+   đặt tên và mô tả dễ hiểu; người dùng chọn một trong các model đó khi tạo ảnh. Không cần deploy. Mỗi model khai báo năng lực (tạo từ chữ, dùng ảnh tham
    chiếu, sửa theo mask), khung hình hỗ trợ và giá ước tính.
 3. **G3. Kho prompt mẫu, tự cập nhật theo trend.** Có mẫu mặc định theo mục đích (ảnh bìa bài, ảnh sản
    phẩm, banner…), mẫu quản trị tự viết và mẫu AI sinh định kỳ theo xu hướng, qua cùng một bộ luật kiểm
-   duyệt. Người dùng luôn viết được prompt riêng và có nút "Cải thiện prompt".
+   duyệt. **Mỗi mẫu có ảnh demo** để người dùng thấy trước kết quả. Người dùng luôn viết được prompt
+   riêng và có nút "Cải thiện prompt".
 4. **G4. Sửa ảnh có sẵn.** Tải ảnh mẫu lên, hoặc chọn từ thư viện, để làm ảnh tham chiếu hay ảnh gốc
    cần sửa.
 5. **G5. Đánh dấu vùng cần sửa theo số thứ tự.** Người dùng khoanh vùng trên ảnh (hình chữ nhật hoặc cọ
@@ -80,7 +82,7 @@ tải lên thư viện media. Muốn sửa một chi tiết nhỏ (đổi màu �
 | U4 | Biên tập viên | chọn một ảnh trong bài, bấm "Sửa bằng AI", khoanh vùng #1 và ghi "xoá logo" | sửa đúng chỗ, không làm hỏng phần còn lại |
 | U5 | Người đăng sản phẩm | tải ảnh chụp sản phẩm, khoanh sản phẩm là "Giữ nguyên", chọn mẫu "Nền trắng TMĐT" | có ảnh bán hàng mà nhãn và bao bì không bị méo |
 | U6 | Người đăng sản phẩm | thêm 3 ảnh bối cảnh (lifestyle) vào gallery sản phẩm | trang sản phẩm có nhiều góc nhìn |
-| U7 | Bất kỳ ai có quyền tạo | chọn mẫu "Đang trend" hoặc viết prompt riêng rồi bấm "Cải thiện prompt" | không phải tự nghĩ prompt từ đầu |
+| U7 | Bất kỳ ai có quyền tạo | xem ảnh demo của từng mẫu, chọn mẫu "Đang trend", hoặc viết prompt riêng rồi bấm "Cải thiện prompt" | không phải tự nghĩ prompt từ đầu |
 | U8 | Bất kỳ ai có quyền tạo | xem trước chi phí ước tính và số lượt còn lại trong tháng | không vượt hạn mức |
 | U9 | Bất kỳ ai có quyền tạo | "Sửa tiếp từ ảnh này" sau mỗi lần sửa, xem lịch sử phiên bản | sửa dần từng bước, quay lại bản trước được |
 | U10 | SuperAdmin | thêm model mới (dán base URL, key, model id, năng lực, giá) và bấm "Chạy thử" | đổi nhà cung cấp mà không cần deploy |
@@ -115,14 +117,14 @@ tải lên thư viện media. Muốn sửa một chi tiết nhỏ (đổi màu �
 - **Hàng đợi:** NewsCMS không có Hangfire. Dùng `Channel` + `BackgroundService` như `VideoCompressionQueue`,
   nhưng **job lưu trong DB** để không mất khi restart.
 - **Model id, giá, giới hạn kích thước là dữ liệu trong DB** (theo D10 của AdVideo). Các con số trong tài
-  liệu là ví dụ, phải kiểm lại ở Đợt 0.
-- Giả định có ít nhất một key thật (9Router đang chạy cho Telegram, hoặc OpenAI/Gemini/fal) trước Đợt 3.
+  liệu là ví dụ; admin nhập giá trị thật ở màn hình. Không có đợt spike riêng (chốt 29/09).
+- Giả định có ít nhất một key thật (9Router đang chạy cho Telegram, hoặc OpenAI/Gemini/fal) để chạy thật.
 
 ## Questions & Open Items
 
 | # | Câu hỏi | Ảnh hưởng |
 |---|---|---|
-| Q1 | Dùng provider nào làm mặc định? 9Router đang có sẵn; có định mua key OpenAI, Gemini hoặc fal.ai không? | Đợt 0 và thứ tự viết adapter |
+| Q1 | Ngoài 9Router, có định mua key OpenAI, Gemini hoặc fal.ai không? *(29/09: không chặn — admin tự thêm model ở màn hình)* | Thứ tự viết adapter ở Đợt 3 |
 | Q2 | Hạn mức mặc định cho mỗi site: bao nhiêu ảnh/tháng, bao nhiêu ảnh/người/ngày? | Đợt 6 |
 | Q3 | Nhãn AI hiển thị: chú thích dưới ảnh trong bài là đủ, hay cần watermark trên ảnh? Chờ pháp chế như R4 AdVideo | Đợt 6 |
 | Q4 | Kho mẫu: chỉ dùng chung toàn hệ thống, hay cho mỗi site có mẫu riêng? | Đợt 2 (đề xuất: có, mức ưu tiên P2) |
