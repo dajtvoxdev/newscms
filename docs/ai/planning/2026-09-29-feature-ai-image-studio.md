@@ -78,6 +78,8 @@ loại mẫu vi phạm, có ghi lý do. Test kho video vẫn xanh.
 
 ### Đợt 3 — Ảnh mẫu và sửa theo vùng đánh số (6 ngày)
 
+> **Kế hoạch chi tiết (29/09):** [image-studio/dot-3-sua-theo-vung-2026-09-29.md](./image-studio/dot-3-sua-theo-vung-2026-09-29.md) — chia 3.0 + 3A–3G, ước tính lại **7,5–8 ngày** (thêm: demo hàng loạt chạy nền, bảng ảnh tải lên, "Chạy thử sửa ảnh", adapter Gemini). Gọn về 6 ngày được nếu bỏ trang sửa toàn trang và dời Gemini.
+
 | # | Việc | File |
 |---|---|---|
 | 3.1 | Tab "Từ ảnh mẫu": tải lên (kéo thả, giải mã lại bằng ImageSharp, ≤ 15 MB, ≤ 40 MP), chọn từ thư viện, tick quyền sử dụng (lưu ai, lúc nào, IP nào); chế độ `Reference` trong runner | modal, `ImageStudioService`, `ImageJobRunner` |
@@ -195,7 +197,7 @@ graph LR
 |---|---|---|---|
 | 1 — Nền móng | 5 | Trung bình | Nhiều file nhưng theo khuôn đã có (VideoStudio, AiConnection) |
 | 2 — Kho prompt + ảnh demo | 4 | Thấp | Bản video đã chạy; rủi ro chỉ ở phần tách code dùng chung |
-| 3 — Sửa theo vùng | 6 | **Cao** | Trình vẽ canvas, `SizeFitter`/ghép lại, và chất lượng bên trong vùng phụ thuộc model |
+| 3 — Sửa theo vùng | 6 → **7,5–8** (kế hoạch chi tiết) | **Cao** | Trình vẽ canvas, `SizeFitter`/ghép lại, và chất lượng bên trong vùng phụ thuộc model |
 | 4 — Bài viết | 4 | Trung bình | Đụng `ai-assist.js` (501 dòng) và hợp đồng chat đang chạy |
 | 5 — Sản phẩm | 3 | Trung bình | Chỉnh viền mềm quanh sản phẩm tốn thời gian thử |
 | 6 — Vận hành | 3 | Thấp | |
