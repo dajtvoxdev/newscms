@@ -17,6 +17,8 @@ hình**, không phải một thứ "gần xong". Đợt nào bắt đầu thì v
 > - **Bỏ Đợt 0 (spike).** Vào thẳng Đợt 1. Model id, giá, kích thước là dữ liệu admin nhập ở màn hình (D2), nên chọn sai model chỉ là sửa một dòng, không phải sửa code. Những việc spike định kiểm (XMP của ImageSharp, quy ước mask) chuyển thành test tự động trong đợt tương ứng.
 > - **Chọn model giống chọn giọng đọc của VideoStudio:** SuperAdmin cấu hình sẵn vài model (tên, mô tả, giá ước tính); người dùng chọn một trong các model đó ở form tạo ảnh.
 > - **Mẫu prompt có ảnh demo** (Đợt 2): mỗi mẫu có ảnh minh hoạ để người dùng thấy trước kết quả.
+>
+> **29/09 — chốt thêm:** Q3 chú thích AI là đủ, không watermark · Q4 kho mẫu dùng chung toàn hệ thống · Q6 SuperAdmin dùng toàn bộ, vai trò khác do quản trị cấp · Q7 giữ 14 ngày · Q8 số ảnh trong bài do AI quyết theo nội dung · Q2 hạn mức theo gói khách mua (chờ Q10: cách làm gói).
 
 ## Milestones
 
@@ -101,7 +103,7 @@ adapter: một adapter dùng mask, một adapter dùng ảnh đánh dấu.
 | 4.1 | `MediaPickerOptions.AiPurpose/AiContextSelectors`; nút "✨ Tạo bằng AI" trong `_MediaPicker` (kiểm quyền); ảnh đại diện bài dùng `post-cover` | `MediaPickerOptions.cs`, `_MediaPicker.cshtml`, `Posts/Create|Edit.cshtml` |
 | 4.2 | Handler "Gợi ý từ nội dung" → skill `imagestudio_suggest_prompt` → `{prompt, alt, caption}` | `ImageStudio/Index.cshtml.cs`, `ImageStudioService` |
 | 4.3 | TinyMCE: nút `aiImage` (chèn `figure` + `img` + `figcaption` tại con trỏ); menu ngữ cảnh trên ảnh "Sửa bằng AI" (tra `Media` bằng `GetByPathAsync`; ảnh ngoài thư viện thì hướng dẫn nhập vào trước) | `_TinyMce.cshtml`, `TinyMceOptions.cs` |
-| 4.4 | Bài hoàn chỉnh: `AiChatRequest.ImageSlots`; hợp đồng JSON `article_chat` thêm `images[]` và ô chờ `figure.ai-image-slot#ai-slot-N`; `AiChatResponseParser` đọc `images`; khung chat thêm tuỳ chọn "Kèm ảnh", thẻ từng ảnh (sửa được prompt), "Tạo tất cả ảnh", "Áp dụng" (ảnh bìa vào picker, ô chờ thay bằng `img`) | `AiChatDtos.cs`, `AiCompletionService.cs`, `AiChatResponseParser.cs`, `Ai/Generate.cshtml.cs`, `ai-assist.js` |
+| 4.4 | Bài hoàn chỉnh: **số ảnh và vị trí do AI quyết theo nội dung bài, không giới hạn cứng** (chốt Q8) — chỉ hạn mức của gói giới hạn; khung chat hiện chi phí ước tính và cho bỏ bớt ảnh đề xuất trước khi "Tạo tất cả ảnh". `AiChatRequest` thêm cờ `IncludeImages`; hợp đồng JSON `article_chat` thêm `images[]` và ô chờ `figure.ai-image-slot#ai-slot-N`; `AiChatResponseParser` đọc `images`; khung chat thêm tuỳ chọn "Kèm ảnh minh hoạ", thẻ từng ảnh (sửa được prompt), "Tạo tất cả ảnh", "Áp dụng" (ảnh bìa vào picker, ô chờ thay bằng `img` + chú thích AI) | `AiChatDtos.cs`, `AiCompletionService.cs`, `AiChatResponseParser.cs`, `Ai/Generate.cshtml.cs`, `ai-assist.js` |
 | 4.5 | `PostService.Create/UpdateAsync` gỡ `figure.ai-image-slot` không có `img` | `PostService.cs` |
 
 **Ra khỏi đợt:** trong trang Tạo bài, gõ vào khung chat "viết bài về cà phê muối Huế, kèm ảnh bìa và 2 ảnh
@@ -126,10 +128,10 @@ phẩm.
 
 | # | Việc | File |
 |---|---|---|
-| 6.1 | Hiện "còn N ảnh tháng này" trong modal; cảnh báo khi chi phí trong ngày vượt ngưỡng | modal, `ImageStudioService` |
+| 6.1 | ~~Hiện "còn N ảnh" trong modal~~ (đã có từ Đợt 1). **Hạn mức theo gói khách mua** (chốt Q2, cách làm chờ Q10); cảnh báo khi chi phí trong ngày vượt ngưỡng | modal, `ImageStudioService` |
 | 6.2 | Trang **Config/Usage**: ảnh và chi phí theo site, model, tháng; tỉ lệ lỗi theo mã lỗi | `ImageStudio/Config/Usage.cshtml*` |
 | 6.3 | `ImageOutputCleanupWorker`: output chưa promote xoá sau 14 ngày, mask và ảnh đánh dấu sau 7 ngày | `Jobs/ImageOutputCleanupWorker.cs` |
-| 6.4 | Trang **SiteSettings** (phong cách thương hiệu, khung mặc định, chú thích AI); helper `IsAiGenerated` cho theme | `ImageStudio/SiteSettings.cshtml*` |
+| 6.4 | Trang **SiteSettings** (phong cách thương hiệu, khung mặc định, chữ chú thích AI); helper `IsAiGenerated` cho theme. **Không watermark** (chốt Q3) | `ImageStudio/SiteSettings.cshtml*` |
 | 6.5 | Bot Telegram: `ImageGenerationTool` gọi `IImageStudioService.RunInlineAsync`; nếu chưa có model mặc định thì rơi về cấu hình skill cũ | `Ai/Tools/ImageGenerationTool.cs` |
 | 6.6 | E2E Playwright trình đánh dấu vùng; chạy thật toàn luồng bằng Chromium (như Đợt G/I) | `tests/e2e/image-region-editor.spec.cjs` |
 | 6.7 | Tài liệu `implementation`, `testing`, `deployment`, `monitoring` cho ImageStudio; cập nhật trạng thái kế hoạch | `docs/ai/*/2026-09-29-feature-ai-image-studio.md` |

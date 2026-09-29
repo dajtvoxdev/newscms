@@ -125,11 +125,12 @@ tải lên thư viện media. Muốn sửa một chi tiết nhỏ (đổi màu �
 | # | Câu hỏi | Ảnh hưởng |
 |---|---|---|
 | Q1 | Ngoài 9Router, có định mua key OpenAI, Gemini hoặc fal.ai không? *(29/09: không chặn — admin tự thêm model ở màn hình)* | Thứ tự viết adapter ở Đợt 3 |
-| Q2 | Hạn mức mặc định cho mỗi site: bao nhiêu ảnh/tháng, bao nhiêu ảnh/người/ngày? | Đợt 6 |
-| Q3 | Nhãn AI hiển thị: chú thích dưới ảnh trong bài là đủ, hay cần watermark trên ảnh? Chờ pháp chế như R4 AdVideo | Đợt 6 |
+| Q2 | Hạn mức mặc định cho mỗi site: bao nhiêu ảnh/tháng, bao nhiêu ảnh/người/ngày? *(29/09: **theo gói khách mua** — NewsCMS chưa có khái niệm gói; cần chốt Q10)* | Đợt 6 |
+| Q3 | Nhãn AI hiển thị: chú thích dưới ảnh trong bài là đủ, hay cần watermark trên ảnh? *(29/09: **chú thích là đủ**, không watermark; metadata AI trong file vẫn luôn ghi)* | Đợt 4, 6 |
 | Q4 | Kho mẫu: chỉ dùng chung toàn hệ thống, hay cho mỗi site có mẫu riêng? *(29/09: **dùng chung toàn hệ thống** — không làm mẫu riêng theo site)* | Đợt 2 |
 | Q5 | Ảnh có người thật do khách tải lên để sửa: bắt buộc tick xác nhận quyền sử dụng? (đề xuất: có) | Đợt 3 |
-| Q6 | Vai trò nào được dùng Xưởng ảnh mặc định? Hiện chỉ SuperAdmin có quyền `ImageStudio.Image.View/Create`; vai trò khác phải cấp tay ở trang Vai trò. Có cấp sẵn cho Admin / Editor khi seed không? | Triển khai |
-| Q7 | Ảnh tạo ra mà không chọn đưa vào thư viện: tự dọn sau 14 ngày — giữ con số này? | Đợt 6 |
-| Q8 | "Bài hoàn chỉnh có ảnh": mặc định bao nhiêu ảnh (đề xuất: 1 ảnh bìa + 2 ảnh trong bài, người dùng đổi được 0–3)? | Đợt 4 |
+| Q6 | Vai trò nào được dùng Xưởng ảnh mặc định? *(29/09: **SuperAdmin dùng toàn bộ; vai trò khác do quản trị cấp** ở trang Vai trò — nhóm "ImageStudio" đã có sẵn, không seed cấp sẵn)* | Triển khai |
+| Q7 | Ảnh tạo ra mà không chọn đưa vào thư viện: tự dọn sau 14 ngày — giữ con số này? *(29/09: **giữ 14 ngày**, vẫn đổi được qua `ImageStudio:OutputRetentionDays`)* | Đợt 6 |
+| Q8 | "Bài hoàn chỉnh có ảnh": mặc định bao nhiêu ảnh? *(29/09: **AI quyết theo nội dung bài, không đặt giới hạn cứng** — chỉ hạn mức của gói giới hạn; người dùng thấy chi phí và bỏ bớt ảnh đề xuất được trước khi tạo)* | Đợt 4 |
 | Q9 | Lỗi có sẵn ngoài Xưởng ảnh: `KeoBiaChangelogs` và cột `KeoBiaMatches.StarType` không có migration — DB mới dựng bị lỗi. Có muốn sửa (thêm migration) trong một việc riêng không? | Việc riêng |
+| Q10 | Gói dịch vụ (theo Q2): làm luôn trong NewsCMS một danh mục **gói** do SuperAdmin tạo (tên, số ảnh/tháng, ảnh/người/ngày, sau này thêm hạn mức video) và gán gói cho từng site — không tích hợp thanh toán — hay chờ hệ thống bán gói/thanh toán riêng? Hạn mức tính theo **site** (khách = site) hay theo **tài khoản**? | Đợt 6 (có thể kéo lên sớm) |

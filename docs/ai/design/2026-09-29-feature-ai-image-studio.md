@@ -206,7 +206,7 @@ Bảng `ImageStudioSiteSettings` (mỗi site một dòng):
 |---|---|---|
 | `Enabled` | SuperAdmin | Tắt thì mọi nút "Tạo bằng AI" của site đều ẩn |
 
-| `MonthlyImageQuota`, `PerUserDailyQuota` | SuperAdmin | 0 = không giới hạn |
+| `MonthlyImageQuota`, `PerUserDailyQuota` | SuperAdmin | 0 = không giới hạn. **Sẽ lấy từ gói khách mua** (chốt Q2); cách làm gói chờ Q10 — đến lúc đó hai cột này là giá trị ghi đè của site |
 | `BrandStyle` | Quản trị site | Ví dụ "tông xanh lá, ánh sáng tự nhiên, tối giản". Được nối vào mọi prompt |
 | `CoverAspect`, `ProductAspect` | Quản trị site | Mặc định `16:9`, `1:1` |
 | `ShowAiCaption`, `AiCaptionText` | Quản trị site | Mặc định bật, "Ảnh minh hoạ tạo bởi AI" |
@@ -621,4 +621,4 @@ server, không chỉ dựa vào việc ẩn nút.
   PNG, JPEG và WebP. Nếu định dạng nào không ghi được thì output đổi sang định dạng ghi được.
 - **Hiển thị**: chú thích trong bài theo `ShowAiCaption`. Helper `Media.IsAiGenerated` cho theme hiện
   huy hiệu ở ảnh đại diện (theme tự quyết cách hiện).
-- **Watermark trên ảnh**: chưa làm. Chờ Q3 hoặc pháp chế.
+- **Không watermark trên ảnh** (chốt Q3, 29/09): chú thích "Ảnh minh hoạ tạo bởi AI" + metadata là đủ.
