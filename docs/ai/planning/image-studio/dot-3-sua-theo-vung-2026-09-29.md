@@ -9,6 +9,7 @@ description: Kế hoạch chi tiết Đợt 3 — tải ảnh mẫu, tạo ảnh
 
 > Trước đó: [dot-2-kho-mau-2026-09-29.md](dot-2-kho-mau-2026-09-29.md) ·
 > Kế hoạch tổng: [../2026-09-29-feature-ai-image-studio.md](../2026-09-29-feature-ai-image-studio.md) ·
+> Chuẩn API ảnh/video, cổng vilao.ai: [chuan-api-anh-video-2026-09-29.md](chuan-api-anh-video-2026-09-29.md) ·
 > Thiết kế: [§5 Sửa ảnh theo vùng](../../design/2026-09-29-feature-ai-image-studio.md#5-sửa-ảnh-theo-vùng-đánh-số), [§8.2 Trình đánh dấu vùng](../../design/2026-09-29-feature-ai-image-studio.md#82-trình-đánh-dấu-vùng--image-region-editorjs)
 
 ## 0. Mục tiêu
@@ -45,15 +46,17 @@ Kịch bản chạy thật trên trình duyệt, không lỗi JavaScript:
 
 | Câu hỏi | Giả định | Nếu trả lời khác |
 |---|---|---|
-| **Q1** — dùng provider nào? | **Đã trả lời 29/09: cổng vilao.ai**, chuẩn OpenAI (`/v1/images/generations` JSON, `/v1/images/edits` multipart `image` + `mask`), model ví dụ `xai/grok-imagine-image`, `size: auto`. Adapter `OpenAiImages` dùng được; thêm **`SizeMode`** (3C) cho model nhận `auto`. Grok sửa ảnh bằng lời → khai `InstructionEdit`. Adapter **Gemini** vẫn làm (người dùng muốn có Google) | Stability: chờ Q11 (Đợt 3 +1 ngày, hoặc Đợt 5) |
+| **Q1** — dùng provider nào? | **Đã trả lời 29/09: cổng vilao.ai**, chuẩn OpenAI (`/v1/images/generations` JSON, `/v1/images/edits` multipart `image` + `mask`), model ví dụ `xai/grok-imagine-image`, `size: auto`. Adapter `OpenAiImages` dùng được; thêm **`SizeMode`** (3C) cho model nhận `auto`. Grok sửa ảnh bằng lời → khai `InstructionEdit`. Adapter **Gemini** gọi thẳng: chờ Q12 (đề xuất đi qua cổng) | Stability: chờ Q11 (Đợt 3 +1 ngày, hoặc Đợt 5) |
 | **Q5** — tick "Tôi có quyền sử dụng ảnh này"? | **Bắt buộc** khi đầu vào có ảnh *không do Xưởng ảnh tạo* (ảnh tải lên, `Media.Origin = upload`). Hệ thống không nhận ra được ảnh có người thật hay không nên không tách trường hợp. Lưu người tick, thời điểm, IP | Không bắt buộc → chỉ ẩn ô tick, cột vẫn ghi |
 | **Q9** — lỗi KeoBia có sẵn | Không sửa trong đợt này | — |
 | **Q10** — gói dịch vụ | Không đụng. Hạn mức đợt này chỉ đổi cách **đếm** (theo số lần gọi) | — |
+| **Q11** — Stability làm lúc nào? | Đợt 5 (đề xuất), cùng tách nền và mở rộng khung. Đợt 3 không có Stability | Làm ở Đợt 3 → thêm S1 + S2 + S6 (~1 ngày), xem [chuan-api-anh-video-2026-09-29.md §3.3](chuan-api-anh-video-2026-09-29.md#33-stability-chờ-q11--đề-xuất-đợt-5) |
+| **Q12** — Google gọi thẳng hay qua cổng? | **Qua cổng** (nano-banana qua vilao/NOVA bằng adapter OpenAI), nhất quán với yêu cầu 25/09 *"xoá API Gemini trực tiếp"* ở AdVideo. Adapter Gemini gọi thẳng **không làm ở Đợt 3**, để dự phòng | Gọi thẳng → làm adapter Gemini như 3C (+0,5–1 ngày) |
 
 ## 2. Phạm vi
 
 **Làm:** tải ảnh lên, chế độ `Reference`, chế độ `RegionEdit` (`Single`, `Sequential`), xử lý ảnh
-(`SizeFitter`, mask, ảnh đánh dấu, ghép lại), `EditAsync` cho OpenAI + Gemini + Fake, "Chạy thử sửa ảnh"
+(`SizeFitter`, mask, ảnh đánh dấu, ghép lại), `EditAsync` cho OpenAI + Fake (+ Gemini nếu Q12 chọn gọi thẳng), `SizeMode`, "Chạy thử sửa ảnh"
 ở trang Model, trình đánh dấu vùng, chuỗi phiên bản + so sánh, trang sửa toàn trang, nút "Sửa bằng AI"
 và bộ lọc "Ảnh AI" ở thư viện media, mẫu `RequiresSourceImage` / `KeepSubject` hiện trong modal.
 
@@ -71,13 +74,15 @@ lên `dev` khi test xanh.
 | 3.0 | Trả nợ Đợt 2: "Tạo demo hàng loạt" chạy ở nền | 0,5 |
 | 3A | Hợp đồng, dữ liệu, migration, kiểm vùng | 0,5 |
 | 3B | Xử lý ảnh: `SizeFitter`, mask, ảnh đánh dấu, ghép lại, câu chỉ dẫn | 1,5 |
-| 3C | Adapter sửa ảnh (OpenAI, Gemini, Fake) + "Chạy thử sửa ảnh" | 1 |
+| 3C | Adapter sửa ảnh (OpenAI, Fake; Gemini chờ Q12) + `SizeMode` + "Chạy thử sửa ảnh" | 1 (0,5 nếu không làm Gemini) |
 | 3D | Tải ảnh lên, service, runner `Reference` / `RegionEdit` | 1 |
 | 3E | Modal: tab "Từ ảnh mẫu", tab "Sửa theo vùng" + `image-region-editor.js` | 1,5 |
 | 3F | Phiên bản, so sánh trước/sau, trang sửa toàn trang, thư viện media | 1 |
 | 3G | Chạy thật theo kịch bản M3, sửa lỗi, tài liệu | 0,5–1 |
 | | **Tổng** | **7,5–8** |
 
+> **Theo Q12 đề xuất (Google qua cổng), bỏ adapter Gemini khỏi 3C → tổng còn ~7 ngày.**
+>
 > Kế hoạch tổng ghi 6 ngày. Phần tăng: việc 3.0, bảng ảnh tải lên, nút "Chạy thử sửa ảnh", adapter
 > Gemini. **Muốn gọn về 6 ngày** thì bỏ trang sửa toàn trang (dùng modal cho cả thư viện media, −0,5) và
 > dời Gemini sang Đợt 6 (−1): khi đó hai đường mask / ảnh đánh dấu vẫn chạy bằng adapter OpenAI.
@@ -208,7 +213,7 @@ SixLabors.Fonts và file phông trên máy chủ.
 | Adapter | Cách gọi | Ghi chú |
 |---|---|---|
 | **`OpenAiImages.EditAsync`** | `POST {base}/images/edits`, `multipart/form-data`: `model`, `prompt`, `n=1`, `size`, `quality`, `output_format`; ảnh là `image` (một ảnh) hoặc `image[]` (nhiều ảnh: gốc → ảnh đánh dấu → tham chiếu); `mask` chỉ ở đường mask. `ExtraParamsJson` thêm thành trường form (bỏ trường `null` như bản tạo ảnh). Kết quả `b64_json` hoặc `url` qua `ImageDownloadGuard` | Dùng chung `MapError`/`FriendlyError`; 404/405 → `Unsupported` |
-| **`Gemini`** (mới) | `POST {base}/models/{model}:generateContent`, header `x-goog-api-key`; `contents[0].parts` = chữ + `inline_data` (ảnh gốc JPEG chất lượng 92 để nhẹ, ảnh đánh dấu PNG, tham chiếu); `generationConfig.responseModalities = ["IMAGE"]`, tạo ảnh từ chữ thêm `imageConfig.aspectRatio`. Đọc `candidates[].content.parts[].inlineData` | Không có mask → luôn đường ảnh đánh dấu. `promptFeedback.blockReason`, `finishReason` = `SAFETY`/`IMAGE_SAFETY`/`PROHIBITED_CONTENT` → `ContentPolicy`; không có phần ảnh → `InvalidResponse` kèm lời model (đã che). Base URL mẫu `https://generativelanguage.googleapis.com/v1beta`. Làm luôn `GenerateAsync` để model Gemini dùng được ở tab Tạo mới |
+| **`Gemini`** (mới — **chỉ khi Q12 chọn gọi thẳng**) | `POST {base}/models/{model}:generateContent`, header `x-goog-api-key`; `contents[0].parts` = chữ + `inline_data` (ảnh gốc JPEG chất lượng 92 để nhẹ, ảnh đánh dấu PNG, tham chiếu); `generationConfig.responseModalities = ["IMAGE"]`, tạo ảnh từ chữ thêm `imageConfig.aspectRatio`. Đọc `candidates[].content.parts[].inlineData` | Không có mask → luôn đường ảnh đánh dấu. `promptFeedback.blockReason`, `finishReason` = `SAFETY`/`IMAGE_SAFETY`/`PROHIBITED_CONTENT` → `ContentPolicy`; không có phần ảnh → `InvalidResponse` kèm lời model (đã che). Base URL mẫu `https://generativelanguage.googleapis.com/v1beta`. Làm luôn `GenerateAsync` để model Gemini dùng được ở tab Tạo mới |
 | **`Fake.EditAsync`** | Vẽ lại **toàn bộ** ảnh (đảo màu + nhiễu nhẹ) và tô đậm vùng mask | Cố ý đổi cả phần ngoài vùng để test chứng minh bước ghép lại |
 
 **Cách gửi khung hình — `ImageModel.SizeMode`** (cột mới trong migration 3A): `Size` (như hiện nay: `WxH` gần nhất trong danh sách), `AspectRatio` (gửi `aspect_ratio: "16:9"`, kèm `size: auto`), `Auto` (gửi `size: auto`, rồi server **cắt giữa về đúng tỉ lệ** người dùng chọn nếu lệch > 2%). Cần cho vilao/Grok: `auto` để model tự chọn thì khung 16:9 của ảnh bìa không được bảo đảm. Test: mỗi chế độ gửi đúng trường; cắt giữa ra đúng tỉ lệ.
@@ -362,13 +367,15 @@ khác site, media không phải ảnh, người thiếu quyền.
   kiểm duyệt.
 - `POST /v1beta/models/{model}:generateContent`: trả `inlineData`.
 
-**Kịch bản:** đúng 8 bước ở §0, thêm: Chạy thử sửa ảnh cho model mask và model Gemini; tạo ảnh từ 2 ảnh
+**Kịch bản:** đúng 8 bước ở §0, thêm: Chạy thử sửa ảnh cho model mask (gpt-image) và model sửa bằng lời (Grok qua vilao; Gemini nếu Q12 chọn gọi thẳng); tạo ảnh từ 2 ảnh
 tham chiếu tải lên (có tick, thiếu tick bị chặn); sửa ảnh mẫu `KeepSubject` "đổi nền, giữ sản phẩm";
 `Sequential` 3 vùng với lỗi ở vùng #3 → nhận kết quả tới #2 kèm cảnh báo; tạo 1 lô demo ở nền trong khi
 dùng trang khác.
 
 **Đo thêm:** bộ nhớ khi 2 job sửa ảnh 2048 px chạy song song (mục tiêu < 400 MB tăng thêm); thời gian xử lý
 ảnh phía server (không tính provider) < 1,5 giây/biến thể.
+
+**Chạy thật với vilao** (khi có biến môi trường `VILAO_API_KEY`): trả lời L1–L7 ở [chuan-api-anh-video-2026-09-29.md §1.4](chuan-api-anh-video-2026-09-29.md#14-phải-trả-lời-bằng-một-lần-gọi-thật); "Chạy thử" và "Chạy thử sửa ảnh" cho Grok và một model gpt-image; một lần sửa vùng thật bằng mỗi model.
 
 **Tài liệu:** kết quả vào file này (như Đợt 1–2); đánh dấu M3 ở kế hoạch tổng; mục "Để dùng thật": khai
 báo năng lực model, bấm "Chạy thử sửa ảnh", model gợi ý cho từng đường.
@@ -379,9 +386,9 @@ báo năng lực model, bấm "Chạy thử sửa ảnh", model gợi ý cho t�
 |---|---|---|
 | Domain | `ImageUpload.cs` | `ImageJob.cs`, `ImageModel.cs` |
 | Application | `ImageRegionDtos.cs`, `ImageRegionValidator.cs`, `ImageRegionPalette.cs`, `RegionPromptComposer.cs`, `IImageUploadService.cs` | `IImageProvider.cs`, `ImageStudioDtos.cs`, `IImageStudioServices.cs`, `ImageStudioRules.cs`, `MediaDtos.cs` |
-| Infrastructure | `Imaging/{SourceImageLoader,SizeFitter,RegionMaskBuilder,RegionAnnotationRenderer,RegionCompositor,PixelFont}.cs`, `Providers/GeminiImageProvider.cs`, `ImageUploadService.cs`, `ImagePromptDemoBatch{Queue,State,Worker}.cs`, migration `AddImageRegionEdit` | `OpenAiImageProvider.cs`, `FakeImageProvider.cs`, `ImageProviderRegistry.cs`, `ImageJobRunner.cs`, `ImageStudioService.cs`, `ImageModelService.cs`, `ImageStudioConfiguration.cs`, `MediaService.cs`, `DependencyInjection.cs` |
+| Infrastructure | `Imaging/{SourceImageLoader,SizeFitter,RegionMaskBuilder,RegionAnnotationRenderer,RegionCompositor,PixelFont}.cs`, `Providers/GeminiImageProvider.cs` (chờ Q12), `ImageUploadService.cs`, `ImagePromptDemoBatch{Queue,State,Worker}.cs`, migration `AddImageRegionEdit` | `OpenAiImageProvider.cs`, `FakeImageProvider.cs`, `ImageProviderRegistry.cs`, `ImageJobRunner.cs`, `ImageStudioService.cs`, `ImageModelService.cs`, `ImageStudioConfiguration.cs`, `MediaService.cs`, `DependencyInjection.cs` |
 | Web | `ImageStudio/Edit.cshtml(.cs)`, `js/admin/image-region-editor.js`, `js/admin/image-compare.js` | `ImageStudio/Api.cshtml.cs` (`Upload`, `Source`, `TestEdit`), `_ImageStudioModal.cshtml`, `image-studio.js`, `Detail.cshtml`, `Index.cshtml`, `Config/ModelEdit`, `Config/Models`, `Config/Templates`, `Media/Edit`, `Media/Index`, `Styles/admin.css` |
-| Test | `ImageRegionValidatorTests`, `SizeFitterTests`, `RegionMaskBuilderTests`, `RegionAnnotationRendererTests`, `RegionCompositorTests`, `RegionPromptComposerTests`, `GeminiImageProviderTests`, `ImageUploadTests`, `ImageStudioEditServiceTests`, `ImageJobRunnerEditTests`, `DemoBatchTests` | `OpenAiImageProviderTests`, `ImageStudioTestHarness` |
+| Test | `ImageRegionValidatorTests`, `SizeFitterTests`, `RegionMaskBuilderTests`, `RegionAnnotationRendererTests`, `RegionCompositorTests`, `RegionPromptComposerTests`, `GeminiImageProviderTests` (chờ Q12), `ImageUploadTests`, `ImageStudioEditServiceTests`, `ImageJobRunnerEditTests`, `DemoBatchTests` | `OpenAiImageProviderTests`, `ImageStudioTestHarness` |
 
 ## 5. Rủi ro riêng của đợt
 
@@ -391,7 +398,7 @@ báo năng lực model, bấm "Chạy thử sửa ảnh", model gợi ý cho t�
 | **9Router/vilao không hỗ trợ `/images/edits` hoặc không nhận `mask`** | "Chạy thử sửa ảnh" phát hiện ngay ở trang Model; lỗi `Unsupported` nói rõ phải đổi gì. Đường ảnh đánh dấu (nhiều `image[]` không mask) hoặc Gemini thay thế |
 | **Model coi mask chỉ là gợi ý, vẽ lại cả ảnh** (gpt-image làm vậy) | Chính là lý do có `RegionCompositor`: phần ngoài vùng luôn là điểm ảnh gốc. Bên trong vùng lệch màu ở mép → chỉnh độ nới + làm mờ viền bằng ảnh thật ở 3G, **không kéo dài đợt để tinh chỉnh prompt** |
 | **Lệch 1 px giữa mask, ảnh gốc và kết quả** khi pad/cắt | `SizeFitter` viết test làm tròn trước (ngày đầu của 3B); mọi ảnh đi qua cùng một `FitPlan` |
-| **Request Gemini quá nặng** (base64 ba ảnh 2048 px) | Ảnh gốc gửi JPEG 92; tham chiếu ≤ 1536 cạnh dài; ảnh đánh dấu cùng cỡ ảnh gốc |
+| **Request quá nặng** (base64 / multipart ba ảnh 2048 px — Gemini, cổng) | Ảnh gốc gửi JPEG 92; tham chiếu ≤ 1536 cạnh dài; ảnh đánh dấu cùng cỡ ảnh gốc |
 | **Bộ nhớ máy chủ** (mỗi ảnh 2048² RGBA ≈ 16 MB, nhiều bản trung gian) | `using` cho mọi `Image`; mask dùng `L8` (1 byte/điểm); `MaxConcurrency` giữ 2; đo ở 3G |
 | **Canvas chậm trên điện thoại với ảnh lớn** | Hiển thị bản ≤ 2048; vẽ lại theo `requestAnimationFrame`; toạ độ chuẩn hoá nên độ phân giải hiển thị không ảnh hưởng kết quả |
 | **Ảnh người thật / deepfake** | Tick quyền có lưu vết (Q5); lỗi kiểm duyệt của provider không thử lại; mọi job có `CreatedBy` |

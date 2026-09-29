@@ -10,6 +10,11 @@ description: Nghiên cứu NOVA/OpenRouter/TTS tiếng Việt và thiết kế P
 > Yêu cầu gốc (25/09/2026): nhiều nguồn video thay vì chỉ fal · **xoá API Gemini trực tiếp** ·
 > ElevenLabs quá đắt · **dán một mẫu JSON là apply được provider**.
 
+> **Cập nhật 29/09/2026:** OpenAI đã tắt Videos API + mọi model `sora-2*` ngày 24/09/2026 (kiểu `/videos`
+> vẫn sống qua NOVA/OpenRouter, AdVideo không bị ảnh hưởng). Có thêm cổng ứng viên **vilao.ai** (chuẩn OpenAI,
+> NewsCMS ImageStudio đang dùng cho ảnh) và phương án **xAI gọi thẳng** cho video độ phân giải cao. Bảng
+> các chuẩn video và việc V1–V6: [../image-studio/chuan-api-anh-video-2026-09-29.md §4–5](../image-studio/chuan-api-anh-video-2026-09-29.md#4-các-chuẩn-api-video).
+
 ## 1. Những gì tìm được, và nó đổi kế hoạch ra sao
 
 ### 1.1 NOVA là cổng video nhiều model — nhưng không có giọng

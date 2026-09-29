@@ -8,6 +8,7 @@ description: Lộ trình ImageStudio — 6 đợt, ~25 người-ngày; mỗi đ�
 
 > Yêu cầu: [../requirements/2026-09-29-feature-ai-image-studio.md](../requirements/2026-09-29-feature-ai-image-studio.md)
 > Thiết kế: [../design/2026-09-29-feature-ai-image-studio.md](../design/2026-09-29-feature-ai-image-studio.md)
+> Chuẩn API ảnh/video, cổng vilao.ai, lộ trình adapter: [image-studio/chuan-api-anh-video-2026-09-29.md](./image-studio/chuan-api-anh-video-2026-09-29.md)
 
 Khoảng **25 người-ngày, tức ~5 tuần cho 1 dev**. Mỗi đợt kết thúc bằng **một thứ bấm được trên màn
 hình**, không phải một thứ "gần xong". Đợt nào bắt đầu thì viết plan chi tiết riêng vào
@@ -19,6 +20,8 @@ hình**, không phải một thứ "gần xong". Đợt nào bắt đầu thì v
 > - **Mẫu prompt có ảnh demo** (Đợt 2): mỗi mẫu có ảnh minh hoạ để người dùng thấy trước kết quả.
 >
 > **29/09 — chốt thêm:** Q3 chú thích AI là đủ, không watermark · Q4 kho mẫu dùng chung toàn hệ thống · Q6 SuperAdmin dùng toàn bộ, vai trò khác do quản trị cấp · Q7 giữ 14 ngày · Q8 số ảnh trong bài do AI quyết theo nội dung · Q2 hạn mức theo gói khách mua (chờ Q10: cách làm gói).
+>
+> **29/09 — provider:** Q1 dùng **cổng vilao.ai** (chuẩn OpenAI). Tra cứu ba chuẩn ảnh (OpenAI, Google, Stability) và các chuẩn video, cái nào đã bị khai tử, lộ trình từng adapter: [image-studio/chuan-api-anh-video-2026-09-29.md](./image-studio/chuan-api-anh-video-2026-09-29.md). Chờ chốt: Q11 (Stability ở Đợt 3 hay 5), Q12 (Google gọi thẳng hay qua cổng).
 
 ## Milestones
 
@@ -121,6 +124,7 @@ chờ nào.
 | 5.2 | Gallery: nút "Thêm ảnh AI", `multiple: true`, đổ kết quả vào `addImage` | `product-form.js`, `_ProductForm.cshtml` |
 | 5.3 | Tab "Từ ảnh mẫu" liệt kê sẵn ảnh của sản phẩm đang sửa | `image-studio.js` |
 | 5.4 | Mẫu `KeepSubject`: trình sửa tạo sẵn vùng #1 "Giữ nguyên" kèm hướng dẫn "Khoanh sản phẩm"; mask = mọi thứ trừ sản phẩm; tinh chỉnh viền mềm để không có quầng ở mép sản phẩm | `image-region-editor.js`, `RegionMaskBuilder`, seed mẫu |
+| 5.5 | *(Chờ Q11 — đề xuất làm ở đây)* **Adapter Stability**: tạo ảnh, sửa bằng mask (`/edit/inpaint`), năng lực mới `ObjectErase` (vùng "Xoá" trong trình đánh dấu), `RemoveBackground` (mẫu "Nền trắng TMĐT" không cần khoanh), `Outpaint` (ảnh vuông → ảnh bìa 16:9 không cắt mất sản phẩm). Chi tiết S1–S6: [chuan-api-anh-video-2026-09-29.md §3.3](./image-studio/chuan-api-anh-video-2026-09-29.md#33-stability-chờ-q11--đề-xuất-đợt-5) · +1,5 ngày | `Providers/StabilityImageProvider.cs`, `ImageStudioEnums.cs`, `image-region-editor.js` |
 
 **Ra khỏi đợt:** từ ảnh chụp điện thoại của một sản phẩm thật: khoanh sản phẩm, chọn "Nền trắng TMĐT" →
 ảnh mới có nền sạch, **nhãn và bao bì giống hệt ảnh gốc**. Thêm 3 ảnh lifestyle vào gallery rồi lưu sản
@@ -186,7 +190,8 @@ graph LR
 | Phụ thuộc | Cần khi | Nếu chậm |
 |---|---|---|
 | Key 9Router (đã có, đang dùng cho Telegram) | Đợt 1 | Dùng Fake; chưa có "chạy thật" |
-| Key thêm một provider có năng lực khác (Gemini hoặc fal) | Đợt 3 | Chỉ có một adapter chạy thật; chưa đạt tiêu chí "không phụ thuộc một provider" |
+| **Key vilao.ai** (Q1) — đặt vào biến môi trường `VILAO_API_KEY` của môi trường cloud để chạy thật | Đợt 3 | Làm và test bằng server giả; chưa trả lời được L1–L7 (vilao có nhận nhiều ảnh, `mask`, `aspect_ratio` không) |
+| Key một nhà cung cấp gọi thẳng: Stability (Q11) hoặc Google AI Studio (Q12) | Đợt 5 (hoặc 3) | Mọi năng lực chỉ đi qua một cổng — chưa đạt tiêu chí "không phụ thuộc một provider" |
 | Ảnh sản phẩm thật của một khách | Đợt 5 | Thử bằng ảnh stock thì mất ý nghĩa phần giữ nguyên sản phẩm |
 | 2–3 biên tập viên dùng thử | cuối Đợt 3 | Chọn model mặc định theo cảm tính (đổi được trên màn hình) |
 | Pháp chế chốt nhãn AI hiển thị (Q3) | Trước khi mở cho khách ngoài | Metadata vẫn ghi; chú thích mặc định bật |
@@ -221,7 +226,7 @@ chạy song song.
 
 | # | Rủi ro | Mức | Giảm thiểu | Đợt |
 |---|---|---|---|---|
-| R1 | **Model bị khai tử hoặc đổi API** | Cao | Model là dữ liệu (D2); ≥ 2 adapter chạy thật; nút "Chạy thử" và `LastTestOk` hiện trên trang Model | 1, 3 |
+| R1 | **Model bị khai tử hoặc đổi API** — đã thấy thật: DALL·E tắt 12/05/2026, Imagen 4 tắt 17/08/2026, Sora 24/09/2026, `gpt-image-1` sẽ tắt 23/10/2026 | Cao | Model là dữ liệu (D2); ≥ 2 adapter chạy thật; nút "Chạy thử" và `LastTestOk` hiện trên trang Model | 1, 3 |
 | R2 | **Thủng ví** (bấm nhiều lần, retry sai, `Sequential` N vùng) | Cao | Hạn mức kiểm trước khi gọi; `IdempotencyKey`; `MaxVariants`, `MaxConcurrency`; D10; chi phí ước tính hiện trước khi bấm; `ImageProviderCall` là nguồn sự thật | 1, 6 |
 | R3 | **Model đổi cả phần không được bảo sửa** (mặt người, chữ, sản phẩm) | Cao | D5 ghép lại điểm ảnh gốc, có test; bật mặc định | 3, 5 |
 | R4 | **Sản phẩm bị méo nhãn** khi làm ảnh bán hàng | Cao | Mẫu `KeepSubject` + D5; không để model vẽ lại sản phẩm. Tách nền tự động để giai đoạn sau | 5 |
