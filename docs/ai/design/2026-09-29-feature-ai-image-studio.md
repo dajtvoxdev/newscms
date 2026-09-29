@@ -206,12 +206,12 @@ Bảng `ImageStudioSiteSettings` (mỗi site một dòng):
 |---|---|---|
 | `Enabled` | SuperAdmin | Tắt thì mọi nút "Tạo bằng AI" của site đều ẩn |
 
-Model **không** chia theo site: mọi site thấy cùng danh sách model đang bật (chốt 29/09). Nếu sau này cần giới hạn theo site thì thêm cột danh sách model được phép vào bảng này.
-
 | `MonthlyImageQuota`, `PerUserDailyQuota` | SuperAdmin | 0 = không giới hạn |
 | `BrandStyle` | Quản trị site | Ví dụ "tông xanh lá, ánh sáng tự nhiên, tối giản". Được nối vào mọi prompt |
 | `CoverAspect`, `ProductAspect` | Quản trị site | Mặc định `16:9`, `1:1` |
 | `ShowAiCaption`, `AiCaptionText` | Quản trị site | Mặc định bật, "Ảnh minh hoạ tạo bởi AI" |
+
+Model **không** chia theo site: mọi site thấy cùng danh sách model đang bật (chốt 29/09). Nếu sau này cần giới hạn theo site thì thêm cột danh sách model được phép vào bảng này.
 
 ### 3.5 Kho prompt mẫu
 
